@@ -52,6 +52,10 @@ export interface CreateCustomerPayload {
   salesRepId?: string
 }
 
+// In-memory fallback for Vercel preview environments where the backend is unreachable
+let mockCustomers: Customer[] = []
+let usingMock = false
+
 export async function listCustomers(
   filters: CustomerListFilters = {},
   pagination: PaginationParams = { page: 1, perPage: 20 },
@@ -61,13 +65,23 @@ export async function listCustomers(
     let all: any[] = []
     try {
       const res = await apiRequest<any[]>("/customers", "GET")
-      if (Array.isArray(res)) all = res
+      if (Array.isArray(res)) {
+        all = res
+        usingMock = false
+      } else {
+        usingMock = true
+      }
     } catch (e) {
-      console.warn("Backend unavailable, using empty customers list")
+      console.warn("Backend unavailable, using mock customers list")
+      usingMock = true
+    }
+
+    if (usingMock) {
+      all = mockCustomers
     }
 
     // Map the backend entity format to the frontend interface format
-    const mapped: Customer[] = all.map((c) => ({
+    const mapped: Customer[] = usingMock ? all : all.map((c) => ({
       id: c.id,
       ref: c.businessNumber || "CUS-UNKNOWN",
       name: c.name,

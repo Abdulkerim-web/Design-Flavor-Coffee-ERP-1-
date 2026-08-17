@@ -1181,7 +1181,7 @@ const CustomerListView: FC<{
       salesRepId: filters.salesRep,
       search: search,
     })
-    if (res.ok) {
+    if (res.state === "ok" && res.data) {
       setCustomers(res.data.items as Customer[])
       setLoadState("ok")
     } else {
