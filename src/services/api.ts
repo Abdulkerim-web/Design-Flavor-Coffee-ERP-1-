@@ -81,6 +81,12 @@ export function loadingResult<T>(): ServiceResult<T> {
   return { data: null, error: null, state: "loading" }
 }
 
+let currentUserRole = "sales"
+
+export function setGlobalUserRole(role: string) {
+  currentUserRole = role
+}
+
 export async function apiRequest<T>(
   endpoint: string,
   method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" = "GET",
@@ -88,11 +94,9 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const url = `/api/v1${endpoint}`
 
-  // TODO: Retrieve token from a store or context if available.
-  // For now, assume it's just passing data.
-
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    "X-User-Role": currentUserRole,
   }
 
   const options: RequestInit = {

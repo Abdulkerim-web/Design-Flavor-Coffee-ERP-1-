@@ -26,7 +26,8 @@ export class CustomersController {
   }
 
   @Post()
-  async createCustomer(@Body() body: any) {
+  async createCustomer(@Body() body: any, @Req() req: any) {
+    const role = req.headers["x-user-role"] || "sales"
     const {
       businessNumber,
       name,
@@ -61,6 +62,7 @@ export class CustomersController {
         notes,
       },
       createdByUserId,
+      role
     )
   }
 

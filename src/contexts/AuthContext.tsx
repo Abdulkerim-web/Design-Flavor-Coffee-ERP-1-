@@ -14,7 +14,7 @@
 
 import { createContext, useContext, useState, type ReactNode } from "react"
 import type { RoleId } from "../lib/rbac"
-import { apiRequest } from "../services/api"
+import { apiRequest, setGlobalUserRole } from "../services/api"
 
 import { INITIAL_USERS } from "../lib/rbac"
 
@@ -77,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setCurrentUser(user)
+      setGlobalUserRole(user.role)
       return { ok: true, user }
     } catch (e: any) {
       console.warn("Backend login failed or unreachable, falling back to local demo users", e)
@@ -96,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           permissions: ["*"],
         }
         setCurrentUser(user)
+        setGlobalUserRole(user.role)
         return { ok: true, user }
       }
 

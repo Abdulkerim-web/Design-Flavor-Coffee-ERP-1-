@@ -34,6 +34,7 @@ export class CustomersService {
       isUrgent?: boolean
     },
     createdByUserId: string,
+    creatorRole: string = "sales",
   ): Promise<Customer> {
     const queryRunner = this.dataSource.createQueryRunner()
     await queryRunner.connect()
@@ -56,7 +57,7 @@ export class CustomersService {
         name: data.name,
         active: true,
         salesRepId: data.salesRepId,
-        status: data.isUrgent ? "pending" : "pending",
+        status: creatorRole === "general-manager" ? "active" : "pending",
         type: data.type || "cafe",
         contactPerson: data.contactPerson,
         phone: data.phone,

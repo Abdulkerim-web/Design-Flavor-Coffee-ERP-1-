@@ -27,6 +27,7 @@ import {
   type FeasibilityKey,
   type PaymentStatusKey,
 } from "../lib/orderStatus"
+import { listOrders, createOrder } from "../services/orders"
 
 /* ─────────────────────────────────────────────────────────────
    TYPES — mirror PHP API response shapes
@@ -2103,11 +2104,19 @@ const OrderListView: FC<{
   const PER_PAGE = 10
 
   useEffect(() => {
-    const t = setTimeout(() => {
-      setOrders(SAMPLE_ORDERS)
-      setLoadState("ok")
-    }, 700)
-    return () => clearTimeout(t)
+    let mounted = true
+    listOrders().then((res) => {
+      if (!mounted) return
+      if (res.state === "ok") {
+        setOrders(res.data?.items || [])
+        setLoadState("ok")
+      } else {
+        setLoadState("error")
+      }
+    })
+    return () => {
+      mounted = false
+    }
   }, [])
 
   const filtered = orders.filter((o) => {
@@ -4229,9 +4238,30 @@ const NewOrderView: FC<{ onBack: () => void }> = ({ onBack }) => {
 
   const handleSubmit = async () => {
     setStep("submitting")
-    await new Promise((r) => setTimeout(r, 1600))
-    setSRef("ORD-1043")
-    setStep("success")
+    const payload = {
+      customerId: form.customerId,
+      urgent: form.urgency,
+      notes: form.notes,
+      lines: form.lines.map(l => ({
+        coffeeType: l.coffeeType,
+        origin: l.origin,
+        roastLevel: l.roastLevel,
+        quantity: parseFloat(l.quantity) || 0,
+        unit: l.unit
+      })),
+      deliveryDate: form.deliveryDate,
+      deliveryAddress: form.deliveryAddress,
+      deliveryContact: form.deliveryContact,
+      deliveryNotes: form.deliveryNotes,
+    }
+    const res = await createOrder(payload)
+    if (res.state === "ok" && res.data) {
+      setSRef(res.data.ref)
+      setStep("success")
+    } else {
+      toast("Failed to submit order.", "error")
+      setStep("error")
+    }
   }
 
   const isSubmitting = step === "submitting"

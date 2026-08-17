@@ -1,4 +1,5 @@
 import { Controller, Post, Get, Body, Req, Param } from "@nestjs/common"
+import { OrdersService } from "./orders.service"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
 import { Order } from "../entities/order.entity"
@@ -7,23 +8,34 @@ import { Order } from "../entities/order.entity"
 export class OrdersController {
   constructor(
     @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
+    private readonly ordersService: OrdersService,
   ) {}
 
   @Get()
   async getAllOrders() {
-    return this.orderRepo.find({ relations: ["items"] })
+    return this.orderRepo.find({ relations: ["items", "customer"] })
   }
 
   @Get(":id")
   async getOrderById(@Param("id") id: string) {
-    return this.orderRepo.findOne({ where: { id }, relations: ["items"] })
+    return this.orderRepo.findOne({ where: { id }, relations: ["items", "customer"] })
   }
 
   @Post()
-  async placeOrder(@Body() body: any) {
+  async placeOrder(@Body() body: any, @Req() req: any) {
+    const role = req.headers["x-user-role"] || "sales"
+    const order = await this.ordersService.createOrder({
+      customerId: body.customerId,
+      salesRepId: body.salesRepId || "mock-sales-rep",
+      branchId: body.branchId,
+      items: body.items,
+      urgent: body.urgent || false,
+    }, role)
+    
     return {
       success: true,
-      orderNumber: "ORD-" + Math.floor(Math.random() * 10000),
+      orderNumber: order.orderNumber,
+      id: order.id,
     }
   }
 

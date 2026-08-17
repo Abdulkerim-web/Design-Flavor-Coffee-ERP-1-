@@ -16,6 +16,66 @@ export class OrdersService {
     private readonly feasibilityService: FeasibilityEngineService,
   ) {}
 
+  async createOrder(
+    payload: {
+      customerId: string
+      salesRepId: string
+      branchId?: string
+      items: { coffeeProductId: string, quantity: number, unitPrice: number }[]
+      urgent: boolean
+    },
+    creatorRole: string,
+  ) {
+    const queryRunner = this.dataSource.createQueryRunner()
+    await queryRunner.connect()
+    await queryRunner.startTransaction()
+
+    try {
+      const order = queryRunner.manager.create(Order, {
+        orderNumber: "ORD-" + Math.floor(Math.random() * 100000),
+        customerId: payload.customerId,
+        salesRepId: payload.salesRepId,
+        branchId: payload.branchId || "default-branch", // mock since we don't always have one
+        status: creatorRole === "general-manager" ? "CONFIRMED" : "PENDING_MANAGER_CONFIRMATION",
+        isUrgent: payload.urgent,
+        preVatAmount: 0,
+        vatAmount: 0,
+        totalAmount: 0,
+      })
+
+      let subtotal = 0
+
+      const savedOrder = await queryRunner.manager.save(order)
+
+      for (const item of payload.items) {
+        subtotal += item.quantity * item.unitPrice
+        
+        const orderItem = queryRunner.manager.create(OrderItem, {
+          orderId: savedOrder.id,
+          coffeeProductId: item.coffeeProductId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          lineTotal: item.quantity * item.unitPrice,
+          status: "pending",
+        })
+        await queryRunner.manager.save(orderItem)
+      }
+
+      savedOrder.preVatAmount = subtotal
+      savedOrder.vatAmount = subtotal * 0.15 // 15% VAT
+      savedOrder.totalAmount = subtotal + savedOrder.vatAmount
+      await queryRunner.manager.save(savedOrder)
+
+      await queryRunner.commitTransaction()
+      return savedOrder
+    } catch (err) {
+      await queryRunner.rollbackTransaction()
+      throw err
+    } finally {
+      await queryRunner.release()
+    }
+  }
+
   /**
    * Sales rep edits a pending order. Resets status if it was pending manager confirmation.
    */

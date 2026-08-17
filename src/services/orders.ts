@@ -136,10 +136,15 @@ export async function listOrders(
       ref: o.orderNumber || "ORD-UNKNOWN",
       status: o.status || "PENDING_MANAGER_APPROVAL",
       urgent: o.isUrgent || false,
-      customer: {
+      customer: o.customer ? {
+        id: o.customer.id,
+        name: o.customer.name,
+        ref: o.customer.businessNumber || "CUS-REF",
+        status: o.customer.status || "active",
+      } : {
         id: o.customerId,
-        name: "Customer Name",
-        ref: "CUS-REF",
+        name: "Unknown Customer",
+        ref: "CUS-UNKNOWN",
         status: "active",
       },
       salesRep: o.salesRepId ? { id: o.salesRepId, name: "Sales Rep" } : null,
@@ -206,10 +211,15 @@ export async function getOrder(id: string) {
       ref: o.orderNumber || "ORD-UNKNOWN",
       status: o.status || "PENDING_MANAGER_APPROVAL",
       urgent: o.isUrgent || false,
-      customer: {
+      customer: o.customer ? {
+        id: o.customer.id,
+        name: o.customer.name,
+        ref: o.customer.businessNumber || "CUS-REF",
+        status: o.customer.status || "active",
+      } : {
         id: o.customerId,
-        name: "Customer Name",
-        ref: "CUS-REF",
+        name: "Unknown Customer",
+        ref: "CUS-UNKNOWN",
         status: "active",
       },
       salesRep: o.salesRepId ? { id: o.salesRepId, name: "Sales Rep" } : null,
@@ -267,6 +277,7 @@ export async function createOrder(_payload: CreateOrderPayload) {
   return safeRequest<{ ref: string }>(async () => {
     const res = await apiRequest<any>("/orders", "POST", {
       customerId: _payload.customerId,
+      urgent: _payload.urgent,
       items: _payload.lines.map((line) => ({
         coffeeProductId: line.coffeeType, // Map coffeeType to ID conceptually
         quantity: line.quantity,
