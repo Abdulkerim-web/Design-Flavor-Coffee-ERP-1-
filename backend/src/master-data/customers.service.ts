@@ -6,6 +6,7 @@ import { CustomerBranch } from "../entities/customer_branch.entity"
 import { CustomerSalesRepHistory } from "../entities/customer_sales_rep_history.entity"
 import { Notification } from "../entities/notification.entity"
 import { AuditLog } from "../entities/audit_log.entity"
+import { User } from "../entities/user.entity"
 
 @Injectable()
 export class CustomersService {
@@ -51,12 +52,18 @@ export class CustomersService {
         )
       }
 
+      let salesRepId = data.salesRepId
+      if (!salesRepId) {
+        const anyUser = await queryRunner.manager.findOne(User, {})
+        if (anyUser) salesRepId = anyUser.id
+      }
+
       // Create Customer
       const customer = queryRunner.manager.create(Customer, {
         businessNumber: data.businessNumber,
         name: data.name,
         active: true,
-        salesRepId: data.salesRepId,
+        salesRepId: salesRepId,
         status: "active",
         type: data.type || "cafe",
         contactPerson: data.contactPerson,

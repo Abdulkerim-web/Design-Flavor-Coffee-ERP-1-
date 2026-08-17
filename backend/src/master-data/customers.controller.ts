@@ -41,8 +41,12 @@ export class CustomersController {
       notes,
     } = body
 
-    // Find a valid sales rep to assign this to, since the frontend currently sends a mock string
-    const salesRep = await this.userRepo.findOne({ where: { email: "meron.b@flavorcoffee.et" } })
+    // Find a valid sales rep to assign this to, or fall back to any user in the DB
+    let salesRep = await this.userRepo.findOne({ where: { email: "meron.b@flavorcoffee.et" } })
+    if (!salesRep) {
+      const users = await this.userRepo.find({ take: 1 })
+      salesRep = users[0] || null
+    }
     const validSalesRepId = salesRep ? salesRep.id : undefined
 
     // We mock createdByUserId for now since we haven't wired full JWT guards

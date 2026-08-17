@@ -85,17 +85,17 @@ export async function listCustomers(
       id: c.id,
       ref: c.businessNumber || "CUS-UNKNOWN",
       name: c.name,
-      type: "other", // Mock for now if missing
-      status: c.status || "pending",
-      contactName: "TBD",
-      contactPhone: "TBD",
-      contactEmail: "TBD",
-      address: "TBD",
-      city: "TBD",
+      type: c.type || "cafe",
+      status: c.status || "active",
+      contactName: c.contactPerson || "N/A",
+      contactPhone: c.phone || "N/A",
+      contactEmail: c.email || "N/A",
+      address: "Main Branch",
+      city: "Addis Ababa",
       creditLimit: "ETB 0.00",
       outstandingBalance: "ETB 0.00",
       salesRep: c.salesRepId ? { id: c.salesRepId, name: "Sales Rep" } : null,
-      createdAt: c.createdAt,
+      createdAt: c.createdAt ? new Date(c.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
     }))
 
     const filtered = mapped.filter((c) => {
@@ -150,11 +150,15 @@ export async function createCustomer(_payload: CreateCustomerPayload) {
     const res = await apiRequest<any>("/customers", "POST", {
       businessNumber: "CUS-" + Math.floor(Math.random() * 10000), // Auto-generate
       name: _payload.name,
-      salesRepId: _payload.salesRepId || "default-sales-rep",
+      type: _payload.type || "cafe",
+      contactPerson: _payload.contactName,
+      phone: _payload.contactPhone,
+      email: _payload.contactEmail,
+      salesRepId: _payload.salesRepId,
       branchDetails: {
         name: "Main Branch",
-        address: _payload.address + ", " + _payload.city,
-        contactInfo: _payload.contactName + " " + _payload.contactPhone,
+        address: (_payload.address || "") + ", " + (_payload.city || ""),
+        contactInfo: (_payload.contactName || "") + " " + (_payload.contactPhone || ""),
       },
     })
     return { ref: res.businessNumber }
