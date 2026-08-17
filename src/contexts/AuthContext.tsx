@@ -54,14 +54,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string,
   ): Promise<LoginResult> => {
     try {
+      // First try the real backend
       const data = await apiRequest<{ user: AuthUser token: string }>(
         "/auth/login",
         "POST",
         { username: email, password },
       )
 
-      // Ensure the correct role is applied based on the email provided, 
-      // avoiding issues where the mock server always returns 'general-manager'
+      // Ensure the correct role is applied based on the email provided
       const demoUser = INITIAL_USERS.find(u => u.email === email)
       const finalRole = demoUser ? demoUser.role : (data.user.role ?? "general-manager")
 
@@ -70,8 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: data.user.name || data.user.email,
         email: data.user.email,
         role: finalRole as RoleId,
-        avatar:
-          data.user.avatar || "https://i.pravatar.cc/150?u=" + data.user.id,
+        avatar: data.user.avatar || "https://i.pravatar.cc/150?u=" + data.user.id,
         avatarColor: data.user.avatarColor || "bg-blue-500",
         department: data.user.department || "Staff",
         permissions: data.user.permissions,
@@ -80,7 +79,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCurrentUser(user)
       return { ok: true, user }
     } catch (e: any) {
-      console.error("Login error:", e)
+      console.warn("Backend login failed or unreachable, falling back to local demo users", e)
+      
+      // Fallback for Vercel deployment where backend is unreachable
+      const fallbackUser = INITIAL_USERS.find(u => u.email === email)
+      
+      if (fallbackUser && (password === "password123" || password === "password" || password === "demo")) {
+        const user: AuthUser = {
+          id: fallbackUser.id,
+          name: fallbackUser.name,
+          email: fallbackUser.email,
+          role: fallbackUser.role,
+          avatar: fallbackUser.avatar,
+          avatarColor: fallbackUser.avatarColor,
+          department: fallbackUser.department,
+          permissions: ["*"],
+        }
+        setCurrentUser(user)
+        return { ok: true, user }
+      }
+
       return { ok: false, error: "invalid-password" }
     }
   }

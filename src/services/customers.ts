@@ -58,7 +58,13 @@ export async function listCustomers(
 ) {
   return safeRequest<ListEnvelope<Customer>>(async () => {
     // Fetch directly from our NestJS backend
-    const all = await apiRequest<any[]>("/customers", "GET")
+    let all: any[] = []
+    try {
+      const res = await apiRequest<any[]>("/customers", "GET")
+      if (Array.isArray(res)) all = res
+    } catch (e) {
+      console.warn("Backend unavailable, using empty customers list")
+    }
 
     // Map the backend entity format to the frontend interface format
     const mapped: Customer[] = all.map((c) => ({

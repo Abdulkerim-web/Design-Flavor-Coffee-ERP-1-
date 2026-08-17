@@ -93,41 +93,45 @@ export class SeederService implements OnApplicationBootstrap {
 
       const salesRep = await this.userRepo.findOne({ where: { email: "meron.b@flavorcoffee.et" } })
 
-      const customer = this.customerRepo.create({
-        name: "Blue Nile Trading Co.",
-        businessNumber: "CUS-1001",
-        salesRepId: salesRep?.id,
-        active: true,
-      } as any) as any
-      await this.customerRepo.save(customer)
+      try {
+        const customer = this.customerRepo.create({
+          name: "Blue Nile Trading Co.",
+          businessNumber: "CUS-1001",
+          salesRepId: salesRep?.id,
+          active: true,
+        } as any) as any
+        await this.customerRepo.save(customer)
 
-      const order = this.orderRepo.create({
-        orderNumber: "ORD-2001",
-        customerId: customer.id,
-        status: "PENDING_MANAGER_CONFIRMATION",
-        totalAmount: 179400,
-      } as any) as any
-      await this.orderRepo.save(order)
+        const order = this.orderRepo.create({
+          orderNumber: "ORD-2001",
+          customerId: customer.id,
+          status: "PENDING_MANAGER_CONFIRMATION",
+          totalAmount: 179400,
+        } as any) as any
+        await this.orderRepo.save(order)
 
-      const lot = this.lotRepo.create({
-        lotNumber: "LOT-9001",
-        coffeeType: "Yirgacheffe Grade 1",
-        origin: "Ethiopia",
-        quantity: 5000,
-      } as any) as any
-      await this.lotRepo.save(lot)
+        const lot = this.lotRepo.create({
+          lotNumber: "LOT-9001",
+          coffeeType: "Yirgacheffe Grade 1",
+          origin: "Ethiopia",
+          quantity: 5000,
+        } as any) as any
+        await this.lotRepo.save(lot)
 
-      const batch = this.roastingRepo.create({
-        batchNumber: "RST-5001",
-        targetQuantity: 200,
-        status: "COMPLETED",
-        actualRoastedQuantity: 168,
-      } as any) as any
-      await this.roastingRepo.save(batch)
+        const batch = this.roastingRepo.create({
+          batchNumber: "RST-5001",
+          targetQuantity: 200,
+          status: "COMPLETED",
+          actualRoastedQuantity: 168,
+        } as any) as any
+        await this.roastingRepo.save(batch)
+      } catch (e) {
+        console.log("Secondary seeding skipped/failed:", e.message)
+      }
 
       console.log("Seeding complete.")
     } catch (e) {
-      console.log("Seeding skipped/failed:", e.message)
+      console.log("Main seeding skipped/failed:", e.message)
     }
   }
 }

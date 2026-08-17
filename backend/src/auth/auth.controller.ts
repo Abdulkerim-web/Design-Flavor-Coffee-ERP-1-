@@ -26,11 +26,13 @@ export class AuthController {
 
     // Since this is demo, all seeded users have 'password' as password,
     // but we just verify the user exists in the DB for now.
-    if (user && (password === "demo" || password === "password")) {
+    if (user && (password === "demo" || password === "password" || password === "password123")) {
       return {
         user: {
           id: user.id,
           username: user.email,
+          email: user.email,
+          name: user.name,
           role: user.roleId,
           permissions: ["*"], // Simplified for demo
         },
