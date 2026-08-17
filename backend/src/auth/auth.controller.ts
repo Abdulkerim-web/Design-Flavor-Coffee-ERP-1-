@@ -48,6 +48,6 @@ export class AuthController {
 
   @Post('logout')
   async logout() {
-    return { success: true } };
+    return { success: true };
   }
 }
