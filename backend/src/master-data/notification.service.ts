@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
-import { AppNotification } from '../entities/app_notification.entity';
+import { Injectable } from "@nestjs/common"
+import { DataSource } from "typeorm"
+import { AppNotification } from "../entities/app_notification.entity"
 
 @Injectable()
 export class NotificationService {
@@ -14,10 +14,10 @@ export class NotificationService {
     userId: string,
     type: string,
     referenceEntityId: string,
-    message: string
+    message: string,
   ) {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
+    const queryRunner = this.dataSource.createQueryRunner()
+    await queryRunner.connect()
 
     try {
       const existing = await queryRunner.manager.findOne(AppNotification, {
@@ -25,16 +25,16 @@ export class NotificationService {
           userId,
           type,
           referenceEntityId,
-          status: 'UNREAD',
+          status: "UNREAD",
         },
-      });
+      })
 
       if (existing) {
         // Prevent spam: just increment count and update timestamp implicitly via save
-        existing.triggerCount += 1;
-        existing.message = message; // Optionally update message if it changed
-        await queryRunner.manager.save(existing);
-        return existing;
+        existing.triggerCount += 1
+        existing.message = message // Optionally update message if it changed
+        await queryRunner.manager.save(existing)
+        return existing
       } else {
         // Create new
         const notification = queryRunner.manager.create(AppNotification, {
@@ -42,12 +42,12 @@ export class NotificationService {
           type,
           referenceEntityId,
           message,
-        });
-        await queryRunner.manager.save(notification);
-        return notification;
+        })
+        await queryRunner.manager.save(notification)
+        return notification
       }
     } finally {
-      await queryRunner.release();
+      await queryRunner.release()
     }
   }
 }

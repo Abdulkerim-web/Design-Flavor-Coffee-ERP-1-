@@ -1,13 +1,19 @@
-import { Controller, Post, Get, Body, Param } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param } from "@nestjs/common"
 
-@Controller('packing')
+@Controller("packing")
 export class PackingController {
   @Get()
-  async getAllPacking() { return []; }
+  async getAllPacking() {
+    return []
+  }
 
   @Post()
-  async logPacking(@Body() body: any) { return { success: true }; }
+  async logPacking(@Body() body: any) {
+    return { success: true }
+  }
 
-  @Post(':id/confirm')
-  async confirmPacking(@Param('id') id: string) { return { success: true }; }
+  @Post(":id/confirm")
+  async confirmPacking(@Param("id") id: string) {
+    return { success: true }
+  }
 }

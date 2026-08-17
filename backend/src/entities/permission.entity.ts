@@ -1,10 +1,10 @@
-import { Entity, PrimaryColumn, Column } from 'typeorm';
+import { Entity, PrimaryColumn, Column } from "typeorm"
 
-@Entity('permissions')
+@Entity("permissions")
 export class Permission {
-  @PrimaryColumn({ type: 'varchar', length: 100 })
-  id: string;
+  @PrimaryColumn({ type: "varchar", length: 100 })
+  id: string
 
-  @Column({ type: 'varchar', length: 255 })
-  description: string;
+  @Column({ type: "varchar", length: 255 })
+  description: string
 }

@@ -1,47 +1,61 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { User } from './user.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from "typeorm"
+import { User } from "./user.entity"
 
-@Entity('discrepancies')
+@Entity("discrepancies")
 export class Discrepancy {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn("uuid")
+  id: string
 
-  @Column({ name: 'entity_type', type: 'varchar', length: 50 })
+  @Column({ name: "entity_type", type: "varchar", length: 50 })
   // e.g. 'RoastingBatch', 'PackingRecord', 'GreenReturn'
-  entityType: string;
+  entityType: string
 
-  @Column({ name: 'entity_id', type: 'uuid' })
-  entityId: string;
+  @Column({ name: "entity_id", type: "uuid" })
+  entityId: string
 
-  @Column({ type: 'decimal', precision: 10, scale: 3 })
-  expectedQuantity: number;
+  @Column({ type: "decimal", precision: 10, scale: 3 })
+  expectedQuantity: number
 
-  @Column({ type: 'decimal', precision: 10, scale: 3 })
-  actualQuantity: number;
+  @Column({ type: "decimal", precision: 10, scale: 3 })
+  actualQuantity: number
 
-  @Column({ type: 'decimal', precision: 10, scale: 3 })
-  difference: number; // actual - expected
+  @Column({ type: "decimal", precision: 10, scale: 3 })
+  difference: number // actual - expected
 
-  @Column({ type: 'varchar', length: 50, default: 'pending-review' })
+  @Column({ type: "varchar", length: 50, default: "pending-review" })
   // PENDING_RESOLUTION, RESOLVED
-  status: string;
+  status: string
 
-  @Column({ name: 'resolved_by_user_id', type: 'uuid', nullable: true })
-  resolvedByUserId: string | null;
+  @Column({ name: "resolved_by_user_id", type: "uuid", nullable: true })
+  resolvedByUserId: string | null
 
   @ManyToOne(() => User)
-  @JoinColumn({ name: 'resolved_by_user_id' })
-  resolvedBy: User | null;
+  @JoinColumn({ name: "resolved_by_user_id" })
+  resolvedBy: User | null
 
-  @Column({ name: 'resolution_note', type: 'text', nullable: true })
-  resolutionNote: string | null;
+  @Column({ name: "resolution_note", type: "text", nullable: true })
+  resolutionNote: string | null
 
-  @Column({ name: 'final_adjudicated_quantity', type: 'decimal', precision: 10, scale: 3, nullable: true })
-  finalAdjudicatedQuantity: number | null;
+  @Column({
+    name: "final_adjudicated_quantity",
+    type: "decimal",
+    precision: 10,
+    scale: 3,
+    nullable: true,
+  })
+  finalAdjudicatedQuantity: number | null
 
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  @CreateDateColumn({ name: "created_at" })
+  createdAt: Date
 
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  @UpdateDateColumn({ name: "updated_at" })
+  updatedAt: Date
 }

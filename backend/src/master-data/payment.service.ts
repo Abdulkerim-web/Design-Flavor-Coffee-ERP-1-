@@ -1,9 +1,9 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { DataSource } from 'typeorm';
-import { Payment } from '../entities/payment.entity';
-import { Order } from '../entities/order.entity';
-import { CompanyBankAccount } from '../entities/company_bank_account.entity';
-import { BankTransaction } from '../entities/bank_transaction.entity';
+import { Injectable, BadRequestException } from "@nestjs/common"
+import { DataSource } from "typeorm"
+import { Payment } from "../entities/payment.entity"
+import { Order } from "../entities/order.entity"
+import { CompanyBankAccount } from "../entities/company_bank_account.entity"
+import { BankTransaction } from "../entities/bank_transaction.entity"
 
 @Injectable()
 export class PaymentService {
@@ -14,42 +14,46 @@ export class PaymentService {
    * This is calculated live rather than stored statically on the DB, per prompt constraints.
    */
   async getOrderStatus(orderId: string): Promise<{
-    totalAmount: number;
-    amountPaid: number;
-    balanceOutstanding: number;
-    status: 'unpaid' | 'partially-paid' | 'paid' | 'overdue';
+    totalAmount: number
+    amountPaid: number
+    balanceOutstanding: number
+    status: "unpaid" | "partially-paid" | "paid" | "overdue"
   }> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
+    const queryRunner = this.dataSource.createQueryRunner()
+    await queryRunner.connect()
 
     try {
-      const order = await queryRunner.manager.findOne(Order, { where: { id: orderId } });
-      if (!order) throw new BadRequestException('Order not found');
+      const order = await queryRunner.manager.findOne(Order, {
+        where: { id: orderId },
+      })
+      if (!order) throw new BadRequestException("Order not found")
 
-      const payments = await queryRunner.manager.find(Payment, { where: { orderId: orderId } });
-      
-      const totalAmount = Number(order.totalAmount) || 0;
-      const amountPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-      const balanceOutstanding = totalAmount - amountPaid;
+      const payments = await queryRunner.manager.find(Payment, {
+        where: { orderId: orderId },
+      })
 
-      let status: 'unpaid' | 'partially-paid' | 'paid' | 'overdue' = 'unpaid';
+      const totalAmount = Number(order.totalAmount) || 0
+      const amountPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0)
+      const balanceOutstanding = totalAmount - amountPaid
+
+      let status: "unpaid" | "partially-paid" | "paid" | "overdue" = "unpaid"
 
       if (amountPaid >= totalAmount && totalAmount > 0) {
-        status = 'paid';
+        status = "paid"
       } else if (amountPaid > 0) {
-        status = 'partially-paid';
+        status = "partially-paid"
       }
 
       // Check overdue if not fully paid
-      if (status !== 'paid' && order.paymentDeadlineAt) {
+      if (status !== "paid" && order.paymentDeadlineAt) {
         if (new Date() > new Date(order.paymentDeadlineAt)) {
-          status = 'overdue';
+          status = "overdue"
         }
       }
 
-      return { totalAmount, amountPaid, balanceOutstanding, status };
+      return { totalAmount, amountPaid, balanceOutstanding, status }
     } finally {
-      await queryRunner.release();
+      await queryRunner.release()
     }
   }
 
@@ -63,32 +67,44 @@ export class PaymentService {
     bankReferenceNumber: string | null,
     bankAccountId: string | null, // The company bank account receiving the money
     idempotencyKey: string,
-    userId: string
+    userId: string,
   ) {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+    const queryRunner = this.dataSource.createQueryRunner()
+    await queryRunner.connect()
+    await queryRunner.startTransaction()
 
     try {
       // 1. Idempotency Check
-      const existingPayment = await queryRunner.manager.findOne(Payment, { where: { idempotencyKey } });
+      const existingPayment = await queryRunner.manager.findOne(Payment, {
+        where: { idempotencyKey },
+      })
       if (existingPayment) {
-        await queryRunner.rollbackTransaction();
-        return { success: true, message: 'Already registered', payment: existingPayment };
+        await queryRunner.rollbackTransaction()
+        return {
+          success: true,
+          message: "Already registered",
+          payment: existingPayment,
+        }
       }
 
       // 2. Load order and existing payments
-      const order = await queryRunner.manager.findOne(Order, { where: { id: orderId } });
-      if (!order) throw new BadRequestException('Order not found');
+      const order = await queryRunner.manager.findOne(Order, {
+        where: { id: orderId },
+      })
+      if (!order) throw new BadRequestException("Order not found")
 
-      const payments = await queryRunner.manager.find(Payment, { where: { orderId: orderId } });
-      const totalAmount = Number(order.totalAmount) || 0;
-      const amountPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-      const balanceOutstanding = totalAmount - amountPaid;
+      const payments = await queryRunner.manager.find(Payment, {
+        where: { orderId: orderId },
+      })
+      const totalAmount = Number(order.totalAmount) || 0
+      const amountPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0)
+      const balanceOutstanding = totalAmount - amountPaid
 
       // 3. Overpayment guard
       if (amount > balanceOutstanding) {
-        throw new BadRequestException(`Overpayment rejected. Amount ${amount} exceeds outstanding balance ${balanceOutstanding}. Use manual credit adjustment if intentional.`);
+        throw new BadRequestException(
+          `Overpayment rejected. Amount ${amount} exceeds outstanding balance ${balanceOutstanding}. Use manual credit adjustment if intentional.`,
+        )
       }
 
       // 4. Create Payment
@@ -99,33 +115,37 @@ export class PaymentService {
         bankReferenceNumber,
         idempotencyKey,
         registeredByUserId: userId,
-      });
-      await queryRunner.manager.save(payment);
+      })
+      await queryRunner.manager.save(payment)
 
       // 5. Atomic Bank Ledger Post (if not Cash)
-      if (paymentMethod === 'BANK_TRANSFER' && bankAccountId) {
-        // Fetch bank account to ensure it exists. 
+      if (paymentMethod === "BANK_TRANSFER" && bankAccountId) {
+        // Fetch bank account to ensure it exists.
         // Note: The ledger strictly reconstructs balance from transactions.
-        const bankAccount = await queryRunner.manager.findOne(CompanyBankAccount, { where: { id: bankAccountId } });
-        if (!bankAccount) throw new BadRequestException('Bank Account not found');
+        const bankAccount = await queryRunner.manager.findOne(
+          CompanyBankAccount,
+          { where: { id: bankAccountId } },
+        )
+        if (!bankAccount)
+          throw new BadRequestException("Bank Account not found")
 
         const bankTx = queryRunner.manager.create(BankTransaction, {
           bankAccountId: bankAccount.id,
           amount: amount, // Positive = deposit
-          sourceType: 'CUSTOMER_PAYMENT',
+          sourceType: "CUSTOMER_PAYMENT",
           sourceId: payment.id,
-          referenceNote: bankReferenceNumber || 'No Reference',
-        });
-        await queryRunner.manager.save(bankTx);
+          referenceNote: bankReferenceNumber || "No Reference",
+        })
+        await queryRunner.manager.save(bankTx)
       }
 
-      await queryRunner.commitTransaction();
-      return { success: true, payment };
+      await queryRunner.commitTransaction()
+      return { success: true, payment }
     } catch (err) {
-      await queryRunner.rollbackTransaction();
-      throw err;
+      await queryRunner.rollbackTransaction()
+      throw err
     } finally {
-      await queryRunner.release();
+      await queryRunner.release()
     }
   }
 }

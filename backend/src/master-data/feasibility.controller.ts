@@ -1,7 +1,9 @@
-import { Controller, Post, Get, Body } from '@nestjs/common';
+import { Controller, Post, Get, Body } from "@nestjs/common"
 
-@Controller('feasibility')
+@Controller("feasibility")
 export class FeasibilityController {
-  @Post('check')
-  async checkFeasibility(@Body() body: any) { return { feasible: true }; }
+  @Post("check")
+  async checkFeasibility(@Body() body: any) {
+    return { feasible: true }
+  }
 }
