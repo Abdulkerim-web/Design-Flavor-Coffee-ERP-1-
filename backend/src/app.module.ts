@@ -42,7 +42,7 @@ import { AllEntities } from './entities';
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/flavor_coffee_erp',
+      url: process.env.DATABASE_URL || 'postgresql://postgres.udvtogofulclohhvdnzc:Lx3MLqIBcFeL4uh7@aws-0-eu-central-1.pooler.supabase.com:6543/postgres',
       extra: { ssl: { rejectUnauthorized: false } },
       entities: AllEntities,
       synchronize: false, // Auto-syncs schema in dev
