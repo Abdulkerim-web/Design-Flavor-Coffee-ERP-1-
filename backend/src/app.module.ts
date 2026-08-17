@@ -13,6 +13,7 @@ import { ReceivingController } from "./master-data/receiving.controller"
 
 import { CustomersController } from "./master-data/customers.controller"
 import { OrdersController } from "./master-data/orders.controller"
+import { DashboardController } from "./master-data/dashboard.controller"
 
 import { AppController } from "./app.controller"
 import { AuthController } from "./auth/auth.controller"
@@ -22,6 +23,7 @@ import { SeederService } from "./database/seeder.service"
 import { AppService } from "./app.service"
 import { OrdersService } from "./master-data/orders.service"
 import { CustomersService } from "./master-data/customers.service"
+import { DashboardService } from "./master-data/dashboard.service"
 import { FeasibilityEngineService } from "./master-data/feasibility.service"
 import { RoastingService } from "./master-data/roasting.service"
 import { PackingService } from "./master-data/packing.service"
@@ -59,6 +61,7 @@ import { AllEntities } from "./entities" // Auto-syncs schema in dev
     ReceivingController,
     FinanceController,
     FeasibilityController,
+    DashboardController,
     AppController,
     AuthController,
   ],
@@ -67,6 +70,7 @@ import { AllEntities } from "./entities" // Auto-syncs schema in dev
     AppService,
     OrdersService,
     CustomersService,
+    DashboardService,
     FeasibilityEngineService,
     RoastingService,
     PackingService,
