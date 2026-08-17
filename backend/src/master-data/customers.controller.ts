@@ -1,6 +1,7 @@
 import { Controller, Post, Get, Patch, Body, Req, Param } from "@nestjs/common"
 import { CustomersService } from "./customers.service"
 import { Customer } from "../entities/customer.entity"
+import { User } from "../entities/user.entity"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
 
@@ -10,6 +11,8 @@ export class CustomersController {
     private readonly customersService: CustomersService,
     @InjectRepository(Customer)
     private readonly customerRepo: Repository<Customer>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
   ) {}
 
   @Get()
@@ -37,6 +40,10 @@ export class CustomersController {
       notes,
     } = body
 
+    // Find a valid sales rep to assign this to, since the frontend currently sends a mock string
+    const salesRep = await this.userRepo.findOne({ where: { email: "meron.b@flavorcoffee.et" } })
+    const validSalesRepId = salesRep ? salesRep.id : undefined
+
     // We mock createdByUserId for now since we haven't wired full JWT guards
     const createdByUserId = "mock-user-id"
 
@@ -44,7 +51,7 @@ export class CustomersController {
       {
         businessNumber,
         name,
-        salesRepId,
+        salesRepId: validSalesRepId,
         branchDetails,
         isUrgent,
         type,

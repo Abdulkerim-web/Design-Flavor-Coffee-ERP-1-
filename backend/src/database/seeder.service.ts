@@ -24,9 +24,9 @@ export class SeederService implements OnApplicationBootstrap {
   async onApplicationBootstrap() {
     try {
       const count = await this.userRepo.count()
-      if (count > 0) return
-
-      console.log("Seeding Supabase with demo records and users...")
+      if (count === 0) {
+        console.log("Seeding Supabase with demo records and users...")
+      }
 
       const roles = [
         "general-manager",
@@ -38,52 +38,52 @@ export class SeederService implements OnApplicationBootstrap {
       ]
       for (const r of roles) {
         await this.roleRepo.save(
-          this.roleRepo.create({ id: r, name: r, description: r } as any),
+          this.roleRepo.create({ id: r, tier: 1 } as any),
         )
       }
 
       const users = [
         {
-          id: "USR-001",
           name: "Abebe Girma",
           email: "abebe.g@flavorcoffee.et",
           roleId: "general-manager",
           status: "active",
+          businessNumber: "BN-001",
         },
         {
-          id: "USR-003",
           name: "Meron Bekele",
           email: "meron.b@flavorcoffee.et",
           roleId: "sales-rep",
           status: "active",
+          businessNumber: "BN-002",
         },
         {
-          id: "USR-005",
           name: "Dawit Haile",
           email: "dawit.h@flavorcoffee.et",
           roleId: "head-roaster",
           status: "active",
+          businessNumber: "BN-003",
         },
         {
-          id: "USR-006",
           name: "Tigist Alemu",
           email: "tigist.a@flavorcoffee.et",
           roleId: "accountant",
           status: "active",
+          businessNumber: "BN-004",
         },
         {
-          id: "USR-007",
           name: "Selamawit Bekele",
           email: "selamawit.b@flavorcoffee.et",
           roleId: "inventory-manager",
           status: "active",
+          businessNumber: "BN-005",
         },
         {
-          id: "USR-008",
           name: "Yohannes Mesfin",
           email: "yohannes.m@flavorcoffee.et",
           roleId: "delivery-staff",
           status: "active",
+          businessNumber: "BN-006",
         },
       ]
 
@@ -91,9 +91,12 @@ export class SeederService implements OnApplicationBootstrap {
         await this.userRepo.save(this.userRepo.create(u as any))
       }
 
+      const salesRep = await this.userRepo.findOne({ where: { email: "meron.b@flavorcoffee.et" } })
+
       const customer = this.customerRepo.create({
         name: "Blue Nile Trading Co.",
         businessNumber: "CUS-1001",
+        salesRepId: salesRep?.id,
         active: true,
       } as any) as any
       await this.customerRepo.save(customer)

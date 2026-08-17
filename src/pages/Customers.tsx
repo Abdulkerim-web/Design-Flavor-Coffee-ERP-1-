@@ -17,6 +17,7 @@ import { useToast } from "../contexts/ToastContext"
 import { canRead } from "../lib/rbac"
 import { can } from "../lib/can"
 import { CustomerFormModal } from "../components/CustomerFormModal"
+import { listCustomers } from "../services/customers"
 
 /* ─────────────────────────────────────────────────────────────
    TYPES
@@ -1157,7 +1158,8 @@ const CustomerListView: FC<{
   onNew: () => void
   canCreate: boolean
   role: string
-}> = ({ onView, onNew, canCreate, role }) => {
+  refreshCount?: number
+}> = ({ onView, onNew, canCreate, role, refreshCount = 0 }) => {
   const { isMobile } = useBreakpoint()
   const [loadState, setLoadState] = useState<LoadState>("loading")
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -1172,14 +1174,24 @@ const CustomerListView: FC<{
   const isSalesRep = role === "sales-rep"
   const PER_PAGE = 10
 
-  useEffect(() => {
+  const fetchCustomers = useCallback(async () => {
     setLoadState("loading")
-    const t = setTimeout(() => {
-      setCustomers(SAMPLE_CUSTOMERS)
+    const res = await listCustomers({
+      status: filters.status as any,
+      salesRepId: filters.salesRep,
+      search: search,
+    })
+    if (res.ok) {
+      setCustomers(res.data.items as Customer[])
       setLoadState("ok")
-    }, 700)
-    return () => clearTimeout(t)
-  }, [])
+    } else {
+      setLoadState("error")
+    }
+  }, [filters, search, refreshCount])
+
+  useEffect(() => {
+    fetchCustomers()
+  }, [fetchCustomers])
 
   const filtered = customers.filter((c) => {
     const q = search.toLowerCase()
@@ -1619,13 +1631,7 @@ const CustomerListView: FC<{
           </div>
           <PrimaryBtn
             label="Try Again"
-            onClick={() => {
-              setLoadState("loading")
-              setTimeout(() => {
-                setCustomers(SAMPLE_CUSTOMERS)
-                setLoadState("ok")
-              }, 700)
-            }}
+            onClick={fetchCustomers}
           />
         </Card>
       )}
@@ -4412,9 +4418,12 @@ export default function Customers() {
   const isSalesRep = role === "sales-rep"
   const canCreateOrder = can(role as any, "orders.create")
 
+  const [refreshCount, setRefreshCount] = useState(0)
+
   const goList = useCallback(() => {
     setView("list")
     setSelected(null)
+    setRefreshCount((c) => c + 1)
   }, [])
   const goDetail = useCallback((c: Customer) => {
     setSelected(c)
@@ -4430,6 +4439,7 @@ export default function Customers() {
   }, [])
   const goBackFromEdit = useCallback(() => {
     setView(selected ? "detail" : "list")
+    setRefreshCount((c) => c + 1)
   }, [selected])
 
   if (view === "detail" && selected) {
@@ -4460,6 +4470,7 @@ export default function Customers() {
         onNew={goNew}
         canCreate={canCreate}
         role={role}
+        refreshCount={refreshCount}
       />
       <CustomerFormModal
         open={view === "new"}
