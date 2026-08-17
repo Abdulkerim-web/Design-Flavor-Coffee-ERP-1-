@@ -1,0 +1,1266 @@
+# F3-02 — COFFEE-ROASTING ERP
+# DESIGN TOKENS, THEME ENGINE, TYPOGRAPHY & RESPONSIVE FOUNDATION
+
+You are continuing the implementation of the Coffee-Roasting ERP frontend.
+
+F3-01 established the overall frontend architecture.
+
+This prompt is ONLY about the visual foundation and theme system.
+
+DO NOT build the ERP modules yet.
+
+DO NOT build PHP.
+
+DO NOT build the database.
+
+DO NOT build backend APIs.
+
+DO NOT implement backend business logic.
+
+Your job is to create the visual infrastructure that every future screen and component will use.
+
+==================================================
+1. SOURCE OF TRUTH
+==================================================
+
+Use the previously established:
+
+- ERP architecture
+- frontend UI/UX specification
+- F3-01 frontend architecture
+- design-system requirements
+- RBAC-aware UI principles
+- responsive requirements
+- accessibility requirements
+
+as the source of truth.
+
+Do not invent a different visual language.
+
+The application should feel like one coherent product from the first screen to the last.
+
+==================================================
+2. PRIMARY OBJECTIVE
+==================================================
+
+Create a complete centralized visual system containing:
+
+- color tokens
+- semantic colors
+- typography
+- spacing
+- sizing
+- borders
+- radii
+- shadows
+- elevation
+- z-index layers
+- transitions
+- breakpoints
+- container widths
+- focus styles
+- light theme
+- dark theme
+- status colors
+- interaction states
+
+Every future component and page must consume this system.
+
+The goal is:
+
+ONE DESIGN SYSTEM
+        ↓
+ONE TOKEN SYSTEM
+        ↓
+ONE COMPONENT LANGUAGE
+        ↓
+EVERY ERP SCREEN
+
+No page should invent its own visual values.
+
+==================================================
+3. TOKEN ARCHITECTURE
+==================================================
+
+Use CSS custom properties as the primary token mechanism.
+
+Organize tokens into semantic categories.
+
+At minimum create:
+
+--color-*
+--font-*
+--space-*
+--radius-*
+--shadow-*
+--border-*
+--z-*
+--transition-*
+--breakpoint-*
+
+Do not expose raw implementation values throughout component CSS.
+
+For example, prefer:
+
+var(--color-text-primary)
+
+over:
+
+#2B2118
+
+and:
+
+var(--space-4)
+
+over:
+
+16px
+
+where the token exists.
+
+==================================================
+4. COLOR PHILOSOPHY
+==================================================
+
+The ERP is a coffee-focused professional business system.
+
+The visual identity should feel:
+
+- warm
+- sophisticated
+- premium
+- calm
+- trustworthy
+- operational
+- modern
+- restrained
+
+Use coffee-inspired colors without turning the interface into a brown-heavy theme.
+
+The brand color should be an anchor, not the background of everything.
+
+The interface should primarily use:
+
+- warm neutrals
+- clean surfaces
+- deep espresso tones
+- restrained roast/amber accents
+- semantic status colors
+
+Avoid:
+
+- excessive brown
+- excessive orange
+- neon colors
+- saturated gradients
+- visually noisy backgrounds
+
+==================================================
+5. LIGHT THEME — SEMANTIC TOKENS
+==================================================
+
+Create semantic tokens for:
+
+SURFACES
+
+- surface.base
+- surface.raised
+- surface.sunken
+- surface.overlay
+- surface.inverse
+
+TEXT
+
+- text.primary
+- text.secondary
+- text.tertiary
+- text.disabled
+- text.inverse
+- text.link
+
+BORDERS
+
+- border.subtle
+- border.default
+- border.strong
+- border.focus
+
+BRAND
+
+- brand.espresso
+- brand.roast
+- brand.roast-hover
+- brand.espresso-hover
+
+STATUS
+
+- status.safe
+- status.safe-surface
+- status.warning
+- status.warning-surface
+- status.danger
+- status.danger-surface
+- status.info
+- status.info-surface
+- status.pending
+
+INTERACTION
+
+- interactive.primary
+- interactive.primary-hover
+- interactive.secondary
+- interactive.secondary-hover
+- interactive.disabled
+
+These names should represent meaning, not visual appearance.
+
+==================================================
+6. DARK THEME
+==================================================
+
+Implement dark mode using the same semantic token names.
+
+Do not create separate component styles for dark mode wherever avoidable.
+
+Instead:
+
+LIGHT THEME
+    ↓
+semantic tokens
+
+DARK THEME
+    ↓
+same semantic tokens
+    ↓
+different underlying values
+
+For example:
+
+surface.base
+
+means:
+
+"the main page background"
+
+It does NOT mean:
+
+"white."
+
+In dark mode it should become an appropriate deep neutral.
+
+Similarly:
+
+text.primary
+
+must remain readable without becoming pure white everywhere.
+
+Dark mode should feel premium and calm rather than black and neon.
+
+==================================================
+7. DARK MODE BEHAVIOR
+==================================================
+
+Support:
+
+- system preference
+- explicit light mode
+- explicit dark mode
+
+Create a theme mechanism that can support:
+
+LIGHT
+DARK
+SYSTEM
+
+If the application already has a theme architecture from F3-01, extend it rather than replacing it.
+
+Theme preference should persist across navigation.
+
+Where practical, persist the user's explicit choice locally.
+
+Do not let individual components independently decide whether they are in dark mode.
+
+There must be ONE source of truth for the active theme.
+
+==================================================
+8. STATUS COLOR SYSTEM
+==================================================
+
+Status colors are extremely important in this ERP.
+
+The status system must be consistent across:
+
+- dashboards
+- orders
+- inventory
+- roasting
+- packing
+- delivery
+- payments
+- finance
+- payroll
+- notifications
+- tables
+- timelines
+- cards
+- detail pages
+
+Use:
+
+STATUS
++
+ICON
++
+TEXT
+
+rather than color alone.
+
+==================================================
+9. STATUS SEMANTICS
+==================================================
+
+SAFE / SUCCESS
+
+Use for:
+
+- healthy stock
+- verified
+- accepted
+- paid
+- completed
+- successful operations
+
+WARNING
+
+Use for:
+
+- low stock
+- pending review
+- approaching deadline
+- discrepancies requiring attention
+- caution states
+
+DANGER
+
+Use for:
+
+- insufficient stock
+- rejected
+- overdue
+- disputed
+- failed
+- serious errors
+
+INFO
+
+Use for:
+
+- informational states
+- neutral progress
+- events requiring awareness but not immediate action
+
+PENDING
+
+Use for:
+
+- awaiting action
+- waiting for approval
+- processing
+- not yet completed
+
+Do not use danger red simply to make something visually noticeable.
+
+Red means something is genuinely wrong or requires meaningful intervention.
+
+==================================================
+10. STATUS ICON CONSISTENCY
+==================================================
+
+Use a consistent icon vocabulary.
+
+Recommended semantic mapping:
+
+SAFE
+→ check-circle
+
+WARNING
+→ alert-triangle
+
+DANGER
+→ x-circle
+
+INFO
+→ info
+
+PENDING
+→ clock
+
+PROCESSING
+→ loader/progress indicator
+
+Do not switch icons randomly between screens.
+
+The exact icon library may follow the existing project, but visual style must remain consistent.
+
+==================================================
+11. COLOR CONTRAST
+==================================================
+
+Target WCAG 2.1 AA.
+
+Verify actual contrast ratios.
+
+Pay special attention to:
+
+- warning amber
+- muted text
+- disabled text
+- borders
+- links
+- status badges
+- dark-mode text
+- focus indicators
+
+Do not assume that a visually attractive color combination is accessible.
+
+If the original coffee-inspired color does not meet accessibility requirements for normal text, create a darker accessible variant while preserving the intended visual identity.
+
+==================================================
+12. TYPOGRAPHY SYSTEM
+==================================================
+
+Create a fixed typography hierarchy.
+
+At minimum:
+
+DISPLAY
+H1
+H2
+H3
+BODY LARGE
+BODY
+BODY SMALL
+CAPTION
+
+Each level must define:
+
+- font family
+- font size
+- line height
+- font weight
+- letter spacing where necessary
+
+Do not choose typography separately on each page.
+
+==================================================
+13. TYPOGRAPHIC CHARACTER
+==================================================
+
+The typography should feel:
+
+- premium
+- highly readable
+- modern
+- operational
+
+The ERP is data-heavy.
+
+Therefore readability takes priority over decorative typography.
+
+If a display typeface is used, restrict it to:
+
+- major dashboard headings
+- important page titles
+- selected brand moments
+
+Do not use decorative typography in:
+
+- dense tables
+- forms
+- financial data
+- operational controls
+- notifications
+
+Body/UI typography must remain highly legible.
+
+==================================================
+14. NUMERICAL TYPOGRAPHY
+==================================================
+
+The ERP contains many numbers.
+
+Create a consistent treatment for:
+
+- quantities
+- weights
+- prices
+- balances
+- percentages
+- dates
+- counts
+
+Numbers in tables should have strong alignment.
+
+Financial figures should be easy to scan.
+
+Where appropriate, use tabular/numeric font features so columns of numbers align cleanly.
+
+Do not make numbers unnecessarily large.
+
+Hierarchy should communicate importance without creating visual noise.
+
+==================================================
+15. SPACING SYSTEM
+==================================================
+
+Use one centralized spacing scale.
+
+Base it on a consistent 4px/8px rhythm.
+
+For example, establish semantic steps equivalent to:
+
+4
+8
+12
+16
+24
+32
+40
+48
+64
+80
+
+The exact implementation should remain centralized.
+
+Do not create:
+
+13px
+19px
+27px
+31px
+
+randomly throughout the application.
+
+When a component needs spacing, select the closest appropriate token.
+
+==================================================
+16. SPACING PRINCIPLES
+==================================================
+
+Use spacing to establish hierarchy.
+
+Smaller spacing:
+
+- icon + text
+- form label + input
+- metadata
+- compact table content
+
+Medium spacing:
+
+- fields
+- cards
+- table sections
+- controls
+
+Large spacing:
+
+- major page sections
+- dashboard groups
+- page headers
+
+Very large spacing:
+
+- major visual separation
+- empty-state presentation
+- important dashboard sections
+
+Do not use large gaps simply to make a page appear "premium."
+
+The ERP should remain information-efficient.
+
+==================================================
+17. BORDER SYSTEM
+==================================================
+
+Create a restrained border system.
+
+At minimum:
+
+- subtle
+- default
+- strong
+- focus
+
+Borders should generally be quiet.
+
+Do not outline every object heavily.
+
+Use borders to establish structure, not decoration.
+
+Cards should not all look like boxed containers stacked inside other boxed containers.
+
+==================================================
+18. BORDER RADIUS
+==================================================
+
+Create a small controlled radius system.
+
+Use only a few levels.
+
+For example:
+
+radius-sm
+radius-md
+radius-lg
+radius-pill
+
+Use:
+
+SMALL
+→ inputs, controls, badges
+
+MEDIUM
+→ cards, panels
+
+LARGE
+→ modals, major surfaces
+
+PILL
+→ status badges and compact tags where appropriate
+
+Do not make every component extremely rounded.
+
+Avoid the generic "everything is a giant pill" dashboard aesthetic.
+
+==================================================
+19. SHADOW SYSTEM
+==================================================
+
+Use restrained shadows.
+
+Create semantic levels such as:
+
+shadow-subtle
+shadow-raised
+shadow-overlay
+
+Use shadows primarily for:
+
+- elevated cards where needed
+- dropdowns
+- popovers
+- drawers
+- dialogs
+
+Normal page content should rely more on:
+
+- surface contrast
+- spacing
+- subtle borders
+
+than on heavy shadows.
+
+==================================================
+20. ELEVATION
+==================================================
+
+Establish a clear hierarchy.
+
+Example conceptual hierarchy:
+
+LEVEL 0
+page background
+
+LEVEL 1
+cards/panels
+
+LEVEL 2
+dropdowns/popovers
+
+LEVEL 3
+drawers/modals
+
+LEVEL 4
+critical overlays
+
+The exact visual implementation may vary, but the hierarchy must remain predictable.
+
+==================================================
+21. Z-INDEX SYSTEM
+==================================================
+
+Create centralized z-index tokens.
+
+Do not let components randomly use:
+
+z-index: 9999
+
+Create a meaningful layer system for:
+
+- base content
+- sticky navigation
+- dropdowns
+- popovers
+- drawers
+- modal backdrop
+- modal
+- toast/notifications
+- critical overlays
+
+This prevents layering bugs later.
+
+==================================================
+22. INTERACTION STATES
+==================================================
+
+Create semantic visual tokens/patterns for:
+
+DEFAULT
+HOVER
+FOCUS
+ACTIVE
+DISABLED
+SELECTED
+LOADING
+ERROR
+SUCCESS
+
+These states must be visually related.
+
+For example:
+
+A primary button should clearly communicate:
+
+normal
+→ hover
+→ pressed
+→ disabled
+→ loading
+
+without changing its fundamental visual identity.
+
+==================================================
+23. FOCUS SYSTEM
+==================================================
+
+Focus must be clearly visible.
+
+Create one consistent focus treatment for:
+
+- buttons
+- links
+- inputs
+- selects
+- checkboxes
+- radios
+- tabs
+- menus
+- table actions
+- dialogs
+
+Do not use:
+
+outline: none;
+
+without a replacement.
+
+The focus treatment must remain visible in dark mode.
+
+==================================================
+24. BREAKPOINT SYSTEM
+==================================================
+
+Create centralized responsive breakpoints.
+
+The design system must support:
+
+- mobile
+- tablet
+- laptop
+- desktop
+- large desktop
+
+Use the breakpoints established in the previous design specification.
+
+Do not allow every component to define unrelated breakpoints.
+
+If a component genuinely requires a specialized breakpoint, document why.
+
+==================================================
+25. RESPONSIVE CONTAINER SYSTEM
+==================================================
+
+Create reusable page/container behavior.
+
+Support:
+
+- full-width layouts
+- standard content width
+- wide operational layouts
+- dense data layouts
+- dashboard grids
+
+Avoid forcing every page into one fixed maximum width.
+
+For example:
+
+A dashboard may benefit from a wide layout.
+
+A customer form may benefit from a narrower readable width.
+
+A financial table may need more horizontal space.
+
+The container system should support these intentionally.
+
+==================================================
+26. RESPONSIVE GRID
+==================================================
+
+Establish a consistent grid system.
+
+The system must support:
+
+- dashboard cards
+- form layouts
+- two-column layouts
+- three-column layouts
+- detail panels
+- side panels
+- responsive stacks
+
+Desktop can use multiple columns.
+
+Tablet should intelligently reduce density.
+
+Mobile should generally collapse into a single clear flow.
+
+Do not simply shrink desktop grids.
+
+==================================================
+27. MOBILE DESIGN PRINCIPLE
+==================================================
+
+Mobile is a first-class experience.
+
+Especially optimize for:
+
+- delivery personnel
+- quick operational actions
+- status verification
+- customer information
+- task completion
+- short forms
+- proof/document upload
+
+Touch targets must be comfortably usable.
+
+Avoid tiny icon-only controls when users need to perform important actions quickly.
+
+==================================================
+28. DESKTOP DESIGN PRINCIPLE
+==================================================
+
+Desktop should take advantage of available space.
+
+Use:
+
+- side navigation
+- multi-column layouts
+- data-rich tables
+- contextual side panels
+- dashboards
+- split views where useful
+
+But do not fill every empty area merely because the screen is large.
+
+Whitespace should support hierarchy.
+
+==================================================
+29. TABLE RESPONSIVENESS
+==================================================
+
+Prepare the visual system for responsive tables.
+
+Possible strategies include:
+
+- horizontal scrolling for genuinely tabular data
+- priority columns
+- stacked mobile rows
+- expandable details
+- condensed metadata
+- mobile card transformation
+
+Do not force every table into a tiny unreadable mobile layout.
+
+==================================================
+30. DARK-MODE COMPONENT TESTING
+==================================================
+
+Every future reusable component must work in:
+
+LIGHT
+DARK
+
+Test:
+
+- text
+- borders
+- icons
+- status colors
+- inputs
+- tables
+- cards
+- dialogs
+- dropdowns
+- notifications
+- hover states
+- focus states
+- disabled states
+
+No component should appear visually "broken" when switching themes.
+
+==================================================
+31. TRANSITION SYSTEM
+==================================================
+
+Create a small centralized transition system.
+
+Use transitions for:
+
+- hover
+- focus
+- theme changes
+- menus
+- drawers
+- modals
+- state changes
+
+Keep them subtle and fast.
+
+Avoid excessive animation.
+
+The interface should feel responsive rather than theatrical.
+
+==================================================
+32. REDUCED MOTION
+==================================================
+
+Support:
+
+prefers-reduced-motion
+
+When reduced motion is enabled:
+
+- minimize transitions
+- disable unnecessary animation
+- avoid large movement
+- preserve functionality
+
+Do not remove essential feedback.
+
+==================================================
+33. FORM VISUAL FOUNDATION
+==================================================
+
+Prepare semantic styling for:
+
+- labels
+- required markers
+- inputs
+- selects
+- textareas
+- checkboxes
+- radios
+- toggles
+- helper text
+- errors
+- success messages
+- read-only fields
+- disabled fields
+
+Forms must remain visually clear in both themes.
+
+==================================================
+34. DATA-DENSE INTERFACE FOUNDATION
+==================================================
+
+This ERP will contain substantial amounts of information.
+
+Create visual rules for:
+
+- dense tables
+- metadata
+- secondary labels
+- compact cards
+- status badges
+- numeric data
+- timestamps
+- audit information
+
+Information density should be controlled through typography and spacing rather than tiny unreadable text.
+
+==================================================
+35. PAGE TITLE HIERARCHY
+==================================================
+
+Establish a standard page-header pattern.
+
+Conceptually:
+
+Breadcrumb
+↓
+Page title
+↓
+Description/context
+↓
+Primary action(s)
+
+Not every page requires all four elements.
+
+But the hierarchy should remain recognizable throughout the ERP.
+
+==================================================
+36. EMPTY SPACE
+==================================================
+
+Whitespace must be intentional.
+
+Use it to:
+
+- separate sections
+- emphasize important information
+- prevent cognitive overload
+- create visual hierarchy
+
+Do not create excessive empty space that forces operational information below the fold.
+
+==================================================
+37. BRANDING
+==================================================
+
+Create a clear location for:
+
+- logo
+- brand mark
+- product name
+- optional branch identity
+
+The brand should be visible without dominating the application.
+
+The application should feel like a professional ERP product rather than a marketing website.
+
+==================================================
+38. NO ONE-OFF VISUAL VALUES
+==================================================
+
+This is a hard rule.
+
+Do not introduce a one-off:
+
+- color
+- font size
+- spacing
+- radius
+- shadow
+- transition
+- breakpoint
+
+inside a component when a semantic token should exist.
+
+If a genuinely new value is required:
+
+1. determine whether an existing token can work
+2. if not, add a new token centrally
+3. document its purpose
+4. reuse it
+
+==================================================
+39. VISUAL QA DEMONSTRATION
+==================================================
+
+Create a dedicated design-system demonstration/style-guide page.
+
+It should visibly demonstrate:
+
+COLORS
+- surfaces
+- text
+- borders
+- brand
+- statuses
+
+TYPOGRAPHY
+- every hierarchy level
+
+SPACING
+- every spacing step
+
+RADII
+- every radius
+
+SHADOWS
+- every elevation
+
+COMPONENT STATES
+- buttons
+- inputs
+- badges
+- cards
+- tables
+- alerts
+
+THEMES
+- light
+- dark
+
+RESPONSIVE
+- demonstrate representative layouts
+
+This page becomes the visual reference for future implementation.
+
+==================================================
+40. ACCESSIBILITY AUDIT
+==================================================
+
+Before completing this prompt, verify:
+
+- text contrast
+- status contrast
+- focus visibility
+- dark-mode contrast
+- disabled-state clarity
+- link visibility
+- interactive control visibility
+- keyboard usability
+
+Target WCAG 2.1 AA.
+
+Do not merely state that accessibility was considered.
+
+Actually inspect the chosen token combinations.
+
+==================================================
+41. PERFORMANCE
+==================================================
+
+Keep the visual foundation lightweight.
+
+Prefer:
+
+CSS custom properties
+CSS media queries
+CSS transitions
+native browser behavior
+
+over unnecessary JavaScript for visual behavior.
+
+Theme switching should not require rebuilding the entire UI.
+
+==================================================
+42. IMPLEMENTATION DISCIPLINE
+==================================================
+
+Do not modify unrelated ERP functionality.
+
+Do not start implementing full business modules.
+
+Do not create backend code.
+
+Do not create database structures.
+
+Do not invent API contracts.
+
+Do not create fake business calculations.
+
+The objective is the visual foundation only.
+
+==================================================
+43. DEFINITION OF DONE
+==================================================
+
+F3-02 is complete only when:
+
+[ ] Semantic color tokens exist.
+
+[ ] Light theme exists.
+
+[ ] Dark theme exists.
+
+[ ] System theme preference is supported.
+
+[ ] Theme selection can persist.
+
+[ ] Typography tokens exist.
+
+[ ] Typography hierarchy is implemented.
+
+[ ] Numeric typography rules exist.
+
+[ ] Spacing tokens exist.
+
+[ ] Border tokens exist.
+
+[ ] Radius tokens exist.
+
+[ ] Shadow/elevation tokens exist.
+
+[ ] Z-index system exists.
+
+[ ] Transition tokens exist.
+
+[ ] Focus styles exist.
+
+[ ] Status color system exists.
+
+[ ] Status icon conventions exist.
+
+[ ] WCAG contrast has been checked.
+
+[ ] Responsive breakpoints are centralized.
+
+[ ] Responsive container system exists.
+
+[ ] Responsive grid foundation exists.
+
+[ ] Mobile behavior is intentionally designed.
+
+[ ] Dark mode works across the foundation.
+
+[ ] Reduced-motion support exists.
+
+[ ] Form visual foundation exists.
+
+[ ] Data-dense UI foundation exists.
+
+[ ] A design-system/style-guide demonstration page exists.
+
+[ ] No unnecessary one-off visual values have been introduced.
+
+[ ] No backend implementation has been introduced.
+
+[ ] No ERP business module has been prematurely implemented.
+
+==================================================
+44. FINAL PRINCIPLE
+==================================================
+
+The purpose of F3-02 is to make visual inconsistency structurally difficult.
+
+A developer working six months later should be able to build a new ERP screen and immediately know:
+
+- which color to use
+- which font size to use
+- which spacing to use
+- which radius to use
+- which shadow to use
+- which status color to use
+- which breakpoint to use
+- which focus style to use
+- how the screen should behave in dark mode
+
+The design system should answer those questions automatically.
+
+Build the visual language once.
+
+Then enforce it everywhere.

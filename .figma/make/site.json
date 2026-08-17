@@ -1,0 +1,10 @@
+{
+  "description": "Streamlines coffee roasting operations with role-based dashboards for inventory, production, delivery, and finance, enhancing efficiency and insights.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

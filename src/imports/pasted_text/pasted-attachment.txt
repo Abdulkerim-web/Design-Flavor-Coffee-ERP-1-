@@ -1,0 +1,1693 @@
+You are continuing the frontend UI/UX implementation of the Coffee-Roasting ERP.
+
+COMPLETED:
+
+F3-01 — Frontend Architecture
+F3-02 — Design Tokens, Theme, Responsive Foundation & Dark Mode
+F3-03 — Application Shell, Navigation & RBAC-Aware Structure
+F3-04 — Core Component Library, States & Reusable UI Components
+F3-05 — Reusable Page Patterns, Composite UI & Screen Templates
+F3-06 — Orders & Customer Experience
+F3-07 — Roasting, Production Workflow & Roasting Job Experience
+
+NOW BUILD:
+
+F3-08 — INVENTORY & STOCK MANAGEMENT EXPERIENCE
+
+==================================================
+IMPORTANT IMPLEMENTATION BOUNDARY
+==================================================
+
+This is a FRONTEND UI/UX implementation.
+
+Use:
+
+- HTML
+- CSS
+- JavaScript only where necessary for interface interaction
+- established design tokens
+- established reusable components
+- established page templates
+
+The eventual backend will use PHP.
+
+DO NOT implement PHP in this prompt.
+
+DO NOT implement database logic.
+
+DO NOT implement inventory calculations.
+
+DO NOT implement stock reservation calculations.
+
+DO NOT implement availability calculations.
+
+DO NOT implement weighted-average calculations.
+
+DO NOT implement valuation calculations.
+
+DO NOT implement stock reconciliation calculations.
+
+DO NOT implement business-rule enforcement.
+
+The frontend renders backend-provided inventory values.
+
+The backend will eventually be authoritative.
+
+==================================================
+1. PRIMARY OBJECTIVE
+==================================================
+
+Create the complete Inventory experience for the ERP.
+
+The inventory interface must make it immediately obvious:
+
+- what inventory exists
+- where it exists
+- what is physically on hand
+- what is reserved
+- what is actually available
+- which inventory requires attention
+- which lots exist
+- where a lot came from
+- what movements affected a lot
+- whether stock is healthy
+- whether stock is approaching a warning level
+- whether stock is insufficient
+- whether a discrepancy requires review
+
+The inventory experience must support the three primary inventory categories:
+
+1. Green Coffee
+2. Roasted Coffee
+3. Packaging Materials
+
+The same conceptual inventory pattern must be used across all three.
+
+==================================================
+2. CORE INVENTORY MODEL
+==================================================
+
+Every inventory category must consistently communicate:
+
+ON HAND
+
+RESERVED
+
+AVAILABLE
+
+Example:
+
+On Hand
+500 KG
+
+Reserved
+120 KG
+
+Available
+380 KG
+
+These values come from the backend.
+
+DO NOT calculate:
+
+available = on hand - reserved
+
+in frontend code.
+
+The frontend simply renders:
+
+on_hand
+reserved
+available
+
+as supplied by the backend.
+
+==================================================
+3. INVENTORY MODULE STRUCTURE
+==================================================
+
+Create:
+
+1. Inventory Dashboard
+2. Green Coffee Inventory
+3. Roasted Coffee Inventory
+4. Packaging Inventory
+5. Inventory Search/Filter Experience
+6. Inventory Lot List
+7. Inventory Lot Detail
+8. Inventory Movement History
+9. Low Stock State
+10. Stock Shortage State
+11. Inventory Discrepancy State
+12. Inventory Empty States
+13. Mobile Inventory Experience
+
+==================================================
+4. INVENTORY DASHBOARD
+==================================================
+
+Use the established DashboardTemplate.
+
+Page title:
+
+Inventory
+
+Subtitle:
+
+Stock overview across green coffee, roasted coffee, and packaging.
+
+Prioritize operational visibility over decorative analytics.
+
+==================================================
+5. INVENTORY SUMMARY
+==================================================
+
+Create summary cards for:
+
+Green Coffee
+Roasted Coffee
+Packaging
+
+Each card should communicate useful backend-provided information.
+
+Example:
+
+GREEN COFFEE
+
+On Hand
+1,250 KG
+
+Reserved
+430 KG
+
+Available
+820 KG
+
+Status:
+Healthy
+
+Do not invent calculations.
+
+==================================================
+6. INVENTORY STATUS
+==================================================
+
+Use the established semantic status system.
+
+Healthy:
+
+status.safe
+
+Warning:
+
+status.warning
+
+Critical:
+
+status.danger
+
+Informational:
+
+status.info
+
+Every status must include an icon and text.
+
+Never rely on color alone.
+
+==================================================
+7. GREEN COFFEE INVENTORY
+==================================================
+
+Create the main Green Coffee inventory page.
+
+Page title:
+
+Green Coffee
+
+Primary information:
+
+Coffee
+Origin
+Lot
+On Hand
+Reserved
+Available
+Status
+Location
+Actions
+
+Example:
+
+Sidamo Natural
+
+Lot:
+GC-2026-014
+
+On Hand:
+500 KG
+
+Reserved:
+120 KG
+
+Available:
+380 KG
+
+Status:
+Healthy
+
+[View Lot]
+
+==================================================
+8. ROASTED COFFEE INVENTORY
+==================================================
+
+Create a visually consistent Roasted Coffee page.
+
+Example:
+
+Sidamo Natural — Medium Roast
+
+On Hand:
+180 KG
+
+Reserved:
+75 KG
+
+Available:
+105 KG
+
+Status:
+Healthy
+
+The structure must be recognizable as the same inventory system.
+
+==================================================
+9. PACKAGING INVENTORY
+==================================================
+
+Create Packaging inventory using the same core pattern.
+
+Example:
+
+250g Kraft Bag
+
+On Hand:
+4,500 units
+
+Reserved:
+1,200 units
+
+Available:
+3,300 units
+
+The UI must support different units.
+
+Possible units:
+
+KG
+grams
+units
+boxes
+bags
+
+The unit must come from backend data.
+
+Do not assume every inventory item uses KG.
+
+==================================================
+10. INVENTORY TABLE
+==================================================
+
+Create a reusable InventoryTable.
+
+Columns should adapt to inventory type but preserve the core pattern.
+
+Core columns:
+
+Item
+Lot
+On Hand
+Reserved
+Available
+Status
+Location
+Action
+
+For packaging:
+
+Item
+Lot/Batch
+On Hand
+Reserved
+Available
+Unit
+Status
+Action
+
+==================================================
+11. INVENTORY DENSITY
+==================================================
+
+Inventory users need to compare many rows quickly.
+
+Use:
+
+- compact table rows
+- clear numeric alignment
+- strong column hierarchy
+- restrained borders
+- sticky table header where appropriate
+
+Numbers should be easy to scan.
+
+==================================================
+12. NUMERIC ALIGNMENT
+==================================================
+
+Inventory quantities should be right-aligned.
+
+Example:
+
+On Hand        Reserved        Available
+
+1,250 KG       430 KG          820 KG
+
+Do not mix left-aligned and right-aligned quantities inconsistently.
+
+==================================================
+13. INVENTORY FILTERS
+==================================================
+
+Create FilterBar options such as:
+
+Inventory Type
+Coffee
+Origin
+Roast Level
+Lot
+Location
+Status
+Availability
+Date
+
+Only show filters relevant to the current inventory category.
+
+==================================================
+14. SEARCH
+==================================================
+
+Provide inventory search.
+
+Search may include:
+
+- coffee name
+- lot number
+- SKU
+- packaging name
+- origin
+
+The eventual implementation should send search parameters to the PHP backend.
+
+Do not assume the complete inventory dataset is loaded into the browser.
+
+==================================================
+15. LOW STOCK
+==================================================
+
+Create a clear low-stock state.
+
+Example:
+
+LOW STOCK
+
+Available:
+42 KG
+
+Minimum threshold:
+50 KG
+
+Status:
+Low Stock
+
+[View Inventory]
+
+The threshold and status come from the backend.
+
+Do not calculate whether stock is low in the frontend.
+
+==================================================
+16. CRITICAL STOCK
+==================================================
+
+Create a stronger state for genuinely insufficient inventory.
+
+Example:
+
+INSUFFICIENT STOCK
+
+Available:
+12 KG
+
+Required:
+25 KG
+
+Shortfall:
+13 KG
+
+Action required.
+
+The values come from backend responses.
+
+Do not calculate the shortfall.
+
+==================================================
+17. STOCK SHORTAGE
+==================================================
+
+When inventory cannot safely satisfy an order, show the relationship clearly.
+
+Example:
+
+Stock shortage
+
+Order:
+#ORD-10482
+
+Required:
+60.6 KG
+
+Available:
+50 KG
+
+Shortfall:
+10.6 KG
+
+Status:
+
+Insufficient Stock
+
+[View Order]
+
+These values are backend-provided.
+
+==================================================
+18. RESERVED STOCK
+==================================================
+
+Reserved stock should be clearly distinguishable from physical on-hand stock.
+
+Use:
+
+On Hand
+500 KG
+
+Reserved
+120 KG
+
+Available
+380 KG
+
+Do not make reserved inventory look like inventory that can freely be used.
+
+==================================================
+19. INVENTORY AVAILABILITY PANEL
+==================================================
+
+Create a reusable AvailabilityPanel.
+
+Structure:
+
+Physical stock
+500 KG
+
+Reserved for orders
+120 KG
+
+Available to allocate
+380 KG
+
+This should become a consistent pattern throughout the ERP.
+
+==================================================
+20. INVENTORY LOTS
+==================================================
+
+Create an Inventory Lot list.
+
+Each lot should contain:
+
+Lot Number
+Coffee
+Origin
+Received Date
+Quantity
+On Hand
+Reserved
+Available
+Status
+Location
+
+Example:
+
+GC-2026-014
+
+Sidamo Natural
+
+Received:
+Aug 04, 2026
+
+On Hand:
+500 KG
+
+Available:
+380 KG
+
+==================================================
+21. LOT DETAIL
+==================================================
+
+Create a dedicated Inventory Lot Detail screen.
+
+Header:
+
+Green Coffee Lot
+
+GC-2026-014
+
+Sidamo Natural
+
+Use DetailTemplate.
+
+==================================================
+22. LOT SUMMARY
+==================================================
+
+Show:
+
+Lot Number
+Coffee
+Origin
+Supplier if available
+Received Date
+Location
+Initial Quantity if provided
+Current On Hand
+Reserved
+Available
+Status
+
+Only display fields supplied by backend.
+
+==================================================
+23. LOT STATUS
+==================================================
+
+The lot detail must show its current state.
+
+Examples:
+
+Available
+Partially Reserved
+Low Stock
+Depleted
+Under Review
+
+Use the centralized status system.
+
+==================================================
+24. LOT MOVEMENT HISTORY
+==================================================
+
+Create a complete movement history.
+
+This is one of the most important parts of the inventory UI.
+
+Use the established ActivityTimeline or TransactionLog pattern.
+
+Each movement should show:
+
+Movement Type
+Quantity
+Direction
+Reference
+Timestamp
+Actor
+
+Example:
+
+RECEIPT
+
++100 KG
+
+Reference:
+GRN-2026-041
+
+Aug 04, 2026
+09:32 AM
+
+Recorded by:
+Storekeeper
+
+==================================================
+25. MOVEMENT TYPES
+==================================================
+
+The interface should support movement types such as:
+
+Receipt
+Reservation
+Release
+Issue
+Transfer
+Adjustment
+Roasting Consumption
+Roasting Output
+Packing Consumption
+Return
+Correction
+
+These are UI categories.
+
+The actual movement types must eventually come from the backend contract.
+
+Do not invent business transitions in the frontend.
+
+==================================================
+26. MOVEMENT DIRECTION
+==================================================
+
+Use clear directional indicators.
+
+Inbound:
+
+↑
+
+Outbound:
+
+↓
+
+Internal/neutral:
+
+↔
+
+Do not rely only on green/red colors.
+
+Always show descriptive text.
+
+==================================================
+27. MOVEMENT REFERENCE
+==================================================
+
+Every movement should link to its source record where possible.
+
+Examples:
+
+Order #ORD-10482
+Roasting Job #ROAST-021
+Receipt #GRN-041
+Adjustment #ADJ-008
+
+Use deep links.
+
+==================================================
+28. LOT AUDITABILITY
+==================================================
+
+The lot screen should answer:
+
+Where did this stock come from?
+
+What happened to it?
+
+Who changed it?
+
+When?
+
+Why?
+
+Do not fabricate audit information.
+
+Render actual backend history once connected.
+
+==================================================
+29. LOT EMPTY HISTORY
+==================================================
+
+If no movement history exists:
+
+No inventory movements recorded yet.
+
+Use a calm empty state.
+
+Do not leave a blank timeline.
+
+==================================================
+30. INVENTORY DISCREPANCY
+==================================================
+
+Create a dedicated discrepancy state.
+
+Example:
+
+Inventory discrepancy
+
+Recorded stock differs from expected stock.
+
+Status:
+
+Needs Review
+
+[Review Discrepancy]
+
+Do not calculate the discrepancy in frontend code.
+
+==================================================
+31. DISCREPANCY DETAIL
+==================================================
+
+Where backend data exists, show:
+
+Expected
+Recorded
+Difference
+Reason
+Reference
+Detected At
+Detected By
+Review Status
+
+Use the same discrepancy language established in roasting.
+
+==================================================
+32. MANAGER REVIEW
+==================================================
+
+If the authenticated user has permission:
+
+[Review]
+
+The review interface should show:
+
+What was expected?
+What was recorded?
+What is different?
+What action is required?
+
+Possible backend-controlled actions may include:
+
+Accept
+Reject
+Adjust
+Request Investigation
+
+Do not hardcode these as universal actions.
+
+==================================================
+33. INVENTORY ADJUSTMENT
+==================================================
+
+If inventory adjustment is permitted by the backend and user permission:
+
+Provide an Adjustment interface.
+
+Show:
+
+Current stock
+Adjustment quantity
+Direction
+Reason
+Reference
+Confirmation
+
+Do not expose a field that directly overwrites the inventory balance.
+
+The UI should communicate:
+
+This creates an inventory movement.
+
+It does not directly edit the balance.
+
+==================================================
+34. ADJUSTMENT CONFIRMATION
+==================================================
+
+Example:
+
+Record inventory adjustment?
+
+Current available:
+380 KG
+
+Adjustment:
++20 KG
+
+Reason:
+Approved stock correction
+
+[Cancel]
+[Confirm Adjustment]
+
+The backend ultimately determines whether the action is permitted.
+
+==================================================
+35. TRANSFER EXPERIENCE
+==================================================
+
+If stock transfers are supported, create a transfer flow.
+
+Show:
+
+From location
+To location
+Item
+Lot
+Quantity
+Reason
+
+Use a clear step-by-step form.
+
+Do not treat a transfer as a direct balance edit.
+
+==================================================
+36. LOCATION
+==================================================
+
+Inventory must support locations where provided.
+
+Example:
+
+Main Warehouse
+
+Roasting Store
+
+Packaging Store
+
+Each inventory row may display:
+
+Location:
+Main Warehouse
+
+The location must come from backend data.
+
+==================================================
+37. INVENTORY DASHBOARD ATTENTION AREA
+==================================================
+
+Create a Needs Attention section.
+
+Potential cards:
+
+Low Stock
+Insufficient Stock
+Inventory Discrepancy
+Pending Adjustment
+Pending Transfer
+
+Each card should:
+
+- use the established semantic status
+- show the key number
+- explain the issue
+- provide one primary action
+- deep-link to the relevant record
+
+==================================================
+38. INVENTORY ATTENTION REGISTRY
+==================================================
+
+Build these cards through a reusable registry pattern.
+
+Do not create bespoke alert markup on every page.
+
+Each attention type should define:
+
+icon
+severity
+title
+description
+primary action
+destination
+
+==================================================
+39. INVENTORY EMPTY STATE
+==================================================
+
+If no inventory exists:
+
+No inventory recorded yet.
+
+Once stock is received, inventory will appear here.
+
+If the user has permission:
+
+[Record Receipt]
+
+Otherwise:
+
+do not show an unauthorized action.
+
+==================================================
+40. FILTER EMPTY STATE
+==================================================
+
+Example:
+
+No inventory matches your filters.
+
+[Clear Filters]
+
+Do not confuse this with:
+
+No inventory exists.
+
+These are different states.
+
+==================================================
+41. LOADING STATES
+==================================================
+
+Create skeleton states for:
+
+- inventory dashboard
+- inventory tables
+- lot detail
+- movement history
+- discrepancy panel
+
+Do not use a generic spinner for every loading state.
+
+==================================================
+42. ERROR STATES
+==================================================
+
+Example:
+
+Unable to load inventory.
+
+[Try Again]
+
+For lot detail:
+
+Unable to load this inventory lot.
+
+[Try Again]
+
+Never expose technical PHP/API error messages.
+
+==================================================
+43. PAGINATION
+==================================================
+
+Inventory tables must support server-side pagination.
+
+Provide:
+
+- current page
+- total pages if available
+- next
+- previous
+- page size where appropriate
+
+Do not load the entire inventory table just to paginate in JavaScript.
+
+==================================================
+44. SORTING
+==================================================
+
+Support backend-driven sorting where appropriate.
+
+Potential sort fields:
+
+Item
+On Hand
+Reserved
+Available
+Received Date
+Updated Date
+
+The frontend sends sorting parameters.
+
+It does not independently sort a complete hidden dataset.
+
+==================================================
+45. RBAC
+==================================================
+
+Inventory screens must be permission-aware.
+
+Potential permissions include:
+
+inventory.view
+inventory.receive
+inventory.adjust
+inventory.transfer
+inventory.review
+inventory.manage
+
+These are conceptual examples only.
+
+Use the eventual centralized permission model.
+
+Do not scatter role checks through components.
+
+==================================================
+46. ROLE EXPERIENCE
+==================================================
+
+STOREKEEPER:
+
+Prioritize:
+
+- receiving
+- stock inspection
+- lot management
+- movement recording
+- stock acceptance
+- operational inventory actions
+
+MANAGER:
+
+May see:
+
+- all relevant inventory
+- shortages
+- discrepancies
+- approvals
+- adjustments
+- operational summaries
+
+ROASTER:
+
+Should see inventory information necessary for roasting.
+
+Example:
+
+Available green coffee
+Required quantity
+Relevant lots
+
+Do not expose unrelated inventory administration.
+
+SALES:
+
+May see inventory availability relevant to orders if permitted.
+
+Do not expose inventory management actions unless authorized.
+
+OTHER ROLES:
+
+Visibility is controlled by permissions.
+
+==================================================
+47. INVENTORY ACTION VISIBILITY
+==================================================
+
+Never display a dangerous action merely because the user cannot execute it.
+
+If the user does not have permission to adjust stock:
+
+Do not show:
+
+[Adjust Inventory]
+
+If the user can view but cannot modify:
+
+show the information in read-only form.
+
+==================================================
+48. ORDER CONNECTION
+==================================================
+
+Inventory should connect naturally to Orders.
+
+Example:
+
+Reserved for:
+
+#ORD-10482
+
+[View Order]
+
+The inventory screen should make reservations understandable without recreating the entire order.
+
+==================================================
+49. ROASTING CONNECTION
+==================================================
+
+Green coffee lots should connect to roasting jobs where appropriate.
+
+Example:
+
+Consumed by:
+
+Roasting Job #ROAST-021
+
+[View Roasting Job]
+
+Roasted inventory should connect to its production origin where backend data exists.
+
+==================================================
+50. PACKING CONNECTION
+==================================================
+
+Roasted coffee and packaging inventory should connect to packing operations where relevant.
+
+Example:
+
+Reserved for:
+
+#ORD-10482
+
+or:
+
+Consumed by:
+Packing Job #PACK-018
+
+==================================================
+51. INVENTORY VISUAL LANGUAGE
+==================================================
+
+Inventory should feel:
+
+precise
+calm
+professional
+operational
+trustworthy
+
+Use:
+
+- warm coffee-inspired neutrals
+- restrained brown brand accents
+- subtle green for healthy inventory
+- amber for warnings
+- red only for genuine problems
+- clean data tables
+- strong numerical hierarchy
+
+Avoid decorative coffee-shop styling.
+
+==================================================
+52. INVENTORY CARD DESIGN
+==================================================
+
+Cards should be used for:
+
+- summaries
+- attention items
+- key inventory states
+- lot overview
+
+Do not put large amounts of tabular data inside cards.
+
+Tables remain the primary dense-data interface.
+
+==================================================
+53. MOBILE INVENTORY
+==================================================
+
+Design mobile intentionally.
+
+Priority:
+
+1. Item
+2. Available
+3. Status
+4. Location
+5. Action
+
+Do not attempt to display every table column simultaneously.
+
+Use:
+
+- stacked information
+- expandable rows
+- horizontal scrolling only where genuinely necessary
+- bottom action bar for important actions
+
+==================================================
+54. MOBILE LOT DETAIL
+==================================================
+
+Mobile lot detail should prioritize:
+
+Lot
+Coffee
+Current available quantity
+Status
+Location
+Movement history
+Primary action
+
+Movement history can become a vertical timeline.
+
+==================================================
+55. MOBILE STOCK WARNING
+==================================================
+
+Example:
+
+LOW STOCK
+
+Sidamo Natural
+
+Available:
+42 KG
+
+Minimum:
+50 KG
+
+[View Lot]
+
+Keep the warning immediately understandable.
+
+==================================================
+56. DARK MODE
+==================================================
+
+All inventory screens must support the established dark theme.
+
+Check carefully:
+
+- data tables
+- numeric quantities
+- status badges
+- low-stock cards
+- discrepancy panels
+- timelines
+- forms
+- dialogs
+
+Use semantic tokens.
+
+==================================================
+57. ACCESSIBILITY
+==================================================
+
+Follow WCAG 2.1 AA.
+
+Ensure:
+
+- sufficient contrast
+- keyboard navigation
+- visible focus
+- accessible table headers
+- accessible status messages
+- screen-reader-friendly icons
+- labels for quantity fields
+- error messages connected to inputs
+
+Never communicate inventory health by color alone.
+
+==================================================
+58. CSS REQUIREMENTS
+==================================================
+
+Use the established CSS architecture.
+
+Use:
+
+CSS variables
+Grid
+Flexbox
+media queries
+semantic classes
+reusable components
+state classes
+
+Do not introduce:
+
+inline styles
+raw hex values
+arbitrary spacing
+duplicated colors
+duplicated component patterns
+
+==================================================
+59. NO FRONTEND INVENTORY CALCULATIONS
+==================================================
+
+CRITICAL RULE:
+
+DO NOT calculate:
+
+available stock
+reserved stock
+stock shortfall
+low-stock status
+inventory valuation
+weighted average
+lot balance
+movement balance
+stock discrepancy
+reservation quantity
+
+The backend will provide authoritative values.
+
+Frontend responsibility:
+
+DISPLAY.
+
+Backend responsibility:
+
+CALCULATE AND ENFORCE.
+
+==================================================
+60. SAMPLE DATA
+==================================================
+
+Use realistic fictional data for prototype screens.
+
+Example:
+
+Green Coffee:
+
+Sidamo Natural
+Lot GC-2026-014
+
+On Hand:
+500 KG
+
+Reserved:
+120 KG
+
+Available:
+380 KG
+
+Status:
+Healthy
+
+Packaging:
+
+250g Kraft Bag
+
+On Hand:
+4,500 units
+
+Reserved:
+1,200 units
+
+Available:
+3,300 units
+
+Status:
+Healthy
+
+These values are prototype data only.
+
+==================================================
+61. FINAL SCREEN INVENTORY
+==================================================
+
+INVENTORY:
+
+1. Inventory Dashboard
+2. Inventory Dashboard — Loading
+3. Inventory Dashboard — Empty
+4. Inventory Dashboard — Error
+
+GREEN COFFEE:
+
+5. Green Coffee Inventory
+6. Green Coffee — Loading
+7. Green Coffee — Empty
+8. Green Coffee — Low Stock
+9. Green Coffee — Insufficient Stock
+
+ROASTED COFFEE:
+
+10. Roasted Coffee Inventory
+11. Roasted Coffee — Loading
+12. Roasted Coffee — Empty
+13. Roasted Coffee — Low Stock
+
+PACKAGING:
+
+14. Packaging Inventory
+15. Packaging — Loading
+16. Packaging — Empty
+17. Packaging — Low Stock
+
+LOTS:
+
+18. Inventory Lot List
+19. Inventory Lot Detail
+20. Inventory Lot — Loading
+21. Inventory Lot — Empty History
+22. Inventory Movement History
+
+DISCREPANCIES:
+
+23. Inventory Discrepancy
+24. Discrepancy Review
+25. Adjustment Confirmation
+26. Adjustment Success
+27. Adjustment Error
+
+TRANSFERS:
+
+28. Inventory Transfer
+29. Transfer Confirmation
+30. Transfer Success
+31. Transfer Error
+
+MOBILE:
+
+32. Mobile Inventory
+33. Mobile Lot Detail
+34. Mobile Stock Warning
+35. Mobile Movement History
+
+==================================================
+62. REUSABLE INVENTORY COMPONENTS
+==================================================
+
+Create:
+
+InventorySummaryCard
+InventoryTable
+InventoryRow
+AvailabilityPanel
+StockStatus
+LotCard
+LotHeader
+MovementLog
+MovementItem
+InventoryAttentionCard
+StockWarningPanel
+StockShortagePanel
+InventoryDiscrepancyPanel
+AdjustmentForm
+TransferForm
+
+Build these from the existing component library.
+
+==================================================
+63. PAGE COMPOSITION
+==================================================
+
+INVENTORY DASHBOARD:
+
+DashboardTemplate
++
+PageHeader
++
+InventorySummaryCards
++
+NeedsAttention
++
+InventoryTable
++
+RecentMovements
+
+GREEN COFFEE:
+
+ListTemplate
++
+PageHeader
++
+FilterBar
++
+InventoryTable
++
+Pagination
+
+LOT DETAIL:
+
+DetailTemplate
++
+EntityHeader
++
+AvailabilityPanel
++
+LotSummary
++
+MovementLog
++
+RelatedRecords
+
+DISCREPANCY:
+
+DetailTemplate
++
+DiscrepancyPanel
++
+ReviewPanel
++
+MovementLog
+
+ADJUSTMENT:
+
+FormTemplate
++
+PageHeader
++
+CurrentStockPanel
++
+AdjustmentForm
++
+ConfirmationDialog
+
+==================================================
+64. INFORMATION HIERARCHY
+==================================================
+
+Inventory users should understand:
+
+WHAT DO WE HAVE?
+
+WHAT IS RESERVED?
+
+WHAT CAN WE ACTUALLY USE?
+
+IS THERE A PROBLEM?
+
+WHERE IS IT?
+
+WHICH LOT IS IT?
+
+WHAT HAPPENED TO IT?
+
+WHO CHANGED IT?
+
+The interface must answer these questions quickly.
+
+==================================================
+65. DEFINITION OF DONE
+==================================================
+
+F3-08 is complete when:
+
+[ ] Inventory Dashboard exists.
+
+[ ] Green Coffee inventory exists.
+
+[ ] Roasted Coffee inventory exists.
+
+[ ] Packaging inventory exists.
+
+[ ] On Hand / Reserved / Available pattern is consistent.
+
+[ ] Inventory filtering exists.
+
+[ ] Inventory search exists.
+
+[ ] Server-side pagination UI exists.
+
+[ ] Server-side sorting UI exists.
+
+[ ] Low-stock state exists.
+
+[ ] Insufficient-stock state exists.
+
+[ ] Stock shortage state exists.
+
+[ ] Inventory discrepancy state exists.
+
+[ ] Lot list exists.
+
+[ ] Lot detail exists.
+
+[ ] Movement history exists.
+
+[ ] Movement references exist.
+
+[ ] Adjustment UI exists where authorized.
+
+[ ] Transfer UI exists where authorized.
+
+[ ] Confirmation states exist.
+
+[ ] Loading states exist.
+
+[ ] Error states exist.
+
+[ ] Empty states exist.
+
+[ ] Mobile inventory exists.
+
+[ ] Mobile lot detail exists.
+
+[ ] RBAC-aware actions exist.
+
+[ ] Unauthorized actions are not exposed.
+
+[ ] Dark mode works.
+
+[ ] WCAG 2.1 AA principles are followed.
+
+[ ] CSS uses existing design tokens.
+
+[ ] No raw visual values are introduced.
+
+[ ] No inventory calculations are implemented in frontend code.
+
+[ ] No database logic is implemented.
+
+[ ] No PHP is implemented.
+
+[ ] Existing F3 architecture is preserved.
+
+==================================================
+66. FINAL PRINCIPLE
+==================================================
+
+The inventory module must make stock trustworthy.
+
+A user must never have to guess:
+
+how much physically exists,
+how much is reserved,
+how much is available,
+which lot contains it,
+why the quantity changed,
+or whether a stock problem requires action.
+
+Use a consistent three-way inventory model:
+
+ON HAND
+RESERVED
+AVAILABLE
+
+Use the same visual language for:
+
+green coffee,
+roasted coffee,
+packaging.
+
+Make lot history auditable.
+
+Make shortages obvious.
+
+Make discrepancies actionable.
+
+Keep operational information dense but understandable.
+
+Most importantly:
+
+THE FRONTEND DOES NOT CALCULATE INVENTORY.
+
+THE FRONTEND VISUALIZES AUTHORITATIVE INVENTORY DATA.
+
+Build the entire Inventory experience as a polished, enterprise-grade operational workspace while preserving the established Coffee-Roasting ERP design system, CSS architecture, responsive behavior, dark mode, accessibility, reusable components, and RBAC-aware UX.
+

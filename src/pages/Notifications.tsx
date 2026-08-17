@@ -1,0 +1,277 @@
+/* Responsive: mobile ≤640 | tablet 641–1024 | laptop 1025–1440 | desktop >1440 */
+import { useState, useEffect } from 'react'
+import { useBreakpoint } from '../hooks/useBreakpoint'
+import { useToast } from '../contexts/ToastContext'
+
+type Category = 'urgent' | 'approval' | 'warning' | 'info'
+type LoadState = 'loading' | 'ok' | 'error'
+
+interface Notif {
+  id: number
+  category: Category
+  title: string
+  what: string
+  why: string
+  action?: string
+  module: string
+  moduleId: string   // nav target
+  time: string
+  timeRaw: number    // ms ago for sorting
+  read: boolean
+}
+
+const CATEGORY_CFG: Record<Category, { label: string; color: string; bg: string; border: string; darkBg: string; iconPath: string }> = {
+  urgent:   { label: 'Urgent',          color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA', darkBg: 'rgba(248,113,113,0.1)', iconPath: 'M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01' },
+  approval: { label: 'Needs Approval',  color: '#B45309', bg: '#FFFBEB', border: '#FDE68A', darkBg: 'rgba(251,191,36,0.1)', iconPath: 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11' },
+  warning:  { label: 'Warning',         color: '#92400E', bg: '#FFF7ED', border: '#FED7AA', darkBg: 'rgba(251,146,60,0.1)', iconPath: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 8v4M12 16h.01' },
+  info:     { label: 'Information',     color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE', darkBg: 'rgba(96,165,250,0.1)', iconPath: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 16v-4M12 8h.01' },
+}
+
+const SAMPLE_NOTIFS: Notif[] = [
+  { id: 1,  category: 'urgent',   read: false, timeRaw: 1000*60*12,      time: '12 min ago', module: 'Orders',    moduleId: 'orders',    title: 'Urgent order requires review',       what: 'Order #ORD-1042 has insufficient green coffee for the requested roasted quantity.',     why: 'Stock check shows a shortfall of 10.6 KG. Manager confirmation required before roasting begins.', action: 'Review Order' },
+  { id: 2,  category: 'urgent',   read: false, timeRaw: 1000*60*60,      time: '1h ago',     module: 'Inventory', moduleId: 'inventory', title: 'Stock shortage — Yirgacheffe Grade 1', what: 'Current stock: 120 KG. Reorder threshold: 200 KG.',                                    why: 'Two active orders totalling 180 KG may not be fulfilled without immediate restocking.',  action: 'Review Stock' },
+  { id: 3,  category: 'urgent',   read: false, timeRaw: 1000*60*60*2,    time: '2h ago',     module: 'Quality',   moduleId: 'quality',   title: 'QC rejection — Lot #GR-0291',         what: 'Moisture content 14.6% exceeded the 13% threshold.',                                   why: '500 KG of Sidama Grade 1 quarantined. Cannot proceed to roasting until reviewed.',       action: 'Open QC Report' },
+  { id: 4,  category: 'approval', read: false, timeRaw: 1000*60*35,      time: '35 min ago', module: 'Customers', moduleId: 'customers', title: 'New customer awaiting approval',       what: 'Sunrise Café has been submitted by a sales representative.',                           why: 'Customer profile and credit terms require manager review before activation.',             action: 'Review Customer' },
+  { id: 5,  category: 'approval', read: false, timeRaw: 1000*60*90,      time: '1.5h ago',   module: 'Expenses',  moduleId: 'expenses',  title: 'Expense approval required',           what: 'Vehicle maintenance expense ETB 8,500 submitted by Solomon Tesfaye.',                  why: 'Expenses above ETB 5,000 require manager sign-off.',                                     action: 'Review Expense' },
+  { id: 6,  category: 'warning',  read: true,  timeRaw: 1000*60*60*24,   time: '1d ago',     module: 'Finance',   moduleId: 'finance',   title: 'Payment deadline approaching',         what: 'ABC Hotel has an outstanding balance of ETB 48,200 approaching its payment deadline.',   why: 'Payment is due in 2 days. Customer contact may be required.',                            action: 'View Payment' },
+  { id: 7,  category: 'warning',  read: true,  timeRaw: 1000*60*60*36,   time: '1.5d ago',   module: 'Orders',    moduleId: 'orders',    title: 'Order delivery overdue',              what: 'Order #ORD-1035 was due for delivery 8 hours ago.',                                   why: 'Customer has not received confirmation. Delivery status unknown.',                       action: 'Check Delivery' },
+  { id: 8,  category: 'info',     read: true,  timeRaw: 1000*60*60*48,   time: '2d ago',     module: 'Orders',    moduleId: 'orders',    title: 'Roasting completed',                  what: 'Order #ORD-1024 has been reported as successfully roasted.',                           why: 'Batch RB-2891 produced 48 KG of Guji Medium. Ready for packing.',                       action: 'View Order' },
+  { id: 9,  category: 'info',     read: true,  timeRaw: 1000*60*60*50,   time: '2d ago',     module: 'Delivery',  moduleId: 'delivery',  title: 'Delivery completed — #ORD-1038',      what: '25 KG Limu Espresso delivered to Hilton Addis Ababa — Main Kitchen.',                  why: 'Customer signature received. Awaiting payment confirmation within 3 business days.',     action: 'View Delivery' },
+  { id: 10, category: 'info',     read: true,  timeRaw: 1000*60*60*72,   time: '3d ago',     module: 'Reports',   moduleId: 'reports',   title: 'Monthly report generated',             what: 'July 2026 operations report is ready for review.',                                     why: 'Includes roasting yield, delivery performance, and revenue summary.',                   action: 'View Report' },
+]
+
+type FilterKey = 'all' | Category | 'unread'
+
+const FILTERS: { key: FilterKey; label: string }[] = [
+  { key: 'all',      label: 'All' },
+  { key: 'unread',   label: 'Unread' },
+  { key: 'urgent',   label: 'Urgent' },
+  { key: 'approval', label: 'Needs Approval' },
+  { key: 'warning',  label: 'Warnings' },
+  { key: 'info',     label: 'Information' },
+]
+
+export default function Notifications() {
+  const { isMobile } = useBreakpoint()
+  const toast = useToast()
+  const [filter, setFilter]       = useState<FilterKey>('all')
+  const [notifs, setNotifs]       = useState<Notif[]>(SAMPLE_NOTIFS)
+  const [loadState, setLoadState] = useState<LoadState>('loading')
+
+  // Simulate initial load
+  useEffect(() => {
+    const t = setTimeout(() => setLoadState('ok'), 900)
+    return () => clearTimeout(t)
+  }, [])
+
+  const unreadCount = notifs.filter(n => !n.read).length
+
+  const filtered = notifs.filter(n => {
+    if (filter === 'all')    return true
+    if (filter === 'unread') return !n.read
+    return n.category === filter
+  })
+
+  const markRead = (id: number) => setNotifs(ns => ns.map(n => n.id === id ? { ...n, read: true } : n))
+  const markAll  = () => {
+    setNotifs(ns => ns.map(n => ({ ...n, read: true })))
+    toast.success('All notifications marked as read.')
+  }
+
+  /* ── Skeleton row ─── */
+  const SkeletonRow = ({ i }: { i: number }) => (
+    <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-neutral)', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+      <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--surface-hover)', flexShrink: 0, marginTop: 6, animation: 'nSkel 1.4s ease infinite', animationDelay: `${i * 0.1}s` }} />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7 }}>
+        <div style={{ height: 12, borderRadius: 6, background: 'var(--surface-hover)', width: '45%', animation: 'nSkel 1.4s ease infinite', animationDelay: `${i * 0.1}s` }} />
+        <div style={{ height: 10, borderRadius: 5, background: 'var(--surface-hover)', width: '75%', animation: 'nSkel 1.4s ease infinite', animationDelay: `${i * 0.1 + 0.1}s` }} />
+        <div style={{ height: 10, borderRadius: 5, background: 'var(--surface-hover)', width: '55%', animation: 'nSkel 1.4s ease infinite', animationDelay: `${i * 0.1 + 0.15}s` }} />
+      </div>
+    </div>
+  )
+
+  return (
+    <div style={{ padding: isMobile ? '20px 16px' : '28px 32px', fontFamily: 'Inter, system-ui, sans-serif', maxWidth: 860, margin: '0 auto' }}>
+      <style>{`
+        @keyframes nSkel { 0%,100% { opacity:0.4 } 50% { opacity:0.9 } }
+        .notif-row:hover { background: var(--surface-hover) !important; }
+      `}</style>
+
+      {/* ── Page header ───────────────────────────────── */}
+      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 11, fontFamily: 'DM Mono', letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 5 }}>
+            Management
+          </div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
+            Notifications
+          </h1>
+          {loadState === 'ok' && unreadCount > 0 && (
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
+              {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
+        {loadState === 'ok' && unreadCount > 0 && (
+          <button
+            onClick={markAll}
+            style={{ padding: '7px 14px', borderRadius: 7, border: '1px solid var(--border-neutral)', background: 'var(--surface-01)', color: 'var(--brand-primary)', fontSize: 13, fontWeight: 500, fontFamily: 'Inter', cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
+            onMouseEnter={e => { const el = e.currentTarget; el.style.background = '#F5F3EF'; el.style.borderColor = '#2B4D3A' }}
+            onMouseLeave={e => { const el = e.currentTarget; el.style.background = 'var(--surface-01)'; el.style.borderColor = 'var(--border-neutral)' }}
+          >
+            Mark all read
+          </button>
+        )}
+      </div>
+
+      {/* ── Filter tabs ───────────────────────────────── */}
+      <div style={{ display: 'flex', gap: 4, overflowX: 'auto', marginBottom: 16, paddingBottom: 4, scrollbarWidth: 'none' }}>
+        {FILTERS.map(f => {
+          const count = f.key === 'all' ? notifs.length : f.key === 'unread' ? notifs.filter(n => !n.read).length : notifs.filter(n => n.category === f.key).length
+          const active = filter === f.key
+          return (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              style={{
+                padding: '6px 12px', borderRadius: 7, border: `1.5px solid ${active ? '#2B4D3A' : 'var(--border-neutral)'}`,
+                background: active ? '#2B4D3A' : 'var(--surface-01)',
+                color: active ? '#FFFFFF' : 'var(--text-secondary)',
+                fontSize: 12.5, fontWeight: active ? 600 : 400, fontFamily: 'Inter',
+                cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
+                display: 'flex', alignItems: 'center', gap: 6,
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={e => { if (!active) { const el = e.currentTarget; el.style.borderColor = '#2B4D3A'; el.style.color = '#2B4D3A' } }}
+              onMouseLeave={e => { if (!active) { const el = e.currentTarget; el.style.borderColor = 'var(--border-neutral)'; el.style.color = 'var(--text-secondary)' } }}
+            >
+              {f.label}
+              {count > 0 && (
+                <span style={{
+                  fontSize: 10, fontFamily: 'DM Mono', fontWeight: 700,
+                  background: active ? 'rgba(255,255,255,0.2)' : 'var(--surface-02)',
+                  color: active ? '#FFFFFF' : 'var(--text-muted)',
+                  padding: '0 5px', borderRadius: 999, lineHeight: '16px', minWidth: 16, textAlign: 'center',
+                }}>
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* ── Content ───────────────────────────────────── */}
+      <div style={{ background: 'var(--surface-01)', border: '1px solid var(--border-neutral)', borderRadius: 11, overflow: 'hidden' }}>
+
+        {/* Loading */}
+        {loadState === 'loading' && (
+          <div>{[0,1,2,3,4].map(i => <SkeletonRow key={i} i={i} />)}</div>
+        )}
+
+        {/* Error */}
+        {loadState === 'error' && (
+          <div style={{ padding: '52px 24px', textAlign: 'center' }}>
+            <div style={{ width: 52, height: 52, borderRadius: 13, background: '#FEF2F2', border: '1px solid #FCA5A5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="1.75" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/></svg>
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 5 }}>Unable to load notifications</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 18 }}>Please try again.</div>
+            <button onClick={() => { setLoadState('loading'); setTimeout(() => setLoadState('ok'), 900) }} style={{ padding: '8px 20px', borderRadius: 8, background: '#2B4D3A', border: 'none', color: '#FFFFFF', fontSize: 13.5, fontWeight: 600, fontFamily: 'Inter', cursor: 'pointer' }}>
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {/* Empty */}
+        {loadState === 'ok' && filtered.length === 0 && (
+          <div style={{ padding: '52px 24px', textAlign: 'center' }}>
+            <div style={{ width: 52, height: 52, borderRadius: 13, background: '#F0FDF4', border: '1px solid #86EFAC', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="1.75" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 5 }}>You're all caught up</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>You have no new notifications{filter !== 'all' ? ' in this category' : ''}.</div>
+          </div>
+        )}
+
+        {/* Notification rows */}
+        {loadState === 'ok' && filtered.length > 0 && filtered.map((n, i) => {
+          const cfg = CATEGORY_CFG[n.category]
+          return (
+            <div
+              key={n.id}
+              className="notif-row"
+              onClick={() => markRead(n.id)}
+              style={{
+                padding: '16px 20px',
+                borderBottom: i < filtered.length - 1 ? '1px solid var(--border-neutral)' : 'none',
+                background: n.read ? 'var(--surface-01)' : cfg.bg,
+                cursor: 'pointer', transition: 'background 0.1s',
+                display: 'flex', gap: 12, alignItems: 'flex-start',
+              }}
+            >
+              {/* Unread dot */}
+              <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, marginTop: 7, background: n.read ? 'transparent' : cfg.color, transition: 'background 0.2s' }} />
+
+              {/* Category icon */}
+              <div style={{
+                width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                background: n.read ? 'var(--surface-02)' : cfg.bg,
+                border: `1px solid ${n.read ? 'var(--border-neutral)' : cfg.border}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.15s',
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={n.read ? 'var(--text-muted)' : cfg.color} strokeWidth="2" strokeLinecap="round">
+                  <path d={cfg.iconPath} />
+                </svg>
+              </div>
+
+              {/* Content */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: 13.5, fontWeight: n.read ? 500 : 700, color: 'var(--text-primary)', lineHeight: '18px' }}>
+                    {n.title}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    <span style={{
+                      fontSize: 10, fontFamily: 'DM Mono', color: cfg.color,
+                      background: cfg.bg, border: `1px solid ${cfg.border}`,
+                      padding: '1px 7px', borderRadius: 999,
+                    }}>
+                      {cfg.label}
+                    </span>
+                    <span style={{ fontSize: 11, fontFamily: 'DM Mono', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{n.time}</span>
+                  </div>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, marginTop: 4 }}>{n.what}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 3, fontStyle: 'italic' }}>{n.why}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                  {n.action && (
+                    <button
+                      onClick={e => { e.stopPropagation(); markRead(n.id) }}
+                      style={{
+                        padding: '4px 12px', borderRadius: 5,
+                        border: `1px solid ${cfg.border}`,
+                        background: 'transparent', color: cfg.color,
+                        fontSize: 12, fontWeight: 600, fontFamily: 'Inter',
+                        cursor: 'pointer', transition: 'background 0.1s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = cfg.bg}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      {n.action}
+                    </button>
+                  )}
+                  <span style={{ fontSize: 10.5, fontFamily: 'DM Mono', color: 'var(--text-muted)', background: 'var(--surface-02)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--border-neutral)' }}>
+                    {n.module}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+    </div>
+  )
+}

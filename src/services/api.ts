@@ -1,0 +1,108 @@
+/**
+ * SERVICE LAYER — base types and utilities
+ *
+ * Architecture: UI → Service → Data Source
+ *
+ * Current data source: mock (setTimeout simulation).
+ * Future data source: PHP REST API — swap mockRequest() calls for fetch() calls.
+ * The UI does NOT need to change when the data source changes.
+ *
+ * IMPORTANT: Services must NEVER calculate business values (stock, yield, VAT,
+ * feasibility, payment deadlines, profit). They only transport data from the
+ * source to the UI. The PHP backend is authoritative.
+ */
+
+/** Canonical load-state type used across all modules. */
+export type LoadState = 'idle' | 'loading' | 'ok' | 'error'
+
+/** Wrapped result returned by every service function. */
+export interface ServiceResult<T> {
+  data: T | null
+  error: string | null
+  state: LoadState
+}
+
+/** Pagination params sent to the data source. */
+export interface PaginationParams {
+  page: number
+  perPage: number
+}
+
+/** Sort params sent to the data source. */
+export interface SortParams {
+  field: string
+  dir: 'asc' | 'desc'
+}
+
+/** Standard list response envelope (mirrors PHP API shape). */
+export interface ListEnvelope<T> {
+  items: T[]
+  total: number
+  page: number
+  perPage: number
+}
+
+/** Simulates an async request to a PHP backend endpoint.
+ *  Replace the body of this function with a real fetch() call when the API is ready.
+ *  @param data     The mock data to return (ignored in production).
+ *  @param delayMs  Simulated network latency in milliseconds.
+ */
+export function mockRequest<T>(data: T, delayMs = 600): Promise<T> {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      // To simulate an error for testing, uncomment:
+      // if (Math.random() < 0.1) { reject(new Error('Network error (simulated)')); return }
+      resolve(data)
+    }, delayMs)
+  })
+}
+
+/** Wraps a service call in try/catch and returns a ServiceResult. */
+export async function safeRequest<T>(fn: () => Promise<T>): Promise<ServiceResult<T>> {
+  try {
+    const data = await fn()
+    return { data, error: null, state: 'ok' }
+  } catch (err) {
+    const error = err instanceof Error ? err.message : 'An unexpected error occurred.'
+    return { data: null, error, state: 'error' }
+  }
+}
+
+/** A no-op service result — useful for initial/idle state. */
+export function idleResult<T>(): ServiceResult<T> {
+  return { data: null, error: null, state: 'idle' }
+}
+
+/** A loading service result — set this before the async call. */
+export function loadingResult<T>(): ServiceResult<T> {
+  return { data: null, error: null, state: 'loading' }
+}
+
+export async function apiRequest<T>(endpoint: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' = 'GET', body?: any): Promise<T> {
+  const url = `/api/v1${endpoint}`;
+  
+  // TODO: Retrieve token from a store or context if available.
+  // For now, assume it's just passing data.
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  const options: RequestInit = {
+    method,
+    headers,
+  };
+
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+
+  const response = await fetch(url, options);
+  const data = await response.json();
+
+  if (!data.success) {
+    throw new Error(data.error?.message || 'API Error');
+  }
+
+  return data.data as T;
+}
