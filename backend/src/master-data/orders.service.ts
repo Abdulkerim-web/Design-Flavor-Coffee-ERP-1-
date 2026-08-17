@@ -7,6 +7,7 @@ import { DataSource } from "typeorm"
 import { Order } from "../entities/order.entity"
 import { OrderItem } from "../entities/order_item.entity"
 import { Reservation } from "../entities/reservation.entity"
+import { CustomerBranch } from "../entities/customer_branch.entity"
 import { FeasibilityEngineService } from "./feasibility.service"
 
 @Injectable()
@@ -31,11 +32,17 @@ export class OrdersService {
     await queryRunner.startTransaction()
 
     try {
+      let branchId = payload.branchId;
+      if (!branchId) {
+        const branch = await queryRunner.manager.findOne(CustomerBranch, { where: { customerId: payload.customerId } });
+        if (branch) branchId = branch.id;
+      }
+
       const order = queryRunner.manager.create(Order, {
         orderNumber: "ORD-" + Math.floor(Math.random() * 100000),
         customerId: payload.customerId,
         salesRepId: payload.salesRepId,
-        branchId: payload.branchId || "default-branch", // mock since we don't always have one
+        branchId: branchId,
         status: "CONFIRMED",
         isUrgent: payload.urgent,
         preVatAmount: 0,
