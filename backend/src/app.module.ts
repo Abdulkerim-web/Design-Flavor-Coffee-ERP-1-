@@ -45,7 +45,7 @@ import { AllEntities } from './entities';
       url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/flavor_coffee_erp',
       extra: { ssl: { rejectUnauthorized: false } },
       entities: AllEntities,
-      synchronize: true, // Auto-syncs schema in dev
+      synchronize: false, // Auto-syncs schema in dev
     }),
     
   ],
