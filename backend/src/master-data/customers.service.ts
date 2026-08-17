@@ -57,7 +57,7 @@ export class CustomersService {
         name: data.name,
         active: true,
         salesRepId: data.salesRepId,
-        status: creatorRole === "general-manager" ? "active" : "pending",
+        status: "active",
         type: data.type || "cafe",
         contactPerson: data.contactPerson,
         phone: data.phone,

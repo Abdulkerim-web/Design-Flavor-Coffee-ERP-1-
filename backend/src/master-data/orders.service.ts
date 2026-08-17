@@ -36,7 +36,7 @@ export class OrdersService {
         customerId: payload.customerId,
         salesRepId: payload.salesRepId,
         branchId: payload.branchId || "default-branch", // mock since we don't always have one
-        status: creatorRole === "general-manager" ? "CONFIRMED" : "PENDING_MANAGER_CONFIRMATION",
+        status: "CONFIRMED",
         isUrgent: payload.urgent,
         preVatAmount: 0,
         vatAmount: 0,
