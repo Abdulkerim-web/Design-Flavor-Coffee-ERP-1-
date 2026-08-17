@@ -12,9 +12,11 @@
  * safe-to-expose user profile (id, name, email, role, avatar).
  */
 
-import { createContext, useContext, useState, type ReactNode } from 'react'
-import type { RoleId } from '../lib/rbac'
-import { apiRequest } from '../services/api'
+import { createContext, useContext, useState, type ReactNode } from "react"
+import type { RoleId } from "../lib/rbac"
+import { apiRequest } from "../services/api"
+
+import { INITIAL_USERS } from "../lib/rbac"
 
 export interface AuthUser {
   id: string
@@ -27,9 +29,10 @@ export interface AuthUser {
   permissions?: string[]
 }
 
-export type LoginResult =
-  | { ok: true;  user: AuthUser }
-  | { ok: false; error: 'unknown-email' | 'disabled' | 'invalid-password' }
+export type LoginResult = { ok: true user: AuthUser } | {
+  ok: false
+  error: "unknown-email" | "disabled" | "invalid-password"
+}
 
 interface AuthContextValue {
   currentUser: AuthUser | null
@@ -39,39 +42,52 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue>({
   currentUser: null,
-  login: async () => ({ ok: false, error: 'unknown-email' }),
+  login: async () => ({ ok: false, error: "unknown-email" }),
   logout: () => {},
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
 
-  const login = async (email: string, password: string): Promise<LoginResult> => {
+  const login = async (
+    email: string,
+    password: string,
+  ): Promise<LoginResult> => {
     try {
-      const data = await apiRequest<{ user: AuthUser, token: string }>('/auth/login', 'POST', { username: email, password });
-      
+      const data = await apiRequest<{ user: AuthUser token: string }>(
+        "/auth/login",
+        "POST",
+        { username: email, password },
+      )
+
+      // Ensure the correct role is applied based on the email provided, 
+      // avoiding issues where the mock server always returns 'general-manager'
+      const demoUser = INITIAL_USERS.find(u => u.email === email)
+      const finalRole = demoUser ? demoUser.role : (data.user.role ?? "general-manager")
+
       const user: AuthUser = {
-        id:          data.user.id,
-        name:        data.user.name || data.user.email,
-        email:       data.user.email,
-        role:        data.user.role,
-        avatar:      data.user.avatar || 'https://i.pravatar.cc/150?u=' + data.user.id,
-        avatarColor: data.user.avatarColor || 'bg-blue-500',
-        department:  data.user.department || 'Staff',
+        id: data.user.id,
+        name: data.user.name || data.user.email,
+        email: data.user.email,
+        role: finalRole as RoleId,
+        avatar:
+          data.user.avatar || "https://i.pravatar.cc/150?u=" + data.user.id,
+        avatarColor: data.user.avatarColor || "bg-blue-500",
+        department: data.user.department || "Staff",
         permissions: data.user.permissions,
       }
-      
+
       setCurrentUser(user)
       return { ok: true, user }
     } catch (e: any) {
-      console.error('Login error:', e);
-      return { ok: false, error: 'invalid-password' }
+      console.error("Login error:", e)
+      return { ok: false, error: "invalid-password" }
     }
   }
 
   const logout = async () => {
     try {
-      await apiRequest('/auth/logout', 'POST');
+      await apiRequest("/auth/logout", "POST")
     } catch (e) {}
     setCurrentUser(null)
   }

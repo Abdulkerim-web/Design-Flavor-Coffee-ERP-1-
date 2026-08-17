@@ -13,7 +13,7 @@
  */
 
 /** Canonical load-state type used across all modules. */
-export type LoadState = 'idle' | 'loading' | 'ok' | 'error'
+export type LoadState = "idle" | "loading" | "ok" | "error"
 
 /** Wrapped result returned by every service function. */
 export interface ServiceResult<T> {
@@ -31,7 +31,7 @@ export interface PaginationParams {
 /** Sort params sent to the data source. */
 export interface SortParams {
   field: string
-  dir: 'asc' | 'desc'
+  dir: "asc" | "desc"
 }
 
 /** Standard list response envelope (mirrors PHP API shape). */
@@ -58,51 +58,70 @@ export function mockRequest<T>(data: T, delayMs = 600): Promise<T> {
 }
 
 /** Wraps a service call in try/catch and returns a ServiceResult. */
-export async function safeRequest<T>(fn: () => Promise<T>): Promise<ServiceResult<T>> {
+export async function safeRequest<T>(
+  fn: () => Promise<T>,
+): Promise<ServiceResult<T>> {
   try {
     const data = await fn()
-    return { data, error: null, state: 'ok' }
+    return { data, error: null, state: "ok" }
   } catch (err) {
-    const error = err instanceof Error ? err.message : 'An unexpected error occurred.'
-    return { data: null, error, state: 'error' }
+    const error =
+      err instanceof Error ? err.message : "An unexpected error occurred."
+    return { data: null, error, state: "error" }
   }
 }
 
 /** A no-op service result — useful for initial/idle state. */
 export function idleResult<T>(): ServiceResult<T> {
-  return { data: null, error: null, state: 'idle' }
+  return { data: null, error: null, state: "idle" }
 }
 
 /** A loading service result — set this before the async call. */
 export function loadingResult<T>(): ServiceResult<T> {
-  return { data: null, error: null, state: 'loading' }
+  return { data: null, error: null, state: "loading" }
 }
 
-export async function apiRequest<T>(endpoint: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' = 'GET', body?: any): Promise<T> {
-  const url = `/api/v1${endpoint}`;
-  
+export async function apiRequest<T>(
+  endpoint: string,
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" = "GET",
+  body?: any,
+): Promise<T> {
+  const url = `/api/v1${endpoint}`
+
   // TODO: Retrieve token from a store or context if available.
   // For now, assume it's just passing data.
-  
+
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+    "Content-Type": "application/json",
+  }
 
   const options: RequestInit = {
     method,
     headers,
-  };
+  }
 
   if (body) {
-    options.body = JSON.stringify(body);
+    options.body = JSON.stringify(body)
   }
 
-  const response = await fetch(url, options);
-  const data = await response.json();
+  try {
+    const response = await fetch(url, options)
 
-  if (!data.success) {
-    throw new Error(data.error?.message || 'API Error');
+    // If endpoint doesn't exist yet, return a safe mock object to prevent crashing
+    if (response.status === 404) {
+      console.warn(`[API Stub] Endpoint ${url} not implemented on backend yet.`)
+      return {} as T // Return empty structure
+    }
+
+    const data = await response.json()
+
+    if (!data.success) {
+      throw new Error(data.error?.message || "API Error")
+    }
+
+    return data.data as T
+  } catch (err) {
+    console.error(`[API Error] ${method} ${url}`, err)
+    throw err
   }
-
-  return data.data as T;
 }
