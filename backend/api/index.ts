@@ -4,7 +4,7 @@ import { ExpressAdapter } from "@nestjs/platform-express"
 import { ValidationPipe } from "@nestjs/common"
 import { TransformInterceptor } from "../src/common/transform.interceptor"
 import { AllExceptionsFilter } from "../src/common/all-exceptions.filter"
-import * as express from "express"
+import express from "express"
 // @ts-ignore
 import serverlessExpress from "@vendia/serverless-express"
 
