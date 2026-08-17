@@ -30,7 +30,7 @@ export class CustomersService {
       phone?: string
       email?: string
       notes?: string
-      branchDetails?: { name: string address: string contactInfo: string }
+      branchDetails?: { name: string, address: string, contactInfo: string }
       isUrgent?: boolean
     },
     createdByUserId: string,

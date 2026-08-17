@@ -22,7 +22,7 @@ export class OrdersService {
   async editPendingOrder(
     orderId: string,
     userId: string,
-    updates: { quantity?: number branchId?: string },
+    updates: { quantity?: number, branchId?: string },
   ) {
     const queryRunner = this.dataSource.createQueryRunner()
     await queryRunner.connect()
