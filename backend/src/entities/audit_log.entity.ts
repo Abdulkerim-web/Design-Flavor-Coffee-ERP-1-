@@ -20,13 +20,13 @@ export class AuditLog {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column({ type: 'enum', length: 50 })
+  @Column({ type: 'varchar', length: 50 })
   action: string;
 
-  @Column({ name: 'entity_type', type: 'enum', length: 100 })
+  @Column({ name: 'entity_type', type: 'varchar', length: 100 })
   entityType: string;
 
-  @Column({ name: 'entity_id', type: 'enum', length: 100 })
+  @Column({ name: 'entity_id', type: 'varchar', length: 100 })
   entityId: string;
 
   @Column({ type: 'json' })

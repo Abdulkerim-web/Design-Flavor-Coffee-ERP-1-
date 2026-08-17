@@ -27,7 +27,7 @@ export class OrderItem {
   @Column({ name: 'unit_price', type: 'decimal', precision: 14, scale: 2 })
   unitPrice: number;
 
-  @Column({ type: 'enum', length: 100, default: 'pending-confirmation' })
+  @Column({ type: 'varchar', length: 100, default: 'pending-confirmation' })
   // Sub-fulfillment status: PENDING, RESERVED, ISSUED_TO_ROASTING, COMPLETED, CANCELLED
   status: string;
 }

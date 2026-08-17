@@ -8,7 +8,7 @@ export class StockBalance {
   @PrimaryColumn({ name: 'item_id', type: 'uuid' })
   itemId: string;
 
-  @Column({ type: 'enum', enum: ['GREEN', 'ROASTED', 'PACKAGING'] })
+  @Column({ type: 'varchar', enum: ['GREEN', 'ROASTED', 'PACKAGING'] })
   itemType: 'GREEN' | 'ROASTED' | 'PACKAGING';
 
   @Column({ name: 'on_hand', type: 'decimal', precision: 10, scale: 3, default: 0 })

@@ -24,7 +24,7 @@ export class Reservation {
   @Column({ type: 'decimal', precision: 10, scale: 3 })
   quantity: number;
 
-  @Column({ type: 'enum', length: 50, default: 'active' })
+  @Column({ type: 'varchar', length: 50, default: 'active' })
   // ACTIVE, RELEASED, CONSUMED
   status: string;
 

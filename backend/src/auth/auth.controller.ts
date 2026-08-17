@@ -16,8 +16,8 @@ export class AuthController {
 
     // Since this is demo, all seeded users have 'password' as password, 
     // but we just verify the user exists in the DB for now.
-    if (user && password === 'demo' || password === 'password') {
-      return {
+    if (user && (password === 'demo' || password === 'password')) {
+      return { success: true, data: {
         user: {
           id: user.id,
           username: user.email,
@@ -25,7 +25,7 @@ export class AuthController {
           permissions: ['*'] // Simplified for demo
         },
         token: `mock-jwt-token-${user.id}`
-      };
+      } };
     }
     
     throw new UnauthorizedException('Invalid credentials from database');
@@ -36,18 +36,18 @@ export class AuthController {
     if (!authHeader) {
       throw new UnauthorizedException('No token provided');
     }
-    return {
+    return { success: true, data: {
       user: {
         id: 'mock-user-123',
         username: 'sales',
         role: 'sales',
         permissions: ['orders.create']
       }
-    };
+    } };
   }
 
   @Post('logout')
   async logout() {
-    return { success: true };
+    return { success: true, data: { success: true } };
   }
 }

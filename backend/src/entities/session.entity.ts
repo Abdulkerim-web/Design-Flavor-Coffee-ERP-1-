@@ -20,13 +20,13 @@ export class Session {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column({ name: 'token_hash', type: 'enum', length: 255 })
+  @Column({ name: 'token_hash', type: 'varchar', length: 255 })
   tokenHash: string;
 
-  @Column({ name: 'ip_address', type: 'enum', length: 45, nullable: true })
+  @Column({ name: 'ip_address', type: 'varchar', length: 45, nullable: true })
   ipAddress: string | null;
 
-  @Column({ type: 'enum', length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   device: string | null;
 
   @CreateDateColumn({ name: 'issued_at' })

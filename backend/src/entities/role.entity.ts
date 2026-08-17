@@ -3,7 +3,7 @@ import { User } from './user.entity';
 
 @Entity('roles')
 export class Role {
-  @PrimaryColumn({ type: 'enum', length: 50 })
+  @PrimaryColumn({ type: 'varchar', length: 50 })
   id: string;
 
   @Column({ type: 'int' })

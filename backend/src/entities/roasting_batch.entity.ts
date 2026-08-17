@@ -22,7 +22,7 @@ export class RoastingBatch {
   @JoinColumn({ name: 'order_item_id' })
   orderItem: OrderItem;
 
-  @Column({ type: 'enum', length: 50, default: 'planned' })
+  @Column({ type: 'varchar', length: 50, default: 'planned' })
   // Enums: PLANNED, IN_PROGRESS, COMPLETED, FAILED
   status: string;
 

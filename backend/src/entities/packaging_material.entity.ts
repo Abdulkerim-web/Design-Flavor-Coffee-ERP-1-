@@ -5,7 +5,7 @@ export class PackagingMaterial {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'enum', length: 100 })
+  @Column({ type: 'varchar', length: 100 })
   name: string; // e.g. Kraft Paper, Foil
 
   @Column({ type: 'boolean', default: true })
@@ -20,7 +20,7 @@ export class PackagingSize {
   @Column({ name: 'material_id', type: 'uuid' })
   materialId: string;
 
-  @Column({ type: 'enum', length: 50 })
+  @Column({ type: 'varchar', length: 50 })
   size: string; // e.g. 250g, 500g, 1kg
 
   @Column({ type: 'boolean', default: true })

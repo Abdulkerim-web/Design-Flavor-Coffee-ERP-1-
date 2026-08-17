@@ -13,13 +13,13 @@ export class CustomerBranch {
   @JoinColumn({ name: 'customer_id' })
   customer: Customer;
 
-  @Column({ type: 'enum', length: 255 })
+  @Column({ type: 'varchar', length: 255 })
   name: string;
 
   @Column({ type: 'text' })
   address: string;
 
-  @Column({ name: 'contact_info', type: 'enum', length: 255 })
+  @Column({ name: 'contact_info', type: 'varchar', length: 255 })
   contactInfo: string;
 
   @Column({ name: 'is_default', type: 'boolean', default: false })

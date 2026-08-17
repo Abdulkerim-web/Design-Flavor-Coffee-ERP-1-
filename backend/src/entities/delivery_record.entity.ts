@@ -21,14 +21,14 @@ export class DeliveryRecord {
   @JoinColumn({ name: 'customer_id' })
   customer: Customer;
 
-  @Column({ type: 'enum', length: 50, default: 'READY_FOR_ASSIGNMENT' })
+  @Column({ type: 'varchar', length: 50, default: 'READY_FOR_ASSIGNMENT' })
   // READY_FOR_ASSIGNMENT, ASSIGNED, IN_TRANSIT, DELIVERED_PENDING_VERIFICATION, COMPLETED
   status: string;
 
   @Column({ name: 'driver_user_id', type: 'uuid', nullable: true })
   driverUserId: string | null;
 
-  @Column({ name: 'proof_document_path', type: 'enum', length: 255, nullable: true })
+  @Column({ name: 'proof_document_path', type: 'varchar', length: 255, nullable: true })
   proofDocumentPath: string | null;
 
   @Column({ name: 'verified_by_manager_id', type: 'uuid', nullable: true })

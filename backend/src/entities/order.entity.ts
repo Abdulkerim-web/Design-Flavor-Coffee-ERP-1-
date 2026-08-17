@@ -9,7 +9,7 @@ export class Order {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'enum', length: 50, unique: true })
+  @Column({ type: 'varchar', length: 50, unique: true })
   orderNumber: string; // Auto-generated e.g. ORD-YYYYMMDD-0001
 
   @Column({ name: 'customer_id', type: 'uuid' })
@@ -33,7 +33,7 @@ export class Order {
   @JoinColumn({ name: 'sales_rep_id' })
   salesRep: User;
 
-  @Column({ type: 'enum', length: 100, default: 'draft' })
+  @Column({ type: 'varchar', length: 100, default: 'draft' })
   // Enums from Appendix A: DRAFT, PENDING_MANAGER_CONFIRMATION, CONFIRMED_RESERVED, INSUFFICIENT_STOCK_ON_HOLD, CANCELLATION_REQUESTED, CANCELLED, etc.
   status: string;
 

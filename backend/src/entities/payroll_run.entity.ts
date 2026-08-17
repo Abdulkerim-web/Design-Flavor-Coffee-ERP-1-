@@ -13,7 +13,7 @@ export class PayrollRun {
   @Column({ name: 'period_end', type: 'date' })
   periodEnd: string;
 
-  @Column({ type: 'enum', length: 50, default: 'draft' })
+  @Column({ type: 'varchar', length: 50, default: 'draft' })
   // DRAFT, PENDING_MANAGER_APPROVAL, APPROVED, PAID, REJECTED
   status: string;
 

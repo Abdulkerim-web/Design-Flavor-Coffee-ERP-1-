@@ -8,7 +8,7 @@ export class ReceivingRecord {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'enum', length: 50, default: 'received' })
+  @Column({ type: 'varchar', length: 50, default: 'received' })
   // RECEIVED, QC_PENDING, QC_COMPLETED, PENDING_MANAGER_APPROVAL, APPROVED, REJECTED
   status: string;
 

@@ -5,19 +5,19 @@ export class Notification {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'enum', length: 50 })
+  @Column({ type: 'varchar', length: 50 })
   type: string;
 
-  @Column({ type: 'enum', length: 20 })
+  @Column({ type: 'varchar', length: 20 })
   severity: string;
 
   @Column({ name: 'recipient_user_id', type: 'uuid' })
   recipientUserId: string;
 
-  @Column({ name: 'related_entity_type', type: 'enum', length: 100, nullable: true })
+  @Column({ name: 'related_entity_type', type: 'varchar', length: 100, nullable: true })
   relatedEntityType: string | null;
 
-  @Column({ name: 'related_entity_id', type: 'enum', length: 100, nullable: true })
+  @Column({ name: 'related_entity_id', type: 'varchar', length: 100, nullable: true })
   relatedEntityId: string | null;
 
   @Column({ type: 'text' })

@@ -5,13 +5,13 @@ export class Supplier {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'business_number', unique: true, type: 'enum', length: 50 })
+  @Column({ name: 'business_number', unique: true, type: 'varchar', length: 50 })
   businessNumber: string;
 
-  @Column({ type: 'enum', length: 255 })
+  @Column({ type: 'varchar', length: 255 })
   name: string;
 
-  @Column({ name: 'contact_info', type: 'enum', length: 255 })
+  @Column({ name: 'contact_info', type: 'varchar', length: 255 })
   contactInfo: string;
 
   @Column({ type: 'text' })

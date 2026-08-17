@@ -16,7 +16,7 @@ export class BankTransaction {
   @Column({ type: 'decimal', precision: 14, scale: 2 })
   amount: number; // positive = deposit, negative = withdrawal
 
-  @Column({ type: 'enum', length: 50 })
+  @Column({ type: 'varchar', length: 50 })
   // e.g. CUSTOMER_PAYMENT, EXPENSE, PAYROLL
   sourceType: string;
 

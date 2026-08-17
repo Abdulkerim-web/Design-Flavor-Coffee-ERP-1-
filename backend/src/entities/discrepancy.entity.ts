@@ -6,7 +6,7 @@ export class Discrepancy {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'entity_type', type: 'enum', length: 50 })
+  @Column({ name: 'entity_type', type: 'varchar', length: 50 })
   // e.g. 'RoastingBatch', 'PackingRecord', 'GreenReturn'
   entityType: string;
 
@@ -22,7 +22,7 @@ export class Discrepancy {
   @Column({ type: 'decimal', precision: 10, scale: 3 })
   difference: number; // actual - expected
 
-  @Column({ type: 'enum', length: 50, default: 'pending-review' })
+  @Column({ type: 'varchar', length: 50, default: 'pending-review' })
   // PENDING_RESOLUTION, RESOLVED
   status: string;
 

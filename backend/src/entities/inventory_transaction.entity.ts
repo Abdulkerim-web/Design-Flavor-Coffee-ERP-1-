@@ -6,11 +6,11 @@ export class InventoryTransaction {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'enum', length: 50 })
+  @Column({ type: 'varchar', length: 50 })
   // e.g. RECEIPT, RESERVATION, CONSUMPTION, ADJUSTMENT, RETURN
   type: string;
 
-  @Column({ type: 'enum', enum: ['in', 'out', 'reserve', 'release'] })
+  @Column({ type: 'varchar', enum: ['in', 'out', 'reserve', 'release'] })
   direction: 'in' | 'out' | 'reserve' | 'release';
 
   @Column({ type: 'decimal', precision: 10, scale: 3 })
@@ -23,10 +23,10 @@ export class InventoryTransaction {
   @Column({ name: 'resulting_balance', type: 'decimal', precision: 10, scale: 3, nullable: true })
   resultingBalance: number | null;
 
-  @Column({ name: 'reference_entity_type', type: 'enum', length: 50 })
+  @Column({ name: 'reference_entity_type', type: 'varchar', length: 50 })
   referenceEntityType: string; // e.g. 'ReceivingRecord', 'Order', 'StockAdjustment'
 
-  @Column({ name: 'reference_entity_id', type: 'enum', length: 50 })
+  @Column({ name: 'reference_entity_id', type: 'varchar', length: 50 })
   referenceEntityId: string;
 
   @Column({ name: 'performed_by_user_id', type: 'uuid' })

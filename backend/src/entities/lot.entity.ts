@@ -4,7 +4,7 @@ import { ReceivingRecord } from './receiving_record.entity';
 
 @Entity('lots')
 export class Lot {
-  @PrimaryColumn({ type: 'enum', length: 50 })
+  @PrimaryColumn({ type: 'varchar', length: 50 })
   // Format: LOT-{ORIGIN}-{YYYY}-{seq}
   id: string;
 

@@ -9,17 +9,17 @@ export class Expense {
   @Column({ type: 'decimal', precision: 14, scale: 2 })
   amount: number;
 
-  @Column({ type: 'enum', length: 100 })
+  @Column({ type: 'varchar', length: 100 })
   category: string;
 
   @Column({ type: 'text' })
   description: string;
 
-  @Column({ type: 'enum', length: 50, default: 'requested' })
+  @Column({ type: 'varchar', length: 50, default: 'requested' })
   // REQUESTED, PENDING_MANAGER_APPROVAL, APPROVED, PAID, REJECTED
   status: string;
 
-  @Column({ name: 'payment_method', type: 'enum', length: 50, nullable: true })
+  @Column({ name: 'payment_method', type: 'varchar', length: 50, nullable: true })
   // BANK_TRANSFER, CASH (Cash does NOT hit BankTransaction)
   paymentMethod: string | null;
 

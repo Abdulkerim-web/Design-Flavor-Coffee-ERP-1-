@@ -15,35 +15,35 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'business_number', unique: true, type: 'enum', length: 50 })
+  @Column({ name: 'business_number', unique: true, type: 'varchar', length: 50 })
   businessNumber: string;
 
-  @Column({ type: 'enum', length: 255 })
+  @Column({ type: 'varchar', length: 255 })
   name: string;
 
-  @Column({ unique: true, type: 'enum', length: 255 })
+  @Column({ unique: true, type: 'varchar', length: 255 })
   email: string;
 
-  @Column({ name: 'role_id', type: 'enum', length: 50 })
+  @Column({ name: 'role_id', type: 'varchar', length: 50 })
   roleId: string;
 
   @ManyToOne(() => Role)
   @JoinColumn({ name: 'role_id' })
   role: Role;
 
-  @Column({ type: 'enum', length: 20, default: 'active' })
+  @Column({ type: 'varchar', length: 20, default: 'active' })
   status: string;
 
   @Column({ name: 'last_active', type: 'timestamp', nullable: true })
   lastActive: Date | null;
 
-  @Column({ type: 'enum', length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   avatar: string | null;
 
-  @Column({ name: 'avatar_color', type: 'enum', length: 20, nullable: true })
+  @Column({ name: 'avatar_color', type: 'varchar', length: 20, nullable: true })
   avatarColor: string | null;
 
-  @Column({ type: 'enum', length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   department: string | null;
 
   @Column({ name: 'deactivated_at', type: 'timestamp', nullable: true })
