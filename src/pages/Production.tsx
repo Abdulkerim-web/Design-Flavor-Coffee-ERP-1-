@@ -3172,12 +3172,19 @@ function DetailView({
 
 /* ─── Root export ─────────────────────────────────────────────── */
 
-export default function Production() {
+export default function Production({ routeParams }: { routeParams?: { id?: string } }) {
   const { currentUser } = useAuth()
   const role = currentUser?.role ?? "viewer"
 
   const [view, setView] = useState<View>("list")
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (routeParams?.id) {
+      setSelectedJobId(routeParams.id)
+      setView("detail")
+    }
+  }, [routeParams])
 
   if (view === "detail" && selectedJobId) {
     return (

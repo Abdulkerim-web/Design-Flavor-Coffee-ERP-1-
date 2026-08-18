@@ -3135,13 +3135,20 @@ function ManagerTable({
 }
 
 /* ─── Main component ─────────────────────────────────────────── */
-export default function Delivery() {
+export default function Delivery({ routeParams }: { routeParams?: { id?: string } }) {
   const { currentUser } = useAuth()
   const { isNarrow } = useBreakpoint()
   const role = currentUser?.role ?? "viewer"
 
   const [view, setView] = useState<View>("list")
   const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (routeParams?.id) {
+      setSelectedId(routeParams.id)
+      setView("detail")
+    }
+  }, [routeParams])
 
   /* List */
   const [summary, setSummary] = useState<DeliverySummary | null>(null)

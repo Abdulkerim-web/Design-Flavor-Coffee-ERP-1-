@@ -870,7 +870,7 @@ function EmployeePayrollDetail({
 
 // ─── Main Payroll Page ─────────────────────────────────────────────────────────
 
-export default function Payroll() {
+export default function Payroll({ routeParams }: { routeParams?: { id?: string } }) {
   const { currentUser } = useAuth()
   const role = currentUser?.role ?? "viewer"
   const canView = can(role as any, "payroll.view")
@@ -880,9 +880,19 @@ export default function Payroll() {
 
   const [view, setView] = useState<View>("dashboard")
   const [run, setRun] = useState<PayrollRun | null>(null)
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(
-    null,
-  )
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (routeParams?.id) {
+      if (routeParams.id.startsWith("run-")) {
+        // Pseudo ID check logic if we were fetching specific run, but currently it just uses dummy data
+        setView("run-detail")
+      } else {
+        setSelectedEmployeeId(routeParams.id)
+        setView("employee-detail")
+      }
+    }
+  }, [routeParams])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 

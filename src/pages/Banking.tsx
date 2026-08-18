@@ -3750,7 +3750,7 @@ function BankingDashboard({
 
 // ─── Main export ───────────────────────────────────────────────────────────────
 
-export default function Banking() {
+export default function Banking({ routeParams }: { routeParams?: { id?: string } }) {
   // Auth + RBAC — all hooks first
   const { currentUser } = useAuth()
   const role = currentUser?.role ?? "viewer"
@@ -3760,10 +3760,18 @@ export default function Banking() {
 
   const [view, setView] = useState<View>("dashboard")
   const [selectedAccountId, setSelectedAccountId] = useState<string>("")
+  
+  useEffect(() => {
+    if (routeParams?.id) {
+      setSelectedAccountId(routeParams.id)
+      setView("account-detail")
+    }
+  }, [routeParams])
   const [accounts, setAccounts] = useState<BankAccountRecord[]>([])
   const [summary, setSummary] = useState<BankingSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [refreshCount, setRefreshCount] = useState(0)
 
   useEffect(() => {
     Promise.all([listBankAccounts(), getBankingSummary()]).then(([a, s]) => {
@@ -3774,7 +3782,7 @@ export default function Banking() {
       if (s.data) setSummary(s.data)
       setLoading(false)
     })
-  }, [])
+  }, [refreshCount])
 
   // Conditional returns after all hooks
   if (!canView) return <AccessDenied />
@@ -3799,7 +3807,10 @@ export default function Banking() {
     return (
       <NewTransactionView
         accounts={accounts}
-        onBack={() => setView("dashboard")}
+        onBack={() => {
+          setRefreshCount(c => c + 1)
+          setView("dashboard")
+        }}
         canCreate={canCreate}
       />
     )
@@ -3807,7 +3818,10 @@ export default function Banking() {
 
   if (view === "transfer") {
     return (
-      <TransferView accounts={accounts} onBack={() => setView("dashboard")} />
+      <TransferView accounts={accounts} onBack={() => {
+        setRefreshCount(c => c + 1)
+        setView("dashboard")
+      }} />
     )
   }
 

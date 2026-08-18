@@ -3710,12 +3710,20 @@ function OverduePaymentsView({
 }
 
 /* ─── Root component ─────────────────────────────────────────── */
-export default function Payments() {
+export default function Payments({ routeParams }: { routeParams?: { id?: string } }) {
   const { currentUser } = useAuth()
   const role = currentUser?.role ?? "viewer"
 
   const [view, setView] = useState<View>("list")
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  
+  useEffect(() => {
+    if (routeParams?.id) {
+      setSelectedId(routeParams.id)
+      setView("detail")
+    }
+  }, [routeParams])
+
   const [recordTarget, setRecordTarget] = useState<PaymentRecord | null>(null)
   const [bankAccounts] = useState<BankAccount[]>(() => getBankAccounts())
   const [toast, setToast] = useState<{

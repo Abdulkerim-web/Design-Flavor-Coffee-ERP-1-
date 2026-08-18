@@ -1,5 +1,19 @@
 import { supabaseAdmin } from "./supabase"
 
+// ── IN-MEMORY MOCKS (Phase 3) ──
+let mockExpenses: any[] = [
+  { id: "exp-1", ref: "EXP-1001", category: "Supplies", description: "Office supplies", amount: "ETB 2,500", date: new Date().toISOString(), requestedBy: "Admin", status: "approved", hasDocument: false, timeline: [] }
+]
+let mockPayments: any[] = []
+let mockPayroll: any[] = []
+let mockBanking: any[] = []
+let mockExpenseCategories: any[] = [
+  { id: "cat-1", name: "Utility", code: "UTL", color: "#6366F1", active: true },
+  { id: "cat-2", name: "Supplies", code: "SUP", color: "#10B981", active: true },
+]
+let mockBankAccounts: any[] = [
+  { id: "acc-1", name: "Main Operating", type: "checking", number: "****1234", currency: "ETB", status: "active", balance: "150000" }
+]
 export async function handleSupabaseApiRequest(
   endpoint: string,
   method: string,
@@ -18,11 +32,67 @@ export async function handleSupabaseApiRequest(
     return { success: true }
   }
 
-  // ── Dashboards ──
+  // ── IN-MEMORY INTERCEPTORS FOR FINANCE ──
+  if (path.startsWith("/finance/expenses")) {
+    if (method === "GET") {
+      if (path === "/finance/expenses") return mockExpenses
+      if (path === "/finance/expenses/summary") return { pendingApproval: mockExpenses.filter(e => e.status === "pending-approval").length, toPay: mockExpenses.filter(e => e.status === "approved").length, recentTotal: "ETB 2,500" }
+      if (path.includes("/approve")) {
+        const idx = mockExpenses.findIndex(e => e.id === parts[2])
+        if (idx !== -1) mockExpenses[idx].status = "approved"
+        return mockExpenses[idx]
+      }
+      if (path.includes("/reject")) {
+        const idx = mockExpenses.findIndex(e => e.id === parts[2])
+        if (idx !== -1) mockExpenses[idx].status = "rejected"
+        return mockExpenses[idx]
+      }
+      if (path.includes("/pay")) {
+        const idx = mockExpenses.findIndex(e => e.id === parts[2])
+        if (idx !== -1) mockExpenses[idx].status = "paid"
+        return mockExpenses[idx]
+      }
+      if (parts.length === 3) return mockExpenses.find(e => e.id === parts[2])
+    }
+    if (method === "POST" && path === "/finance/expenses") {
+      const newExp = {
+        id: "exp-" + Math.floor(Math.random() * 10000),
+        ref: "EXP-" + Math.floor(Math.random() * 10000),
+        category: body.category || "Unknown",
+        description: body.description || "",
+        amount: "ETB " + (body.amount || "0"),
+        date: new Date().toISOString(),
+        requestedBy: "Admin",
+        status: "pending-approval",
+        hasDocument: false,
+        timeline: []
+      }
+      mockExpenses = [newExp, ...mockExpenses]
+      return newExp
+    }
+  }
+
+  if (path.startsWith("/finance/expense-categories")) {
+    if (method === "GET") return mockExpenseCategories
+    if (method === "POST") {
+      const newCat = { id: "cat-" + Math.floor(Math.random() * 10000), ...body, active: true }
+      mockExpenseCategories.push(newCat)
+      return newCat
+    }
+  }
+
+  // ── Dashboards & Fallbacks ──
   if (path === "/dashboard/manager" && method === "GET") return await getManagerDashboard()
-  if (path === "/dashboard/sales" && method === "GET") return {} // Mock for now
-  if (path === "/dashboard/finance" && method === "GET") return {} // Mock for now
-  if (path === "/dashboard/inventory" && method === "GET") return {} // Mock for now
+  if (path === "/dashboard/sales" && method === "GET") return { kpiCards: [], attentionCards: [], orderStatuses: [] }
+  if (path === "/dashboard/finance" && method === "GET") return { totalCustomerPayments: "ETB 0", outstandingBalances: "ETB 0", overdueCount: 0, thisMonthExpenses: "ETB 0", pendingExpenseApprovals: "ETB 0", pendingExpenseCount: 0, currentPayrollTotal: "ETB 0", payrollPeriod: "Current", payrollStatus: "draft", totalBankBalance: "ETB 0", alerts: [] }
+  if (path === "/finance/dashboard" && method === "GET") return { totalCustomerPayments: "ETB 0", outstandingBalances: "ETB 0", overdueCount: 0, thisMonthExpenses: "ETB 0", pendingExpenseApprovals: "ETB 0", pendingExpenseCount: 0, currentPayrollTotal: "ETB 0", payrollPeriod: "Current", payrollStatus: "draft", totalBankBalance: "ETB 0", alerts: [] }
+  if (path === "/dashboard/inventory" && method === "GET") return { kpiCards: [], attentionCards: [] }
+  if (path === "/inventory/stats" && method === "GET") return { green: { onHand: "0 kg", reserved: "0 kg", available: "0 kg", status: "healthy", lotCount: 0 }, roasted: { onHand: "0 kg", reserved: "0 kg", available: "0 kg", status: "healthy", lotCount: 0 }, packaging: { onHand: "0", reserved: "0", available: "0", status: "healthy", skuCount: 0 }, attentionCount: 0 }
+  if (path === "/inventory/attention" && method === "GET") return []
+  if (path === "/finance/banking/summary" && method === "GET") return { totalBalance: "ETB 0", unassignedDeposits: "ETB 0", pendingReconciliations: 0, alerts: [] }
+  if (path === "/finance/expenses/summary" && method === "GET") return { pendingApproval: 0, toPay: 0, recentTotal: "ETB 0" }
+  if (path === "/delivery/summary" && method === "GET") return { pending: 0, inTransit: 0, completedToday: 0 }
+  if (path === "/payments/summary" && method === "GET") return { receivedToday: "ETB 0", pendingVerification: 0 }
 
   // ── Custom Actions ──
   if (path === "/receiving" && method === "POST") {
@@ -66,17 +136,25 @@ export async function handleSupabaseApiRequest(
   const id = parts[idPos]
 
   if (method === "GET" && !id) {
-    let query = supabaseAdmin.from(table).select("*").order("created_at", { ascending: false })
+    let query = supabaseAdmin.from(table).select("*")
+    if (table !== "customers" && table !== "users") {
+      query = query.order("created_at", { ascending: false })
+    }
     if (table === "orders") {
       query = supabaseAdmin.from(table).select("*, customer:customers(*)").order("created_at", { ascending: false })
     }
     const { data, error } = await query
     if (error) {
       console.error(`[Supabase API] Error fetching ${table}:`, error)
-      return { items: [], total: 0, page: 1, perPage: 10 }
+      return path.startsWith("/inventory/lots") || path.startsWith("/inventory/green") || path.startsWith("/inventory/roasted") || path.startsWith("/inventory/packaging")
+        ? { lots: [], total: 0, page: 1, pageSize: 10 }
+        : []
     }
     const mapped = camelizeKeys(data) || []
-    return { items: mapped, total: mapped.length, page: 1, perPage: mapped.length || 10 }
+    if (path.startsWith("/inventory/lots") || path.startsWith("/inventory/green") || path.startsWith("/inventory/roasted") || path.startsWith("/inventory/packaging")) {
+       return { lots: mapped, total: mapped.length, page: 1, pageSize: mapped.length || 10 }
+    }
+    return mapped
   }
 
   if (method === "POST" && !id) {
@@ -120,7 +198,8 @@ export async function handleSupabaseApiRequest(
     return camelizeKeys(data[0])
   }
 
-  console.warn(`[Supabase API] Endpoint ${method} ${endpoint} falling back to {}`)
+  console.warn(`[Supabase API] Endpoint ${method} ${endpoint} falling back to default mock array/object`)
+  if (method === "GET" && !id) return []
   return {}
 }
 

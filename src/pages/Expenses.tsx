@@ -3432,7 +3432,7 @@ function SummaryCards({
 
 // ─── Main Expenses Page ────────────────────────────────────────────────────────
 
-export default function Expenses() {
+export default function Expenses({ routeParams }: { routeParams?: { id?: string } }) {
   // All hooks first — before any conditional returns
   const { currentUser } = useAuth()
   const role = currentUser?.role ?? "viewer"
@@ -3480,6 +3480,12 @@ export default function Expenses() {
     setSelectedExpenseId(id)
     setView("detail")
   }
+
+  useEffect(() => {
+    if (routeParams?.id) {
+      goDetail(routeParams.id)
+    }
+  }, [routeParams])
 
   // Guard after all hooks
   if (!canView) return <AccessDenied />

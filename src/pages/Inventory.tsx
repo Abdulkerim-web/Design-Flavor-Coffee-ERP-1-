@@ -3550,7 +3550,7 @@ function TransferView({
 /*  ROOT COMPONENT                                                 */
 /* ═══════════════════════════════════════════════════════════════ */
 
-export default function Inventory() {
+export default function Inventory({ routeParams }: { routeParams?: { id?: string } }) {
   const { currentUser } = useAuth()
   const role = currentUser?.role ?? "viewer"
 
@@ -3570,6 +3570,12 @@ export default function Inventory() {
     setPrevView(view)
     setView("lot-detail")
   }
+
+  useEffect(() => {
+    if (routeParams?.id) {
+      selectLot(routeParams.id)
+    }
+  }, [routeParams])
 
   if (!can(role as any, "inventory.view")) {
     return (
