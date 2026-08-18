@@ -18,6 +18,7 @@ import {
   managerConfirmPacking,
   reviewPackingDiscrepancy,
 } from "../services/operations"
+import { apiRequest } from "../services/api"
 import type {
   PackingJob,
   PackingMaterialEntry,
@@ -2071,6 +2072,26 @@ function DetailView({
                     }}
                   >
                     Driver assignment is handled in the Delivery module.
+                  </div>
+                )}
+                {job.status === "ready-for-delivery" && (
+                  <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+                    <PrimaryButton
+                      onClick={async () => {
+                        try {
+                          await apiRequest("/deliveries", "POST", {
+                            orderId: job.orderId || job.orderRef,
+                            notes: `Packing ready: ${job.ref}`,
+                          })
+                          alert("Delivery created from packing.")
+                        } catch (err) {
+                          console.error(err)
+                          alert("Failed to create delivery")
+                        }
+                      }}
+                    >
+                      Create Delivery
+                    </PrimaryButton>
                   </div>
                 )}
               </div>
