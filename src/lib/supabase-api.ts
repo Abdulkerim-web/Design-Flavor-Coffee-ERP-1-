@@ -5,7 +5,7 @@ let mockExpenses: any[] = [
   { id: "exp-1", ref: "EXP-1001", category: "Supplies", description: "Office supplies", amount: "ETB 2,500", date: new Date().toISOString(), requestedBy: "Admin", status: "approved", hasDocument: false, timeline: [] }
 ]
 let mockPayments: any[] = []
-let mockPayroll: any[] = []
+let mockPayroll: any = { id: "pr-1", period: "August 2026", status: "draft", employeeCount: 0, totalAmount: "ETB 0", pendingReviewCount: 0, changesCount: 0, employees: [], timeline: [] }
 let mockBanking: any[] = []
 let mockExpenseCategories: any[] = [
   { id: "cat-1", name: "Utility", code: "UTL", color: "#6366F1", active: true },
@@ -84,20 +84,22 @@ export async function handleSupabaseApiRequest(
   // ── IN-MEMORY INTERCEPTORS FOR PAYMENTS, BANKING, PAYROLL ──
   if (path === "/payments/record" && method === "POST") {
     const paymentId = "PAY-" + Math.floor(Math.random() * 10000)
-    await supabaseAdmin.from("payments").insert([{
+    const { error } = await supabaseAdmin.from("payments").insert([{
       order_id: body.paymentId || "ORD-0",
-      amount: parseFloat(body.amount) || 0,
+      amount: parseFloat(String(body.amount).replace(/[^0-9.]/g, '')) || 0,
       payment_method: "bank_transfer",
       bank_reference_number: body.transferRef,
       idempotency_key: "PAY-" + Math.floor(Math.random() * 100000),
       registered_by_user_id: "USR-001"
     }])
+    if (error) throw error
     return { success: true, ref: paymentId }
   }
 
   if (path.startsWith("/finance/payroll")) {
+    const base = path.split("?")[0]
     if (method === "GET") {
-      if (path === "/finance/payroll") return mockPayroll
+      if (base === "/finance/payroll") return mockPayroll
       return null
     }
     if (method === "POST") {
@@ -118,6 +120,18 @@ export async function handleSupabaseApiRequest(
     }
     mockBanking.unshift(newTx)
     return newTx
+  }
+
+  if (path.startsWith("/finance/expenses/") && method === "POST") {
+    const parts = path.split("/")
+    const id = parts[3]
+    const action = parts[4]
+    const expense = mockExpenses.find(e => e.id === id)
+    if (expense) {
+      if (action === "approve") expense.status = "approved"
+      if (action === "reject") expense.status = "rejected"
+      return expense
+    }
   }
   
   if (path === "/finance/accounts" && method === "GET") return mockBankAccounts
@@ -199,7 +213,7 @@ export async function handleSupabaseApiRequest(
       query = query.order("created_at", { ascending: false })
     }
     if (table === "orders") {
-      query = supabaseAdmin.from(table).select("*, customer:customers(*)").order("created_at", { ascending: false })
+      query = supabaseAdmin.from(table).select("*").order("created_at", { ascending: false })
     }
     const { data, error } = await query
     if (error) {
@@ -211,12 +225,20 @@ export async function handleSupabaseApiRequest(
     
     if (table === "orders" && data && data.length > 0) {
       const orderIds = data.map((d: any) => d.id)
-      const { data: itemsData } = await supabaseAdmin.from("order_items").select("*").in("order_id", orderIds)
-      if (itemsData) {
-        data.forEach((order: any) => {
-          order.items = itemsData.filter((i: any) => i.order_id === order.id)
-        })
-      }
+      const customerIds = [...new Set(data.map((d: any) => d.customer_id).filter(Boolean))]
+
+      const [itemsRes, customersRes] = await Promise.all([
+        supabaseAdmin.from("order_items").select("*").in("order_id", orderIds),
+        supabaseAdmin.from("customers").select("*").in("id", customerIds)
+      ])
+
+      const itemsData = itemsRes.data || []
+      const customersData = customersRes.data || []
+
+      data.forEach((order: any) => {
+        order.items = itemsData.filter((i: any) => i.order_id === order.id)
+        order.customer = customersData.find((c: any) => c.id === order.customer_id) || null
+      })
     }
 
     const mapped = camelizeKeys(data) || []
