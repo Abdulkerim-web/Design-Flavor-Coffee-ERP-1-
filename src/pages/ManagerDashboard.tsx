@@ -1,5 +1,5 @@
 /* Responsive: mobile ≤640 | tablet 641–1024 | laptop 1025–1440 | desktop >1440 */
-import { useState, useEffect, type FC, type ReactNode } from "react"
+import { useState, useEffect, useCallback, type FC, type ReactNode } from "react"
 import { useBreakpoint } from "../hooks/useBreakpoint"
 import { useAuth } from "../contexts/AuthContext"
 import { canRead } from "../lib/rbac"
