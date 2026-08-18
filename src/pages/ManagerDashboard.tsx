@@ -378,29 +378,34 @@ const ACTIVITY: ActivityEvent[] = [
    PRIMITIVE COMPONENTS
 ───────────────────────────────────────────────────────────── */
 const SvgIcon: FC<{
-  d: string
+  d?: string
   size?: number
   stroke?: string
   strokeW?: number
-}> = ({ d, size = 14, stroke = "currentColor", strokeW = 1.75 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={stroke}
-    strokeWidth={strokeW}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    {d
-      .split("M")
-      .filter(Boolean)
-      .map((seg, i) => (
-        <path key={i} d={`M${seg}`} />
-      ))}
-  </svg>
-)
+}> = ({ d, size = 14, stroke = "currentColor", strokeW = 1.75 }) => {
+  if (!d || !d.startsWith("M")) {
+    return <span style={{ fontSize: size }}>{d || "📋"}</span>
+  }
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={stroke}
+      strokeWidth={strokeW}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {d
+        .split("M")
+        .filter(Boolean)
+        .map((seg, i) => (
+          <path key={i} d={`M${seg}`} />
+        ))}
+    </svg>
+  )
+}
 
 const SectionHeading: FC<{ title: string sub?: string action?: ReactNode }> = ({
   title,

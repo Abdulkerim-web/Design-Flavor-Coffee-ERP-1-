@@ -45,25 +45,25 @@ export class DashboardService {
         label: 'Orders in Progress',
         value: activeOrders.length.toString(),
         sub: `${orders.filter(o => o.status === 'PENDING_MANAGER_CONFIRMATION').length} awaiting confirmation`,
-        icon: '📋',
+        icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
       },
       {
         label: 'Total Active Customers',
         value: `${customers.length} clients`,
         sub: `${customers.filter(c => new Date(c.createdAt).toDateString() === new Date().toDateString()).length} registered today`,
-        icon: '👥',
+        icon: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
       },
       {
         label: 'Active Roasting',
         value: `${roastingBatches.length} batches`,
         sub: 'In progress',
-        icon: '🔥',
+        icon: 'M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0',
       },
       {
         label: 'Low Stock Alerts',
         value: `${lowStock.length} items`,
         sub: 'Require attention',
-        icon: '⚠️',
+        icon: 'M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01',
       }
     ];
 
