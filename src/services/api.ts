@@ -109,23 +109,10 @@ export async function apiRequest<T>(
   }
 
   try {
-    const response = await fetch(url, options)
-
-    // If endpoint doesn't exist yet, return a safe mock object to prevent crashing
-    if (response.status === 404) {
-      console.warn(`[API Stub] Endpoint ${url} not implemented on backend yet.`)
-      return {} as T // Return empty structure
-    }
-
-    const data = await response.json()
-
-    if (!data.success) {
-      throw new Error(data.error?.message || "API Error")
-    }
-
-    return data.data as T
+    const { handleSupabaseApiRequest } = await import("../lib/supabase-api")
+    return await handleSupabaseApiRequest(endpoint, method, body, currentUserRole) as T
   } catch (err) {
-    console.error(`[API Error] ${method} ${url}`, err)
+    console.error(`[Supabase API Error] ${method} ${url}`, err)
     throw err
   }
 }
