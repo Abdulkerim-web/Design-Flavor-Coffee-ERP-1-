@@ -85,6 +85,7 @@ function AppInner() {
   const { currentUser, logout } = useAuth()
   const [unauthPage, setUnauthPage] = useState<UnauthPage>("welcome")
   const [active, setActive] = useState<ModuleId>("dashboard")
+  const [routeParams, setRouteParams] = useState<any>(null)
   const [collapsed, setCollapsed] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -132,6 +133,12 @@ function AppInner() {
     )
   }
 
+  const handleNavigate = (id: string, params?: any) => {
+    setActive(id as ModuleId)
+    setRouteParams(params || null)
+    if (isMobile) setSidebarOpen(false)
+  }
+
   const Module = MODULES[active]
 
   return (
@@ -147,10 +154,7 @@ function AppInner() {
         active={active}
         collapsed={collapsed}
         onToggleCollapse={() => setCollapsed((v) => !v)}
-        onNavigate={(id) => {
-          setActive(id as ModuleId)
-          if (isMobile) setSidebarOpen(false)
-        }}
+        onNavigate={handleNavigate}
         onOpenSearch={() => setSearchOpen(true)}
         isMobile={isMobile}
         isOpen={sidebarOpen}
@@ -292,10 +296,8 @@ function AppInner() {
           {canRead(currentUser.role, active) ? (
             <Module
               key={active}
-              onNavigate={(id) => {
-                setActive(id as ModuleId)
-                if (isMobile) setSidebarOpen(false)
-              }}
+              onNavigate={handleNavigate}
+              routeParams={routeParams}
             />
           ) : (
             <div
@@ -320,10 +322,7 @@ function AppInner() {
       {isMobile && (
         <BottomNav
           active={active}
-          onNavigate={(id) => {
-            setActive(id as ModuleId)
-            setSidebarOpen(false)
-          }}
+          onNavigate={handleNavigate}
           onOpenAlerts={() => setAlertsOpen(true)}
           alertCount={5}
         />

@@ -8,7 +8,7 @@ import OperationsDashboard from "./OperationsDashboard"
 export default function Dashboard({
   onNavigate,
 }: {
-  onNavigate?: (id: string) => void
+  onNavigate?: (id: string, params?: any) => void
 }) {
   const { currentUser } = useAuth()
   const role = currentUser?.role ?? "general-manager"

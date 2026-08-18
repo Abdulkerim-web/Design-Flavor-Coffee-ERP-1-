@@ -4398,12 +4398,32 @@ const CustomerFormView: FC<{
 /* ─────────────────────────────────────────────────────────────
    ROOT EXPORT — internal view router
 ───────────────────────────────────────────────────────────── */
-export default function Customers() {
+export default function Customers({
+  onNavigate,
+  routeParams,
+}: {
+  onNavigate?: (id: string, params?: any) => void
+  routeParams?: any
+}) {
   const { currentUser } = useAuth()
   const role = currentUser?.role ?? "general-manager"
 
   const [view, setView] = useState<View>("list")
   const [selected, setSelected] = useState<Customer | null>(null)
+
+  // Handle incoming routeParams for deep linking
+  useEffect(() => {
+    if (routeParams?.view === "detail" && routeParams?.id) {
+      import("../services/customers").then(({ getCustomer }) => {
+        getCustomer(routeParams.id).then((res) => {
+          if (res.state === "ok" && res.data) {
+            setSelected(res.data)
+            setView("detail")
+          }
+        })
+      })
+    }
+  }, [routeParams])
 
   // Permission derivations — UI only. PHP enforces all actual authorization.
   const canCreate =

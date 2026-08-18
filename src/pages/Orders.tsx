@@ -5514,7 +5514,13 @@ const NewOrderView: FC<{ onBack: () => void }> = ({ onBack }) => {
 /* ─────────────────────────────────────────────────────────────
    ROOT EXPORT — internal view router
 ───────────────────────────────────────────────────────────── */
-export default function Orders() {
+export default function Orders({
+  onNavigate,
+  routeParams,
+}: {
+  onNavigate?: (id: string, params?: any) => void
+  routeParams?: any
+}) {
   const { currentUser } = useAuth()
   const role = (currentUser?.role ?? "sales-rep") as string
 
@@ -5525,6 +5531,20 @@ export default function Orders() {
 
   const [view, setView] = useState<View>("list")
   const [selected, setSelected] = useState<Order | null>(null)
+
+  // Handle incoming routeParams for deep linking
+  useEffect(() => {
+    if (routeParams?.view === "detail" && routeParams?.id) {
+      import("../services/orders").then(({ getOrder }) => {
+        getOrder(routeParams.id).then((res) => {
+          if (res.state === "ok" && res.data) {
+            setSelected(res.data)
+            setView("detail")
+          }
+        })
+      })
+    }
+  }, [routeParams])
 
   const goList = useCallback(() => {
     setView("list")

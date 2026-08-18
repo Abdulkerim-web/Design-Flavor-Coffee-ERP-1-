@@ -663,7 +663,7 @@ const SEVERITY_CFG = {
   },
 }
 
-const AttentionCardUI: FC<{ card: AttentionCard }> = ({ card }) => {
+const AttentionCardUI: FC<{ card: AttentionCard; onNavigate?: (id: string, params?: any) => void }> = ({ card, onNavigate }) => {
   const cfg = SEVERITY_CFG[card.severity] || SEVERITY_CFG.info
   return (
     <div
@@ -819,6 +819,15 @@ const AttentionCardUI: FC<{ card: AttentionCard }> = ({ card }) => {
           }}
           onMouseLeave={(e) => {
             ;(e.currentTarget as HTMLButtonElement).style.opacity = "1"
+          }}
+          onClick={() => {
+            if (card.module === "customers") {
+              onNavigate?.("customers", { view: "detail", id: card.id.replace("cus-", "") })
+            } else if (card.module === "orders") {
+              onNavigate?.("orders", { view: "detail", id: card.id.replace("ord-", "") })
+            } else {
+              onNavigate?.(card.module)
+            }
           }}
         >
           {card.primaryAction}
@@ -1735,7 +1744,7 @@ export default function ManagerDashboard({
                 }}
               >
                 {attentionItems.map((card) => (
-                  <AttentionCardUI key={card.id} card={card} />
+                  <AttentionCardUI key={card.id} card={card} onNavigate={onNavigate} />
                 ))}
               </div>
             )}
