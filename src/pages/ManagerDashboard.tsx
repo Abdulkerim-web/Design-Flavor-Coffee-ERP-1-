@@ -16,7 +16,7 @@ type DateRange = "today" | "week" | "month" | "quarter" | "custom"
 
 interface AttentionCard {
   id: string
-  severity: "urgent" | "warning" | "approval"
+  severity: "urgent" | "warning" | "approval" | "info"
   category: string
   title: string
   description: string
@@ -653,10 +653,18 @@ const SEVERITY_CFG = {
     iconPath:
       "M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11",
   },
+  info: {
+    color: "#0369A1",
+    bg: "#F0F9FF",
+    border: "#BAE6FD",
+    bar: "#0284C7",
+    iconPath:
+      "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+  },
 }
 
 const AttentionCardUI: FC<{ card: AttentionCard }> = ({ card }) => {
-  const cfg = SEVERITY_CFG[card.severity]
+  const cfg = SEVERITY_CFG[card.severity] || SEVERITY_CFG.info
   return (
     <div
       style={{
