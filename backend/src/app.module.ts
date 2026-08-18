@@ -49,7 +49,10 @@ import { AllEntities } from "./entities" // Auto-syncs schema in dev
         "postgresql://postgres.udvtogofulclohhvdnzc:Lx3MLqIBcFeL4uh7@aws-0-eu-central-1.pooler.supabase.com:6543/postgres",
       extra: { ssl: { rejectUnauthorized: false } },
       entities: AllEntities,
-      synchronize: true,
+      // Disable automatic schema synchronization by default to avoid
+      // runtime migration/index-creation errors. Enable in development
+      // only by setting TYPEORM_SYNCHRONIZE=true in the environment.
+      synchronize: process.env.TYPEORM_SYNCHRONIZE === "true",
     }),
   ],
   controllers: [

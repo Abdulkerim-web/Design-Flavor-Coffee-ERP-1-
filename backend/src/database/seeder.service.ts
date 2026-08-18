@@ -105,6 +105,7 @@ export class SeederService implements OnApplicationBootstrap {
         const order = this.orderRepo.create({
           orderNumber: "ORD-2001",
           customerId: customer.id,
+          branchId: "BRN-001",
           status: "PENDING_MANAGER_CONFIRMATION",
           totalAmount: 179400,
         } as any) as any
