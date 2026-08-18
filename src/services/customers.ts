@@ -81,16 +81,20 @@ export async function listCustomers(
     }
 
     // Map the backend entity format to the frontend interface format
-    const mapped: Customer[] = usingMock ? all : all.map((c) => ({
+    const mapped: any[] = usingMock ? all : all.map((c) => ({
       id: c.id,
       ref: c.businessNumber || "CUS-UNKNOWN",
       name: c.name,
       type: c.type || "cafe",
       status: c.status || "active",
+      contactPerson: c.contactPerson || "N/A",
       contactName: c.contactPerson || "N/A",
+      phone: c.phone || "N/A",
       contactPhone: c.phone || "N/A",
+      email: c.email || undefined,
       contactEmail: c.email || "N/A",
-      address: "Main Branch",
+      address: c.address || "Main Branch",
+      location: "Addis Ababa",
       city: "Addis Ababa",
       creditLimit: "ETB 0.00",
       outstandingBalance: "ETB 0.00",
@@ -123,24 +127,28 @@ export async function listCustomers(
 }
 
 export async function getCustomer(id: string) {
-  return safeRequest<Customer>(async () => {
+  return safeRequest<any>(async () => {
     const c = await apiRequest<any>(`/customers/${id}`, "GET")
     if (!c) throw new Error(`Customer ${id} not found.`)
     return {
       id: c.id,
       ref: c.businessNumber || "CUS-UNKNOWN",
       name: c.name,
-      type: "other",
-      status: c.status || "pending",
-      contactName: "TBD",
-      contactPhone: "TBD",
-      contactEmail: "TBD",
-      address: "TBD",
-      city: "TBD",
+      type: c.type || "cafe",
+      status: c.status || "active",
+      contactPerson: c.contactPerson || "N/A",
+      contactName: c.contactPerson || "N/A",
+      phone: c.phone || "N/A",
+      contactPhone: c.phone || "N/A",
+      email: c.email || undefined,
+      contactEmail: c.email || "N/A",
+      address: c.address || "Main Branch",
+      location: "Addis Ababa",
+      city: "Addis Ababa",
       creditLimit: "ETB 0.00",
       outstandingBalance: "ETB 0.00",
       salesRep: c.salesRepId ? { id: c.salesRepId, name: "Sales Rep" } : null,
-      createdAt: c.createdAt,
+      createdAt: c.createdAt ? new Date(c.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
     }
   })
 }

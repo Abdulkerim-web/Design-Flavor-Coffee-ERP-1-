@@ -1285,27 +1285,28 @@ export default function ManagerDashboard({
   const [activities, setActivities] = useState<ActivityEvent[]>([])
   const [customerModalOpen, setCustomerModalOpen] = useState(false)
 
+  const loadDashboard = useCallback(async () => {
+    try {
+      const { apiRequest } = await import("../services/api")
+      const data = await apiRequest<any>("/dashboard/manager")
+      setAttentionItems(data.attentionCards || [])
+      setKpis(data.kpiCards || [])
+      setStatuses(data.orderStatuses || [])
+      setFinances(data.financeRows || [])
+      setActivities(data.activityFeed || [])
+      setLoadState("ok")
+      setFinanceState("ok")
+      setActivityState("ok")
+      setInventoryState("ok")
+    } catch (err) {
+      setLoadState("error")
+    }
+  }, [])
+
   // Fetch real data from backend
   useEffect(() => {
-    async function loadDashboard() {
-      try {
-        const { apiRequest } = await import("../services/api")
-        const data = await apiRequest<any>("/dashboard/manager")
-        setAttentionItems(data.attentionCards || [])
-        setKpis(data.kpiCards || [])
-        setStatuses(data.orderStatuses || [])
-        setFinances(data.financeRows || [])
-        setActivities(data.activityFeed || [])
-        setLoadState("ok")
-        setFinanceState("ok")
-        setActivityState("ok")
-        setInventoryState("ok")
-      } catch (err) {
-        setLoadState("error")
-      }
-    }
     loadDashboard()
-  }, [])
+  }, [loadDashboard])
 
   // Update finance when range changes
   useEffect(() => {
@@ -2167,6 +2168,7 @@ export default function ManagerDashboard({
       <CustomerFormModal
         open={customerModalOpen}
         onClose={() => setCustomerModalOpen(false)}
+        onSuccess={loadDashboard}
       />
     </div>
   )

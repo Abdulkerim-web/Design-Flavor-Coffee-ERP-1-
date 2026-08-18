@@ -71,7 +71,7 @@ export const CustomerFormModal: FC<{
     try {
       await createCustomer(data)
       toast.success("Customer created", {
-        description: `${data.name} is now pending approval.`,
+        description: `${data.name} is now active and saved to database.`,
       })
       onSuccess?.()
       onClose()

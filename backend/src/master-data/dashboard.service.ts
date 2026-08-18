@@ -7,6 +7,8 @@ import { RoastingBatch } from '../entities/roasting_batch.entity';
 import { BankTransaction } from '../entities/bank_transaction.entity';
 import { AuditLog } from '../entities/audit_log.entity';
 
+import { Customer } from '../entities/customer.entity';
+
 @Injectable()
 export class DashboardService {
   constructor(
@@ -15,6 +17,7 @@ export class DashboardService {
     @InjectRepository(RoastingBatch) private readonly roastRepo: Repository<RoastingBatch>,
     @InjectRepository(BankTransaction) private readonly bankRepo: Repository<BankTransaction>,
     @InjectRepository(AuditLog) private readonly auditRepo: Repository<AuditLog>,
+    @InjectRepository(Customer) private readonly customerRepo: Repository<Customer>,
   ) {}
 
   async getManagerDashboard() {
@@ -24,12 +27,14 @@ export class DashboardService {
       lowStock,
       recentLogs,
       recentBankTx,
+      customers,
     ] = await Promise.all([
       this.orderRepo.find({ relations: ['customer'] }),
       this.roastRepo.find({ where: { status: 'ROASTING' } }),
       this.stockRepo.find({ where: { available: LessThan(50) } }),
       this.auditRepo.find({ order: { createdAt: 'DESC' }, take: 10 }),
       this.bankRepo.find({ order: { createdAt: 'DESC' }, take: 5 }),
+      this.customerRepo.find({ order: { createdAt: 'DESC' } }),
     ]);
 
     const activeOrders = orders.filter((o) => !['CANCELLED', 'DELIVERED', 'COMPLETED'].includes(o.status));
@@ -41,6 +46,12 @@ export class DashboardService {
         value: activeOrders.length.toString(),
         sub: `${orders.filter(o => o.status === 'PENDING_MANAGER_CONFIRMATION').length} awaiting confirmation`,
         icon: '📋',
+      },
+      {
+        label: 'Total Active Customers',
+        value: `${customers.length} clients`,
+        sub: `${customers.filter(c => new Date(c.createdAt).toDateString() === new Date().toDateString()).length} registered today`,
+        icon: '👥',
       },
       {
         label: 'Active Roasting',
@@ -70,6 +81,19 @@ export class DashboardService {
 
     // 3. Attention Cards
     const attentionCards = [];
+    const recentCustomers = customers.slice(0, 3);
+    for (const c of recentCustomers) {
+      attentionCards.push({
+        id: `cus-${c.id}`,
+        severity: 'info',
+        category: 'New Customer',
+        title: `Customer ${c.name} registered`,
+        description: `Ref: ${c.businessNumber} | Type: ${c.type}`,
+        primaryAction: 'View Customer',
+        module: 'customers',
+        age: 'Recent',
+      });
+    }
     const urgentOrders = orders.filter(o => o.isUrgent && o.status === 'PENDING_MANAGER_CONFIRMATION');
     for (const o of urgentOrders) {
       attentionCards.push({
