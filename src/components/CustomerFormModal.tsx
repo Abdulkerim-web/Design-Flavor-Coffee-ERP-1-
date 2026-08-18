@@ -69,12 +69,16 @@ export const CustomerFormModal: FC<{
     if (!validate()) return
     setIsSubmitting(true)
     try {
-      await createCustomer(data)
-      toast.success("Customer created", {
-        description: `${data.name} is now active and saved to database.`,
-      })
-      onSuccess?.()
-      onClose()
+      const res = await createCustomer(data)
+      if (res.state === "error") {
+        toast.error("Failed to create", { description: res.error })
+      } else {
+        toast.success("Customer created", {
+          description: `${data.name} is now active and saved to database.`,
+        })
+        onSuccess?.()
+        onClose()
+      }
     } catch (err: any) {
       toast.error("Failed to create", { description: err.message })
     } finally {

@@ -24,12 +24,41 @@ export async function handleSupabaseApiRequest(
   if (path === "/dashboard/finance" && method === "GET") return {} // Mock for now
   if (path === "/dashboard/inventory" && method === "GET") return {} // Mock for now
 
+  // ── Custom Actions ──
+  if (path === "/receiving" && method === "POST") {
+    await supabaseAdmin.from("lots").insert([{
+      lot_number: body.lotId || `LOT-${Math.floor(Math.random() * 10000)}`,
+      coffee_type: "Raw Coffee",
+      origin: "Local",
+      quantity: body.confirmedQty || 0,
+      qc_status: "pending"
+    }])
+    return { success: true }
+  }
+  if (path.startsWith("/orders/") && path.endsWith("/confirm") && method === "POST") {
+    await supabaseAdmin.from("orders").update({ status: "PROCESSING" }).eq("id", parts[1])
+    return { success: true }
+  }
+  if (path.startsWith("/orders/") && path.endsWith("/reject") && method === "POST") {
+    await supabaseAdmin.from("orders").update({ status: "CANCELLED" }).eq("id", parts[1])
+    return { success: true }
+  }
+  if (path.startsWith("/roasting/") && path.endsWith("/start") && method === "POST") {
+    await supabaseAdmin.from("roasting_batches").update({ status: "ROASTING" }).eq("id", parts[1])
+    return { success: true }
+  }
+  if (path.startsWith("/roasting/") && path.endsWith("/complete") && method === "POST") {
+    await supabaseAdmin.from("roasting_batches").update({ status: "COMPLETED", actual_roasted_quantity: body.actualYield }).eq("id", parts[1])
+    return { success: true }
+  }
+
   // ── Generic CRUD Table Mapping ──
   let table = parts[0]
   
   // Specific mappings for nested or differently named routes
   if (path.startsWith("/inventory/lots")) table = "lots"
   if (path.startsWith("/production/batches")) table = "roasting_batches"
+  if (path.startsWith("/roasting")) table = "roasting_batches"
   if (path.startsWith("/customers")) table = "customers"
   if (path.startsWith("/orders")) table = "orders"
 
@@ -65,6 +94,13 @@ export async function handleSupabaseApiRequest(
         active: true,
         status: "active"
       }
+    } else if (table === "orders") {
+      dbBody = {
+        order_number: `ORD-${Math.floor(Math.random() * 10000)}`,
+        status: "PENDING_MANAGER_CONFIRMATION",
+        customer_id: body.customerId,
+        total_amount: body.items?.reduce((sum: number, item: any) => sum + ((item.quantity || 0) * (item.unitPrice || 0)), 0) || 0
+      }
     }
     const { data, error } = await supabaseAdmin.from(table).insert([dbBody]).select()
     if (error) throw error
@@ -95,7 +131,7 @@ async function getManagerDashboard() {
   ] = await Promise.all([
     supabaseAdmin.from("orders").select("*, customers(*)"),
     supabaseAdmin.from("roasting_batches").select("*").eq("status", "ROASTING"),
-    supabaseAdmin.from("customers").select("*").order("created_at", { ascending: false })
+    supabaseAdmin.from("customers").select("*").order("id", { ascending: false })
   ])
 
   const orders = ordersData || []
