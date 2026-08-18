@@ -1,7 +1,7 @@
 import { FC, useState, useEffect } from "react"
 import { listOrders, confirmOrder } from "../services/orders"
 import { listExpenses, approveExpense, rejectExpense } from "../services/finance-ops"
-import { useAuth } from "../hooks/useAuth"
+import { useAuth } from "../contexts/AuthContext"
 
 type ApprovalItem = {
   id: string
