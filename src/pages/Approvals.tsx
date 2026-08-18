@@ -1,6 +1,6 @@
 import { FC, useState, useEffect } from "react"
 import { listOrders, confirmOrder } from "../services/orders"
-import { listExpenses, approveExpense, rejectExpense } from "../services/finance-ops"
+import { listExpensesFull, approveExpense, rejectExpense } from "../services/finance-ops"
 import { useAuth } from "../contexts/AuthContext"
 
 type ApprovalItem = {
@@ -23,7 +23,7 @@ export default function Approvals() {
     setLoading(true)
     Promise.all([
       listOrders({ status: "pending-confirmation" }),
-      listExpenses({ status: "pending-approval" })
+      listExpensesFull({ status: "pending-approval" })
     ]).then(([ordersRes, expensesRes]) => {
       if (!mounted) return
       
