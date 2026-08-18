@@ -92,7 +92,8 @@ export async function handleSupabaseApiRequest(
         notes: body.notes,
         business_number: `CUS-${Math.floor(Math.random() * 10000)}`,
         active: true,
-        status: "active"
+        status: "active",
+        sales_rep_id: body.salesRepId || "USR-003" // Default to seed sales rep if none provided to satisfy NOT NULL constraint
       }
     } else if (table === "orders") {
       dbBody = {
