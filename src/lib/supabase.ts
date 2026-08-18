@@ -1,13 +1,18 @@
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = "https://udvtogofulclohhvdnzc.supabase.co"
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkdnRvZ29mdWxjbG9oaHZkbnpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5MjIyMzQsImV4cCI6MjEwMjQ5ODIzNH0.tEVigUQp9LVaY3sRZxo9smqoHPqbVBDc939d4CEEg0U"
-const supabaseServiceRoleKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkdnRvZ29mdWxjbG9oaHZkbnpjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjkyMjIzNCwiZXhwIjoyMTAyNDk4MjM0fQ.LWTXMgNfSwIukBQuIR5v71CuhlNkCd6OpszP3UTcwT0"
+// Use Vite environment variables for the frontend client.
+// Do NOT expose service_role keys in the browser. The admin/service role
+// operations should live on the server. If you need admin actions, move
+// them to backend endpoints and call those from the frontend.
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
-// Standard client for most operations
+if (!supabaseUrl || !supabaseAnonKey) {
+	console.warn("VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is not set. Realtime and API calls may fail.")
+}
+
+// Standard client for most operations (anon/public key)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Admin client using service_role to bypass RLS policies if needed
-// WARNING: Service Role key should NOT normally be exposed to the browser.
-// The user explicitly requested to use this to ensure everything works properly.
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
+// WARNING: The service role / admin client has been removed from the
+// frontend for security. Use server-side functions for privileged operations.

@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "./supabase"
+import { supabase } from "./supabase"
 
 // ── IN-MEMORY MOCKS (Phase 3) ──
 let mockExpenses: any[] = [
@@ -84,7 +84,7 @@ export async function handleSupabaseApiRequest(
   // ── IN-MEMORY INTERCEPTORS FOR PAYMENTS, BANKING, PAYROLL ──
   if (path === "/payments/record" && method === "POST") {
     const paymentId = "PAY-" + Math.floor(Math.random() * 10000)
-    const { error } = await supabaseAdmin.from("payments").insert([{
+    const { error } = await supabase.from("payments").insert([{
       order_id: body.paymentId || "ORD-0",
       amount: parseFloat(String(body.amount).replace(/[^0-9.]/g, '')) || 0,
       payment_method: "bank_transfer",
@@ -168,7 +168,7 @@ export async function handleSupabaseApiRequest(
 
   // ── Custom Actions ──
   if (path === "/receiving" && method === "POST") {
-    await supabaseAdmin.from("lots").insert([{
+    await supabase.from("lots").insert([{
       lot_number: body.lotId || `LOT-${Math.floor(Math.random() * 10000)}`,
       coffee_type: "Raw Coffee",
       origin: "Local",
@@ -178,19 +178,19 @@ export async function handleSupabaseApiRequest(
     return { success: true }
   }
   if (path.startsWith("/orders/") && path.endsWith("/confirm") && method === "POST") {
-    await supabaseAdmin.from("orders").update({ status: "PROCESSING" }).eq("id", parts[1])
+    await supabase.from("orders").update({ status: "PROCESSING" }).eq("id", parts[1])
     return { success: true }
   }
   if (path.startsWith("/orders/") && path.endsWith("/reject") && method === "POST") {
-    await supabaseAdmin.from("orders").update({ status: "CANCELLED" }).eq("id", parts[1])
+    await supabase.from("orders").update({ status: "CANCELLED" }).eq("id", parts[1])
     return { success: true }
   }
   if (path.startsWith("/roasting/") && path.endsWith("/start") && method === "POST") {
-    await supabaseAdmin.from("roasting_batches").update({ status: "ROASTING" }).eq("id", parts[1])
+    await supabase.from("roasting_batches").update({ status: "ROASTING" }).eq("id", parts[1])
     return { success: true }
   }
   if (path.startsWith("/roasting/") && path.endsWith("/complete") && method === "POST") {
-    await supabaseAdmin.from("roasting_batches").update({ status: "COMPLETED", actual_roasted_quantity: body.actualYield }).eq("id", parts[1])
+    await supabase.from("roasting_batches").update({ status: "COMPLETED", actual_roasted_quantity: body.actualYield }).eq("id", parts[1])
     return { success: true }
   }
 
@@ -208,12 +208,12 @@ export async function handleSupabaseApiRequest(
   const id = parts[idPos]
 
   if (method === "GET" && !id) {
-    let query = supabaseAdmin.from(table).select("*")
+    let query = supabase.from(table).select("*")
     if (table !== "customers" && table !== "users") {
       query = query.order("created_at", { ascending: false })
     }
     if (table === "orders") {
-      query = supabaseAdmin.from(table).select("*").order("created_at", { ascending: false })
+      query = supabase.from(table).select("*").order("created_at", { ascending: false })
     }
     const { data, error } = await query
     if (error) {
@@ -228,8 +228,8 @@ export async function handleSupabaseApiRequest(
       const customerIds = [...new Set(data.map((d: any) => d.customer_id).filter(Boolean))]
 
       const [itemsRes, customersRes] = await Promise.all([
-        supabaseAdmin.from("order_items").select("*").in("order_id", orderIds),
-        supabaseAdmin.from("customers").select("*").in("id", customerIds)
+        supabase.from("order_items").select("*").in("order_id", orderIds),
+        supabase.from("customers").select("*").in("id", customerIds)
       ])
 
       const itemsData = itemsRes.data || []
@@ -282,7 +282,7 @@ export async function handleSupabaseApiRequest(
         total_amount: totalAmount,
       }
     }
-    const { data, error } = await supabaseAdmin.from(table).insert([dbBody]).select()
+    const { data, error } = await supabase.from(table).insert([dbBody]).select()
     if (error) throw error
     
     if (table === "orders" && body.items && body.items.length > 0) {
@@ -294,20 +294,20 @@ export async function handleSupabaseApiRequest(
         unit_price: item.unitPrice || 0,
         status: "pending-confirmation"
       }))
-      await supabaseAdmin.from("order_items").insert(orderItems)
+      await supabase.from("order_items").insert(orderItems)
     }
 
     return camelizeKeys(data[0])
   }
 
   if (method === "GET" && id) {
-    const { data, error } = await supabaseAdmin.from(table).select("*").eq("id", id).single()
+    const { data, error } = await supabase.from(table).select("*").eq("id", id).single()
     if (error) throw error
     return camelizeKeys(data)
   }
 
   if (method === "PUT" && id) {
-    const { data, error } = await supabaseAdmin.from(table).update(body).eq("id", id).select()
+    const { data, error } = await supabase.from(table).update(body).eq("id", id).select()
     if (error) throw error
     return camelizeKeys(data[0])
   }
@@ -323,9 +323,9 @@ async function getManagerDashboard() {
     { data: roastingBatches },
     { data: customersData }
   ] = await Promise.all([
-    supabaseAdmin.from("orders").select("*, customers(*)").order("created_at", { ascending: false }),
-    supabaseAdmin.from("roasting_batches").select("*").eq("status", "ROASTING").order("created_at", { ascending: false }),
-    supabaseAdmin.from("customers").select("*").order("created_at", { ascending: false })
+    supabase.from("orders").select("*, customers(*)").order("created_at", { ascending: false }),
+    supabase.from("roasting_batches").select("*").eq("status", "ROASTING").order("created_at", { ascending: false }),
+    supabase.from("customers").select("*").order("created_at", { ascending: false })
   ])
 
   const orders = ordersData || []

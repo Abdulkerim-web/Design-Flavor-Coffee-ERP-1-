@@ -22,6 +22,8 @@ import {
   confirmRoastedReceipt,
   reviewRoastingDiscrepancy,
 } from "../services/operations"
+import { apiRequest } from "../services/api"
+import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 import type {
   RoastingJob,
   RoastingBatch,
@@ -2017,6 +2019,9 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
   const [statusFilter, setStatusFilter] = useState<RoastingJobStatus | "">("")
   const [roastLevelFilter, setRoastLevelFilter] = useState("")
   const [urgentOnly, setUrgentOnly] = useState(false)
+  const [showCreateDelivery, setShowCreateDelivery] = useState(false)
+  const [deliveryOrderId, setDeliveryOrderId] = useState("")
+  const [deliveryNotes, setDeliveryNotes] = useState("")
   const { isMobile } = useBreakpoint()
 
   const load = useCallback(async () => {
@@ -2043,6 +2048,11 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
   useEffect(() => {
     load()
   }, [load])
+
+  // Realtime: refresh when deliveries change
+  useSupabaseRealtime("deliveries", () => {
+    void load()
+  })
 
   const needsAttention = jobs.filter(
     (j) => j.status === "discrepancy" || j.status === "awaiting-manager",
@@ -2079,6 +2089,15 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
     <div>
       {/* Page header */}
       <div style={{ marginBottom: 24 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          <button
+            onClick={() => setShowCreateDelivery(true)}
+            className="btn"
+            style={{ fontSize: 13 }}
+          >
+            Create Delivery
+          </button>
+        </div>
         <div className="section-eyebrow" style={{ marginBottom: 4 }}>
           Production
         </div>
@@ -2105,6 +2124,44 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
           Manage assigned roasting jobs and report completed output.
         </p>
       </div>
+
+      {/* Create Delivery Modal */}
+      {showCreateDelivery && (
+        <div
+          onClick={() => setShowCreateDelivery(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 400 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: 520, margin: "80px auto", background: "var(--surface-01)", border: "1px solid var(--border-neutral)", borderRadius: 12, padding: 18 }}
+          >
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Create Delivery</h3>
+            <p style={{ color: "var(--text-muted)", marginTop: 8 }}>Create a delivery record linked to an order.</p>
+            <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+              <input placeholder="Order ID" value={deliveryOrderId} onChange={(e) => setDeliveryOrderId(e.target.value)} />
+              <textarea placeholder="Notes (optional)" value={deliveryNotes} onChange={(e) => setDeliveryNotes(e.target.value)} />
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 6 }}>
+                <button className="btn-ghost" onClick={() => setShowCreateDelivery(false)}>Cancel</button>
+                <button
+                  className="btn-primary"
+                  onClick={async () => {
+                    try {
+                      await apiRequest("/deliveries", "POST", { orderId: deliveryOrderId, notes: deliveryNotes })
+                      // close and refresh list
+                      setShowCreateDelivery(false)
+                      load()
+                      alert("Delivery created")
+                    } catch (err) {
+                      console.error(err)
+                      alert("Failed to create delivery")
+                    }
+                  }}
+                >Create</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats — from backend */}
       <div

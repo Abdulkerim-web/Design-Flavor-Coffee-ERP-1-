@@ -38,6 +38,7 @@ import Payroll from "./pages/Payroll"
 import Approvals from "./pages/Approvals"
 import Notifications from "./pages/Notifications"
 import DesignSystem from "./pages/DesignSystem"
+import QuickActionsPanel from "./components/QuickActionsPanel"
 
 type ModuleId = "dashboard" | "inventory" | "suppliers" | "quality" | "production" | "verification" | "packaging" | "orders" | "delivery" | "finance" | "reports" | "users" | "audit" | "settings" | "portal" | "customers" | "payments" | "banking" | "expenses" | "payroll" | "approvals" | "notifications" | "design-system"
 
@@ -292,6 +293,7 @@ function AppInner() {
             paddingBottom: isMobile ? 64 : 0,
           }}
         >
+          <QuickActionsPanel onNavigate={handleNavigate} onOpenQuickCreate={() => setQcOpen(true)} />
           {/* Route guard: show access-denied state if role lacks read permission */}
           {canRead(currentUser.role, active) ? (
             <Module
