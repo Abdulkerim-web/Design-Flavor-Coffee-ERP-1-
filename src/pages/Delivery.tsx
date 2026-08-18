@@ -20,6 +20,7 @@ import {
   verifyCustomerAcceptance,
   reportFailedAttempt,
 } from "../services/delivery"
+import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 import type {
   DeliveryRecord,
   DeliveryStatus,
@@ -3203,6 +3204,12 @@ export default function Delivery({ routeParams }: { routeParams?: { id?: string 
     fetchSummary()
     fetchList()
   }, [fetchSummary, fetchList, role])
+
+  // Realtime: refresh delivery list and summary when deliveries table changes
+  useSupabaseRealtime("deliveries", () => {
+    void fetchSummary()
+    void fetchList()
+  })
 
   useEffect(() => {
     if (view === "detail" && selectedId) fetchDetail(selectedId)

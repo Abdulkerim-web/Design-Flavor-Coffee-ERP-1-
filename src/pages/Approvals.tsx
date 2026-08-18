@@ -2,6 +2,7 @@ import { FC, useState, useEffect } from "react"
 import { listOrders, confirmOrder } from "../services/orders"
 import { listExpensesFull, approveExpense, rejectExpense } from "../services/finance-ops"
 import { useAuth } from "../contexts/AuthContext"
+import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 
 type ApprovalItem = {
   id: string
@@ -58,6 +59,10 @@ export default function Approvals() {
     })
     return () => { mounted = false }
   }, [refreshCount])
+
+  // Realtime updates: refetch when relevant DB tables change
+  useSupabaseRealtime("orders", () => setRefreshCount((c) => c + 1))
+  useSupabaseRealtime("expenses", () => setRefreshCount((c) => c + 1))
 
   const handleApprove = async (item: ApprovalItem) => {
     setProcessing(item.id)

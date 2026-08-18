@@ -14,6 +14,7 @@ import { listPayments } from "../services/delivery"
 import type { PaymentRecord } from "../services/delivery"
 import { useAuth } from "../contexts/AuthContext"
 import { can } from "../lib/can"
+import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 
 // ─── Shared atoms ──────────────────────────────────────────────────────────────
 
@@ -273,6 +274,24 @@ export default function Finance() {
       setAttentionLoading(false)
     })
   }, [])
+
+  // Realtime: refresh summary, payments, and pending expenses on DB changes
+  useSupabaseRealtime("expenses", async () => {
+    const [pRes, eRes, sRes] = await Promise.all([
+      listPayments({ status: "overdue" }),
+      listExpensesFull({ status: "pending-approval" }),
+      getFinanceDashboard(),
+    ])
+    if (pRes.data) setOverduePayments(pRes.data)
+    if (eRes.data) setPendingExpenses(eRes.data)
+    if (sRes.data) setSummary(sRes.data)
+  })
+
+  useSupabaseRealtime("payments", async () => {
+    const [pRes, sRes] = await Promise.all([listPayments({ status: "overdue" }), getFinanceDashboard()])
+    if (pRes.data) setOverduePayments(pRes.data)
+    if (sRes.data) setSummary(sRes.data)
+  })
 
   if (!can(role as any, "finance.view")) {
     return (

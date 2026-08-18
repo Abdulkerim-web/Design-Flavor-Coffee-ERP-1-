@@ -31,6 +31,7 @@ import type {
 import { useAuth } from "../contexts/AuthContext"
 import { can } from "../lib/can"
 import { useToast } from "../contexts/ToastContext"
+import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 
 // ─── View routing ──────────────────────────────────────────────────────────────
 
@@ -3475,6 +3476,11 @@ export default function Expenses({ routeParams }: { routeParams?: { id?: string 
   useEffect(() => {
     loadData()
   }, [])
+
+  // Realtime: refresh expenses and summary when `expenses` table changes
+  useSupabaseRealtime("expenses", () => {
+    loadData()
+  })
 
   function goDetail(id: string) {
     setSelectedExpenseId(id)

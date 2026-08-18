@@ -28,6 +28,7 @@ import {
   type PaymentStatusKey,
 } from "../lib/orderStatus"
 import { listOrders, createOrder } from "../services/orders"
+import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 
 /* ─────────────────────────────────────────────────────────────
    TYPES — mirror PHP API response shapes
@@ -2118,6 +2119,14 @@ const OrderListView: FC<{
       mounted = false
     }
   }, [])
+
+  // Realtime: refresh order list on DB changes
+  useSupabaseRealtime("orders", () => {
+    listOrders().then((res) => {
+      if (res.state === "ok") setOrders(res.data?.items || [])
+      else setLoadState("error")
+    })
+  })
 
   const filtered = orders.filter((o) => {
     const q = search.toLowerCase()

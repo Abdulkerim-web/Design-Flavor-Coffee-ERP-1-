@@ -18,6 +18,7 @@ import { canRead } from "../lib/rbac"
 import { can } from "../lib/can"
 import { CustomerFormModal } from "../components/CustomerFormModal"
 import { listCustomers } from "../services/customers"
+import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 
 /* ─────────────────────────────────────────────────────────────
    TYPES
@@ -1192,6 +1193,11 @@ const CustomerListView: FC<{
   useEffect(() => {
     fetchCustomers()
   }, [fetchCustomers])
+
+  // Subscribe to realtime changes to the `customers` table and refetch when things change
+  useSupabaseRealtime("customers", () => {
+    void fetchCustomers()
+  })
 
   const filtered = customers.filter((c) => {
     const q = search.toLowerCase()

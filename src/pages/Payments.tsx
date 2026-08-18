@@ -29,6 +29,7 @@ import type {
 import { can } from "../lib/can"
 import { useAuth } from "../contexts/AuthContext"
 import { useBreakpoint } from "../hooks/useBreakpoint"
+import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 
 /* ─── Internal routing ──────────────────────────────────────── */
 type View = "list" | "detail" | "outstanding" | "overdue"
@@ -1414,6 +1415,11 @@ function PaymentListView({
   useEffect(() => {
     load()
   }, [statusFilter])
+
+  // Realtime: reload payments when payments table changes
+  useSupabaseRealtime("payments", () => {
+    void load()
+  })
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()

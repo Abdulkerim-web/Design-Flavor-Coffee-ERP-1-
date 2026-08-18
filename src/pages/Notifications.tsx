@@ -1,5 +1,6 @@
 /* Responsive: mobile ≤640 | tablet 641–1024 | laptop 1025–1440 | desktop >1440 */
 import { useState, useEffect } from "react"
+import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 import { useBreakpoint } from "../hooks/useBreakpoint"
 import { useToast } from "../contexts/ToastContext"
 
@@ -222,6 +223,35 @@ export default function Notifications() {
     const t = setTimeout(() => setLoadState("ok"), 900)
     return () => clearTimeout(t)
   }, [])
+
+  // Realtime: listen for notifications inserted/updated/deleted
+  useSupabaseRealtime("notifications", (payload) => {
+    const ev = (payload.eventType || (payload as any).event || "").toString().toLowerCase()
+    const rec = payload.record
+    if (!rec) return
+    if (ev.includes("insert")) {
+      setNotifs((ns) => [
+        {
+          id: rec.id,
+          category: rec.category ?? "info",
+          title: rec.title ?? "Notification",
+          what: rec.what ?? "",
+          why: rec.why ?? "",
+          action: rec.action ?? undefined,
+          module: rec.module ?? "",
+          moduleId: rec.module_id ?? rec.moduleId ?? "",
+          time: rec.time ?? new Date().toLocaleString(),
+          timeRaw: rec.time_raw ?? Date.now(),
+          read: !!rec.read,
+        },
+        ...ns,
+      ])
+    } else if (ev.includes("update")) {
+      setNotifs((ns) => ns.map((n) => (n.id === rec.id ? { ...n, ...rec } : n)))
+    } else if (ev.includes("delete")) {
+      setNotifs((ns) => ns.filter((n) => n.id !== rec.id))
+    }
+  })
 
   const unreadCount = notifs.filter((n) => !n.read).length
 
