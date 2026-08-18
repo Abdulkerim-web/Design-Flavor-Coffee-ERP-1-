@@ -66,9 +66,9 @@ export async function handleSupabaseApiRequest(
   const id = parts[idPos]
 
   if (method === "GET" && !id) {
-    let query = supabaseAdmin.from(table).select("*")
+    let query = supabaseAdmin.from(table).select("*").order("created_at", { ascending: false })
     if (table === "orders") {
-      query = supabaseAdmin.from(table).select("*, customer:customers(*)")
+      query = supabaseAdmin.from(table).select("*, customer:customers(*)").order("created_at", { ascending: false })
     }
     const { data, error } = await query
     if (error) {
@@ -130,9 +130,9 @@ async function getManagerDashboard() {
     { data: roastingBatches },
     { data: customersData }
   ] = await Promise.all([
-    supabaseAdmin.from("orders").select("*, customers(*)"),
-    supabaseAdmin.from("roasting_batches").select("*").eq("status", "ROASTING"),
-    supabaseAdmin.from("customers").select("*").order("id", { ascending: false })
+    supabaseAdmin.from("orders").select("*, customers(*)").order("created_at", { ascending: false }),
+    supabaseAdmin.from("roasting_batches").select("*").eq("status", "ROASTING").order("created_at", { ascending: false }),
+    supabaseAdmin.from("customers").select("*").order("created_at", { ascending: false })
   ])
 
   const orders = ordersData || []
