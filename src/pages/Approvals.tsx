@@ -1,4 +1,86 @@
+import { FC, useState, useEffect } from "react"
+import { listOrders, confirmOrder } from "../services/orders"
+import { listExpenses, approveExpense, rejectExpense } from "../services/finance-ops"
+import { useAuth } from "../hooks/useAuth"
+
+type ApprovalItem = {
+  id: string
+  ref: string
+  type: string
+  desc: string
+  originalData: any
+}
+
 export default function Approvals() {
+  const { currentUser } = useAuth()
+  const [items, setItems] = useState<ApprovalItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [processing, setProcessing] = useState<string | null>(null)
+  const [refreshCount, setRefreshCount] = useState(0)
+
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    Promise.all([
+      listOrders({ status: "pending-confirmation" }),
+      listExpenses({ status: "pending-approval" })
+    ]).then(([ordersRes, expensesRes]) => {
+      if (!mounted) return
+      
+      const newItems: ApprovalItem[] = []
+      
+      if (ordersRes.state === "ok" && ordersRes.data) {
+        ordersRes.data.items.forEach((o: any) => {
+          newItems.push({
+            id: o.id,
+            ref: o.ref,
+            type: "Order Approval",
+            desc: `${o.customer.name} — ${o.total}`,
+            originalData: o
+          })
+        })
+      }
+      
+      if (expensesRes.state === "ok" && expensesRes.data) {
+        expensesRes.data.forEach((e: any) => {
+          newItems.push({
+            id: e.id,
+            ref: e.ref,
+            type: "Expense Approval",
+            desc: `${e.description} — ${e.amount}`,
+            originalData: e
+          })
+        })
+      }
+      
+      setItems(newItems)
+      setLoading(false)
+    })
+    return () => { mounted = false }
+  }, [refreshCount])
+
+  const handleApprove = async (item: ApprovalItem) => {
+    setProcessing(item.id)
+    if (item.type === "Order Approval") {
+      await confirmOrder(item.id)
+    } else {
+      await approveExpense(item.id, currentUser?.id || "MANAGER-1")
+    }
+    setProcessing(null)
+    setRefreshCount(c => c + 1)
+  }
+
+  const handleReject = async (item: ApprovalItem) => {
+    setProcessing(item.id)
+    if (item.type === "Order Approval") {
+      await fetch(import.meta.env.VITE_API_BASE_URL + `/orders/${item.id}/reject`, { method: "POST" }).catch(() => {})
+    } else {
+      await rejectExpense(item.id, "Rejected by manager")
+    }
+    setProcessing(null)
+    setRefreshCount(c => c + 1)
+  }
+
   return (
     <div style={{ padding: 32, fontFamily: "Inter, system-ui, sans-serif" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
@@ -63,119 +145,110 @@ export default function Approvals() {
               background: "#F59E0B",
             }}
           />
-          3 items awaiting your approval
+          {items.length} items awaiting your approval
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[
-            {
-              id: "ORD-1042",
-              type: "Order Approval",
-              desc: "Guji Medium — 50 KG — Harar Coffee Exporters",
-              urgency: "amber",
-            },
-            {
-              id: "EXP-0098",
-              type: "Expense Approval",
-              desc: "Vehicle maintenance — Delivery truck ETB 8,500",
-              urgency: "amber",
-            },
-            {
-              id: "ORD-1039",
-              type: "Order Approval",
-              desc: "Sidama Grade 1 — 120 KG — Bole Supermarket",
-              urgency: "amber",
-            },
-          ].map((item) => (
-            <div
-              key={item.id}
-              style={{
-                background: "var(--surface-01)",
-                border: "1px solid var(--border-neutral)",
-                borderRadius: 9,
-                padding: "14px 16px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    marginBottom: 4,
-                  }}
-                >
-                  <span
+        {loading ? (
+           <div style={{ fontSize: 13, color: "var(--text-muted)" }}>Loading pending approvals...</div>
+        ) : items.length === 0 ? (
+           <div style={{ padding: 32, textAlign: "center", background: "var(--surface-01)", borderRadius: 9, border: "1px dashed var(--border-neutral)", color: "var(--text-muted)", fontSize: 13.5 }}>No pending approvals.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {items.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  background: "var(--surface-01)",
+                  border: "1px solid var(--border-neutral)",
+                  borderRadius: 9,
+                  padding: "14px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  opacity: processing === item.id ? 0.5 : 1,
+                  pointerEvents: processing === item.id ? "none" : "auto"
+                }}
+              >
+                <div>
+                  <div
                     style={{
-                      fontSize: 10.5,
-                      fontFamily: "DM Mono",
-                      color: "#B45309",
-                      background: "#FFFBEB",
-                      border: "1px solid #FDE68A",
-                      padding: "1px 7px",
-                      borderRadius: 999,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginBottom: 4,
                     }}
                   >
-                    {item.type}
-                  </span>
-                  <span
+                    <span
+                      style={{
+                        fontSize: 10.5,
+                        fontFamily: "DM Mono",
+                        color: "#B45309",
+                        background: "#FFFBEB",
+                        border: "1px solid #FDE68A",
+                        padding: "1px 7px",
+                        borderRadius: 999,
+                      }}
+                    >
+                      {item.type}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 11.5,
+                        fontFamily: "DM Mono",
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      {item.ref}
+                    </span>
+                  </div>
+                  <div
                     style={{
-                      fontSize: 11.5,
-                      fontFamily: "DM Mono",
-                      color: "var(--text-muted)",
+                      fontSize: 13.5,
+                      color: "var(--text-primary)",
+                      fontWeight: 500,
                     }}
                   >
-                    {item.id}
-                  </span>
+                    {item.desc}
+                  </div>
                 </div>
-                <div
-                  style={{
-                    fontSize: 13.5,
-                    color: "var(--text-primary)",
-                    fontWeight: 500,
-                  }}
-                >
-                  {item.desc}
+                <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                  <button
+                    onClick={() => handleReject(item)}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 6,
+                      border: "1px solid var(--border-neutral)",
+                      background: "var(--bg-primary)",
+                      color: "var(--text-secondary)",
+                      fontSize: 12.5,
+                      fontFamily: "Inter",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Reject
+                  </button>
+                  <button
+                    onClick={() => handleApprove(item)}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 6,
+                      border: "none",
+                      background: "#2B4D3A",
+                      color: "#FFFFFF",
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      fontFamily: "Inter",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Approve
+                  </button>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                <button
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: 6,
-                    border: "1px solid var(--border-neutral)",
-                    background: "var(--bg-primary)",
-                    color: "var(--text-secondary)",
-                    fontSize: 12.5,
-                    fontFamily: "Inter",
-                    cursor: "pointer",
-                  }}
-                >
-                  Reject
-                </button>
-                <button
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: 6,
-                    border: "none",
-                    background: "#2B4D3A",
-                    color: "#FFFFFF",
-                    fontSize: 12.5,
-                    fontWeight: 600,
-                    fontFamily: "Inter",
-                    cursor: "pointer",
-                  }}
-                >
-                  Approve
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

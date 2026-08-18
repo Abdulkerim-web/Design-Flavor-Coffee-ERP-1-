@@ -81,18 +81,76 @@ export async function handleSupabaseApiRequest(
     }
   }
 
+  // ── IN-MEMORY INTERCEPTORS FOR PAYMENTS, BANKING, PAYROLL ──
+  if (path === "/payments/record" && method === "POST") {
+    const paymentId = "PAY-" + Math.floor(Math.random() * 10000)
+    await supabaseAdmin.from("payments").insert([{
+      order_id: body.paymentId || "ORD-0",
+      amount: parseFloat(body.amount) || 0,
+      payment_method: "bank_transfer",
+      bank_reference_number: body.transferRef,
+      idempotency_key: "PAY-" + Math.floor(Math.random() * 100000),
+      registered_by_user_id: "USR-001"
+    }])
+    return { success: true, ref: paymentId }
+  }
+
+  if (path.startsWith("/finance/payroll")) {
+    if (method === "GET") {
+      if (path === "/finance/payroll") return mockPayroll
+      return null
+    }
+    if (method === "POST") {
+      return { success: true }
+    }
+  }
+
+  if (path === "/finance/transactions" && method === "POST") {
+    const newTx = {
+      id: "tx-" + Math.floor(Math.random() * 10000),
+      ref: "TXN-" + Math.floor(Math.random() * 10000),
+      date: body.date,
+      description: body.description,
+      amount: "ETB " + body.amount,
+      type: body.type,
+      direction: body.direction,
+      status: "cleared"
+    }
+    mockBanking.unshift(newTx)
+    return newTx
+  }
+  
+  if (path === "/finance/accounts" && method === "GET") return mockBankAccounts
+
   // ── Dashboards & Fallbacks ──
   if (path === "/dashboard/manager" && method === "GET") return await getManagerDashboard()
   if (path === "/dashboard/sales" && method === "GET") return { kpiCards: [], attentionCards: [], orderStatuses: [] }
-  if (path === "/dashboard/finance" && method === "GET") return { totalCustomerPayments: "ETB 0", outstandingBalances: "ETB 0", overdueCount: 0, thisMonthExpenses: "ETB 0", pendingExpenseApprovals: "ETB 0", pendingExpenseCount: 0, currentPayrollTotal: "ETB 0", payrollPeriod: "Current", payrollStatus: "draft", totalBankBalance: "ETB 0", alerts: [] }
-  if (path === "/finance/dashboard" && method === "GET") return { totalCustomerPayments: "ETB 0", outstandingBalances: "ETB 0", overdueCount: 0, thisMonthExpenses: "ETB 0", pendingExpenseApprovals: "ETB 0", pendingExpenseCount: 0, currentPayrollTotal: "ETB 0", payrollPeriod: "Current", payrollStatus: "draft", totalBankBalance: "ETB 0", alerts: [] }
+  
+  if ((path === "/dashboard/finance" || path === "/finance/dashboard") && method === "GET") {
+    const expensesTotal = mockExpenses.reduce((sum, e) => sum + parseFloat(e.amount.replace(/[^0-9.]/g, '') || '0'), 0)
+    const txTotal = mockBanking.reduce((sum, t) => sum + parseFloat(t.amount.replace(/[^0-9.]/g, '') || '0'), 0)
+    return { 
+      totalCustomerPayments: "ETB " + txTotal.toLocaleString(), 
+      outstandingBalances: "ETB 0", 
+      overdueCount: 0, 
+      thisMonthExpenses: "ETB " + expensesTotal.toLocaleString(), 
+      pendingExpenseApprovals: "ETB 0", 
+      pendingExpenseCount: mockExpenses.filter(e => e.status === "pending-approval").length, 
+      currentPayrollTotal: "ETB 0", 
+      payrollPeriod: "Current", 
+      payrollStatus: "draft", 
+      totalBankBalance: "ETB 150000", 
+      alerts: [] 
+    }
+  }
+
   if (path === "/dashboard/inventory" && method === "GET") return { kpiCards: [], attentionCards: [] }
   if (path === "/inventory/stats" && method === "GET") return { green: { onHand: "0 kg", reserved: "0 kg", available: "0 kg", status: "healthy", lotCount: 0 }, roasted: { onHand: "0 kg", reserved: "0 kg", available: "0 kg", status: "healthy", lotCount: 0 }, packaging: { onHand: "0", reserved: "0", available: "0", status: "healthy", skuCount: 0 }, attentionCount: 0 }
   if (path === "/inventory/attention" && method === "GET") return []
-  if (path === "/finance/banking/summary" && method === "GET") return { totalBalance: "ETB 0", unassignedDeposits: "ETB 0", pendingReconciliations: 0, alerts: [] }
-  if (path === "/finance/expenses/summary" && method === "GET") return { pendingApproval: 0, toPay: 0, recentTotal: "ETB 0" }
+  if (path === "/finance/banking/summary" && method === "GET") return { totalBalance: "ETB 150000", unassignedDeposits: "ETB 0", pendingReconciliations: 0, alerts: [] }
+  if (path === "/finance/expenses/summary" && method === "GET") return { pendingApproval: mockExpenses.filter(e => e.status === "pending-approval").length, toPay: mockExpenses.filter(e => e.status === "approved").length, recentTotal: "ETB " + mockExpenses.reduce((sum, e) => sum + parseFloat(e.amount.replace(/[^0-9.]/g, '') || '0'), 0).toLocaleString() }
   if (path === "/delivery/summary" && method === "GET") return { pending: 0, inTransit: 0, completedToday: 0 }
-  if (path === "/payments/summary" && method === "GET") return { receivedToday: "ETB 0", pendingVerification: 0 }
+  if (path === "/payments/summary" && method === "GET") return { receivedToday: "ETB " + mockBanking.reduce((sum, t) => sum + parseFloat(t.amount.replace(/[^0-9.]/g, '') || '0'), 0).toLocaleString(), pendingVerification: 0 }
 
   // ── Custom Actions ──
   if (path === "/receiving" && method === "POST") {
@@ -191,7 +249,7 @@ export async function handleSupabaseApiRequest(
       const totalAmount = preVatAmount + vatAmount
       dbBody = {
         orderNumber: `ORD-${Math.floor(Math.random() * 10000)}`,
-        status: "PENDING_MANAGER_CONFIRMATION",
+        status: "pending-confirmation",
         customer_id: body.customerId,
         branch_id: "BRN-001",
         sales_rep_id: "USR-003",
