@@ -64,10 +64,17 @@ export async function safeRequest<T>(
   try {
     const data = await fn()
     return { data, error: null, state: "ok" }
-  } catch (err) {
-    const error =
-      err instanceof Error ? err.message : "An unexpected error occurred."
-    return { data: null, error, state: "error" }
+  } catch (err: any) {
+    let errorMsg = "An unexpected error occurred."
+    if (err instanceof Error) {
+      errorMsg = err.message
+    } else if (err && err.message) {
+      errorMsg = `${err.message} ${err.details ? '(' + err.details + ')' : ''}`
+    } else if (typeof err === "string") {
+      errorMsg = err
+    }
+    console.error("[safeRequest Error]", err)
+    return { data: null, error: errorMsg, state: "error" }
   }
 }
 
