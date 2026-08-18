@@ -49,7 +49,7 @@ import { AllEntities } from "./entities" // Auto-syncs schema in dev
         "postgresql://postgres.udvtogofulclohhvdnzc:Lx3MLqIBcFeL4uh7@aws-0-eu-central-1.pooler.supabase.com:6543/postgres",
       extra: { ssl: { rejectUnauthorized: false } },
       entities: AllEntities,
-      synchronize: false,
+      synchronize: true,
     }),
   ],
   controllers: [

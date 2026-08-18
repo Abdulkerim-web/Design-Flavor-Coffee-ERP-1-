@@ -2,6 +2,8 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
+  CreateDateColumn,
+  UpdateDateColumn,
   ManyToOne,
   JoinColumn,
   OneToMany,
@@ -73,4 +75,10 @@ export class Customer {
     (history) => history.customer,
   )
   history: CustomerSalesRepHistory[]
+
+  @CreateDateColumn({ name: "created_at" })
+  createdAt: Date
+
+  @UpdateDateColumn({ name: "updated_at" })
+  updatedAt: Date
 }
