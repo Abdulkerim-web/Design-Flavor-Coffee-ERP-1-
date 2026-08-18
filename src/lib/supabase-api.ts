@@ -150,6 +150,17 @@ export async function handleSupabaseApiRequest(
         ? { lots: [], total: 0, page: 1, pageSize: 10 }
         : []
     }
+    
+    if (table === "orders" && data && data.length > 0) {
+      const orderIds = data.map((d: any) => d.id)
+      const { data: itemsData } = await supabaseAdmin.from("order_items").select("*").in("order_id", orderIds)
+      if (itemsData) {
+        data.forEach((order: any) => {
+          order.items = itemsData.filter((i: any) => i.order_id === order.id)
+        })
+      }
+    }
+
     const mapped = camelizeKeys(data) || []
     if (path.startsWith("/inventory/lots") || path.startsWith("/inventory/green") || path.startsWith("/inventory/roasted") || path.startsWith("/inventory/packaging")) {
        return { lots: mapped, total: mapped.length, page: 1, pageSize: mapped.length || 10 }
@@ -174,15 +185,38 @@ export async function handleSupabaseApiRequest(
         sales_rep_id: body.salesRepId || "USR-003" // Default to seed sales rep if none provided to satisfy NOT NULL constraint
       }
     } else if (table === "orders") {
+      const preVatAmount = body.items?.reduce((sum: number, item: any) => sum + ((item.quantity || 0) * (item.unitPrice || 0)), 0) || 0
+      const vatRate = 15.00
+      const vatAmount = preVatAmount * (vatRate / 100)
+      const totalAmount = preVatAmount + vatAmount
       dbBody = {
-        order_number: `ORD-${Math.floor(Math.random() * 10000)}`,
+        orderNumber: `ORD-${Math.floor(Math.random() * 10000)}`,
         status: "PENDING_MANAGER_CONFIRMATION",
         customer_id: body.customerId,
-        total_amount: body.items?.reduce((sum: number, item: any) => sum + ((item.quantity || 0) * (item.unitPrice || 0)), 0) || 0
+        branch_id: "BRN-001",
+        sales_rep_id: "USR-003",
+        is_urgent: body.urgent || false,
+        pre_vat_amount: preVatAmount,
+        vat_rate: vatRate,
+        vat_amount: vatAmount,
+        total_amount: totalAmount,
       }
     }
     const { data, error } = await supabaseAdmin.from(table).insert([dbBody]).select()
     if (error) throw error
+    
+    if (table === "orders" && body.items && body.items.length > 0) {
+      const orderId = data[0].id
+      const orderItems = body.items.map((item: any) => ({
+        order_id: orderId,
+        coffee_product_id: item.coffeeProductId || item.coffeeType || "Unknown",
+        quantity: item.quantity || 0,
+        unit_price: item.unitPrice || 0,
+        status: "pending-confirmation"
+      }))
+      await supabaseAdmin.from("order_items").insert(orderItems)
+    }
+
     return camelizeKeys(data[0])
   }
 

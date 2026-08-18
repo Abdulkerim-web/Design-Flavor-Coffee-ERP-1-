@@ -151,13 +151,13 @@ export async function listOrders(
       items:
         o.items?.map((item: any) => ({
           id: item.id,
-          coffeeType: item.coffeeType,
+          coffeeType: item.coffeeProductId || item.coffeeType || "Unknown",
           origin: item.origin || "Unknown",
           roastLevel: item.roastLevel || "Unknown",
-          quantity: parseFloat(item.quantity),
+          quantity: parseFloat(item.quantity) || 0,
           unit: "KG",
-          unitPrice: `ETB ${item.unitPrice}`,
-          lineTotal: `ETB ${item.lineTotal}`,
+          unitPrice: `ETB ${item.unitPrice || 0}`,
+          lineTotal: `ETB ${(parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0)}`,
         })) || [],
       totalQty: "0 KG", // Calculate later
       coffeeLabel: "Mixed",
