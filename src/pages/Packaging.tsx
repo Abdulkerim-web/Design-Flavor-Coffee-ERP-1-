@@ -1057,6 +1057,11 @@ function ListView({
     }
   }, [search, statusFilter])
 
+  const [showPackModal, setShowPackModal] = useState(false)
+  const [packJobRef, setPackJobRef] = useState("PJ-102")
+  const [packSize, setPackSize] = useState("250g Valve Bag")
+  const [packBags, setPackBags] = useState("100")
+
   useEffect(() => {
     void load()
   }, [load])
@@ -1101,28 +1106,114 @@ function ListView({
       }}
     >
       {/* Header */}
-      <div style={{ marginBottom: 20 }}>
-        <h1
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+        <div>
+          <h1
+            style={{
+              fontFamily: "Fraunces, serif",
+              fontSize: 26,
+              fontWeight: 700,
+              color: "var(--text-primary)",
+              margin: 0,
+            }}
+          >
+            Packing
+          </h1>
+          <p
+            style={{
+              fontSize: 14,
+              color: "var(--text-secondary)",
+              margin: "4px 0 0",
+            }}
+          >
+            Prepare accepted roasted coffee for delivery.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowPackModal(true)}
           style={{
-            fontFamily: "Fraunces, serif",
-            fontSize: 26,
-            fontWeight: 700,
-            color: "var(--text-primary)",
-            margin: 0,
+            height: 38,
+            padding: "0 16px",
+            borderRadius: 8,
+            border: "none",
+            background: "#2B4D3A",
+            color: "#FFFFFF",
+            fontSize: 13,
+            fontWeight: 600,
+            fontFamily: "Inter",
+            cursor: "pointer",
           }}
         >
-          Packing
-        </h1>
-        <p
-          style={{
-            fontSize: 14,
-            color: "var(--text-secondary)",
-            margin: "4px 0 0",
-          }}
-        >
-          Prepare accepted roasted coffee for delivery.
-        </p>
+          + Record Packaging Entry
+        </button>
       </div>
+
+      {/* Packaging Modal */}
+      {showPackModal && (
+        <div
+          onClick={() => setShowPackModal(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: 480, background: "var(--surface-01)", border: "1px solid var(--border-neutral)", borderRadius: 12, padding: 24, boxShadow: "var(--shadow-modal)" }}
+          >
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, fontFamily: "Fraunces, serif" }}>Record Packaging Entry</h3>
+            <p style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 4, marginBottom: 18 }}>Record packed bag outputs and update inventory SKUs.</p>
+            <div style={{ display: "grid", gap: 14 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>Packing Job Ref</label>
+                <input
+                  type="text"
+                  value={packJobRef}
+                  onChange={(e) => setPackJobRef(e.target.value)}
+                  style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid var(--border-neutral)", background: "var(--surface-01)", fontFamily: "DM Mono, monospace" }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>Bag Size / Packaging Material</label>
+                <select
+                  value={packSize}
+                  onChange={(e) => setPackSize(e.target.value)}
+                  style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid var(--border-neutral)", background: "var(--surface-01)" }}
+                >
+                  <option value="250g Valve Bag">250g Degassing Valve Bag</option>
+                  <option value="500g Valve Bag">500g Degassing Valve Bag</option>
+                  <option value="1kg Tin-Tie Bag">1kg Tin-Tie Wholebean Bag</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>Bags Filled Count</label>
+                <input
+                  type="number"
+                  value={packBags}
+                  onChange={(e) => setPackBags(e.target.value)}
+                  style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid var(--border-neutral)", background: "var(--surface-01)", fontFamily: "DM Mono, monospace" }}
+                />
+              </div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+                <button className="btn-secondary" onClick={() => setShowPackModal(false)} style={{ padding: "8px 16px", borderRadius: 8 }}>Cancel</button>
+                <button
+                  className="btn-primary"
+                  style={{ padding: "8px 18px", borderRadius: 8, background: "#2B4D3A", color: "#FFF", border: "none", fontWeight: 600 }}
+                  onClick={async () => {
+                    try {
+                      await apiRequest("/packaging/entries", "POST", { jobRef: packJobRef, size: packSize, bags: packBags })
+                      setShowPackModal(false)
+                      load()
+                    } catch {
+                      setShowPackModal(false)
+                      load()
+                    }
+                  }}
+                >
+                  Record Output
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Summary strip */}
       <div

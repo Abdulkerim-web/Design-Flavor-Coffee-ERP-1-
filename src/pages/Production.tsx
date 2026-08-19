@@ -2022,6 +2022,10 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
   const [showCreateDelivery, setShowCreateDelivery] = useState(false)
   const [deliveryOrderId, setDeliveryOrderId] = useState("")
   const [deliveryNotes, setDeliveryNotes] = useState("")
+  const [showScheduleBatch, setShowScheduleBatch] = useState(false)
+  const [batchCoffee, setBatchCoffee] = useState("Guji Grade 1 Natural")
+  const [batchQty, setBatchQty] = useState("60")
+  const [batchNotes, setBatchNotes] = useState("")
   const { isMobile } = useBreakpoint()
 
   const load = useCallback(async () => {
@@ -2089,11 +2093,18 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
     <div>
       {/* Page header */}
       <div style={{ marginBottom: 24 }}>
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginBottom: 8 }}>
+          <button
+            onClick={() => setShowScheduleBatch(true)}
+            className="btn-primary"
+            style={{ fontSize: 13, background: "#2B4D3A", color: "#FFF", padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600 }}
+          >
+            + Schedule Roasting Batch
+          </button>
           <button
             onClick={() => setShowCreateDelivery(true)}
-            className="btn"
-            style={{ fontSize: 13 }}
+            className="btn-secondary"
+            style={{ fontSize: 13, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border-neutral)", background: "var(--surface-01)", cursor: "pointer", fontWeight: 600 }}
           >
             Create Delivery
           </button>
@@ -2124,6 +2135,75 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
           Manage assigned roasting jobs and report completed output.
         </p>
       </div>
+
+      {/* Schedule Batch Modal */}
+      {showScheduleBatch && (
+        <div
+          onClick={() => setShowScheduleBatch(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: 500, background: "var(--surface-01)", border: "1px solid var(--border-neutral)", borderRadius: 12, padding: 24, boxShadow: "var(--shadow-modal)" }}
+          >
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, fontFamily: "Fraunces, serif" }}>Schedule Roasting Batch</h3>
+            <p style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 4, marginBottom: 18 }}>Schedule a new coffee roasting batch for production.</p>
+            <div style={{ display: "grid", gap: 14 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>Coffee Profile</label>
+                <select
+                  value={batchCoffee}
+                  onChange={(e) => setBatchCoffee(e.target.value)}
+                  style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid var(--border-neutral)", background: "var(--surface-01)" }}
+                >
+                  <option value="Guji Grade 1 Natural">Guji Grade 1 Natural</option>
+                  <option value="Yirgacheffe AOP Washed">Yirgacheffe AOP Washed</option>
+                  <option value="Sidama Reserve Specialty">Sidama Reserve Specialty</option>
+                  <option value="Harrar Longberry Dark">Harrar Longberry Dark</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>Target Green Quantity (KG)</label>
+                <input
+                  type="number"
+                  value={batchQty}
+                  onChange={(e) => setBatchQty(e.target.value)}
+                  style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid var(--border-neutral)", background: "var(--surface-01)" }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>Roaster Notes (optional)</label>
+                <textarea
+                  value={batchNotes}
+                  onChange={(e) => setBatchNotes(e.target.value)}
+                  rows={2}
+                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid var(--border-neutral)", background: "var(--surface-01)", resize: "vertical" }}
+                  placeholder="Special instructions, moisture target..."
+                />
+              </div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+                <button className="btn-secondary" onClick={() => setShowScheduleBatch(false)} style={{ padding: "8px 16px", borderRadius: 8 }}>Cancel</button>
+                <button
+                  className="btn-primary"
+                  style={{ padding: "8px 18px", borderRadius: 8, background: "#2B4D3A", color: "#FFF", border: "none", fontWeight: 600 }}
+                  onClick={async () => {
+                    try {
+                      await apiRequest("/roasting", "POST", { coffee: batchCoffee, quantity: batchQty, notes: batchNotes })
+                      setShowScheduleBatch(false)
+                      void load()
+                    } catch {
+                      setShowScheduleBatch(false)
+                      void load()
+                    }
+                  }}
+                >
+                  Schedule Batch
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Delivery Modal */}
       {showCreateDelivery && (

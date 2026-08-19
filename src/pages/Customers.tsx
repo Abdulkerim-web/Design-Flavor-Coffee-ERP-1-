@@ -3932,17 +3932,37 @@ const CustomerFormView: FC<{
     e.preventDefault()
     if (!validate()) return
     setFormState("submitting")
-    await new Promise((r) => setTimeout(r, 1400))
-    setFormState("success")
-    toast.success(
-      mode === "new" ? "Customer submitted for approval" : "Changes saved",
-      {
-        description:
-          mode === "new"
-            ? `${data.name} is pending manager approval.`
-            : `${data.name} has been updated.`,
-      },
-    )
+    try {
+      const { createCustomer } = await import("../services/customers")
+      const res = await createCustomer({
+        name: data.name,
+        type: data.type,
+        contactName: data.contactPerson,
+        contactPhone: data.phone,
+        contactEmail: data.email,
+        address: data.address,
+        city: data.location || "Addis Ababa",
+        branchDetails: data.branch,
+        salesRepId: data.salesRepId,
+        notes: data.notes,
+      })
+      if (res.state === "error") {
+        toast.error("Failed to create customer", { description: res.error })
+        setFormState("error")
+      } else {
+        setFormState("success")
+        toast.success(
+          mode === "new" ? "Customer created successfully" : "Changes saved",
+          {
+            description: `${data.name} is now saved to the database.`,
+          },
+        )
+        onBack()
+      }
+    } catch (err: any) {
+      setFormState("error")
+      toast.error("Error creating customer", { description: err.message })
+    }
   }
 
   const col2 = isMobile ? "1fr" : "1fr 1fr"

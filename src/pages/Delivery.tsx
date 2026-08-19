@@ -3159,6 +3159,10 @@ export default function Delivery({ routeParams }: { routeParams?: { id?: string 
   const [listError, setListError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<DeliveryStatus | "">("")
+  const [showDispatchModal, setShowDispatchModal] = useState(false)
+  const [dispatchOrderRef, setDispatchOrderRef] = useState("ORD-1042")
+  const [dispatchDriver, setDispatchDriver] = useState("Yohannes Mesfin")
+  const [dispatchNotes, setDispatchNotes] = useState("")
 
   /* Detail */
   const [detail, setDetail] = useState<DeliveryRecord | null>(null)
@@ -3566,6 +3570,24 @@ export default function Delivery({ routeParams }: { routeParams?: { id?: string 
           <option value="verified">Verified</option>
         </select>
         <button
+          onClick={() => setShowDispatchModal(true)}
+          style={{
+            height: 40,
+            padding: "0 16px",
+            borderRadius: 8,
+            border: "none",
+            background: "#2B4D3A",
+            color: "#FFFFFF",
+            fontSize: 13,
+            fontWeight: 600,
+            fontFamily: "Inter",
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          + Dispatch New Delivery
+        </button>
+        <button
           onClick={fetchList}
           style={{
             height: 40,
@@ -3584,6 +3606,75 @@ export default function Delivery({ routeParams }: { routeParams?: { id?: string 
           Refresh
         </button>
       </div>
+
+      {/* Dispatch New Delivery Modal */}
+      {showDispatchModal && (
+        <div
+          onClick={() => setShowDispatchModal(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: 500, background: "var(--surface-01)", border: "1px solid var(--border-neutral)", borderRadius: 12, padding: 24, boxShadow: "var(--shadow-modal)" }}
+          >
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, fontFamily: "Fraunces, serif" }}>Dispatch New Delivery</h3>
+            <p style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 4, marginBottom: 18 }}>Assign and dispatch a delivery for a confirmed customer order.</p>
+            <div style={{ display: "grid", gap: 14 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>Order Reference</label>
+                <input
+                  type="text"
+                  placeholder="e.g. ORD-1042"
+                  value={dispatchOrderRef}
+                  onChange={(e) => setDispatchOrderRef(e.target.value)}
+                  style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid var(--border-neutral)", background: "var(--surface-01)", fontFamily: "DM Mono, monospace" }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>Assigned Driver</label>
+                <select
+                  value={dispatchDriver}
+                  onChange={(e) => setDispatchDriver(e.target.value)}
+                  style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid var(--border-neutral)", background: "var(--surface-01)" }}
+                >
+                  <option value="Yohannes Mesfin">Yohannes Mesfin (Isuzu Truck - ET-3021)</option>
+                  <option value="Tewodros Kassahun">Tewodros Kassahun (Van - ET-1094)</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>Delivery Notes (optional)</label>
+                <textarea
+                  value={dispatchNotes}
+                  onChange={(e) => setDispatchNotes(e.target.value)}
+                  rows={2}
+                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid var(--border-neutral)", background: "var(--surface-01)", resize: "vertical" }}
+                  placeholder="Gate code, recipient contact, instructions..."
+                />
+              </div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+                <button className="btn-secondary" onClick={() => setShowDispatchModal(false)} style={{ padding: "8px 16px", borderRadius: 8 }}>Cancel</button>
+                <button
+                  className="btn-primary"
+                  style={{ padding: "8px 18px", borderRadius: 8, background: "#2B4D3A", color: "#FFF", border: "none", fontWeight: 600 }}
+                  onClick={async () => {
+                    try {
+                      const { apiRequest } = await import("../services/api")
+                      await apiRequest("/deliveries", "POST", { orderRef: dispatchOrderRef, driver: dispatchDriver, notes: dispatchNotes })
+                      setShowDispatchModal(false)
+                      fetchList()
+                    } catch {
+                      setShowDispatchModal(false)
+                      fetchList()
+                    }
+                  }}
+                >
+                  Dispatch Delivery
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Error banner */}
       {listError && (
