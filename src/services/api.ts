@@ -99,31 +99,11 @@ export async function apiRequest<T>(
   method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" = "GET",
   body?: any,
 ): Promise<T> {
-  const url = `/api/v1${endpoint}`
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "X-User-Role": currentUserRole,
-  }
-
-  const options: RequestInit = {
-    method,
-    headers,
-  }
-
-  if (body) {
-    options.body = JSON.stringify(body)
-  }
-
   try {
-    const res = await fetch(url, options)
-    if (!res.ok) {
-      const text = await res.text()
-      throw new Error(`API ${method} ${url} failed: ${res.status} ${text}`)
-    }
-    return (await res.json()) as T
+    const { handleSupabaseApiRequest } = await import("../lib/supabase-api")
+    return (await handleSupabaseApiRequest(endpoint, method, body, currentUserRole)) as T
   } catch (err) {
-    console.error(`[API Error] ${method} ${url}`, err)
+    console.error(`[Supabase API Error] ${method} ${endpoint}`, err)
     throw err
   }
 }
