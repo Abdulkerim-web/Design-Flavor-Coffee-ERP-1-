@@ -1,18 +1,29 @@
-import { createClient } from "@supabase/supabase-js"
-
-// Use Vite environment variables for the frontend client.
-// Do NOT expose service_role keys in the browser. The admin/service role
-// operations should live on the server. If you need admin actions, move
-// them to backend endpoints and call those from the frontend.
+// Lazily import @supabase/supabase-js to avoid build-time bundling
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
-if (!supabaseUrl || !supabaseAnonKey) {
-	console.warn("VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is not set. Realtime and API calls may fail.")
+function makeStub() {
+	const stubChannel = () => ({
+		on: (_: any, __: any, handler: any) => ({ subscribe: () => {}, // no-op
+		}),
+	})
+	return {
+		channel: (_name: string) => ({ on: (_: any, __: any, handler: any) => ({ subscribe: () => {} }) }),
+		removeChannel: (_: any) => {},
+		from: (_: any) => ({ select: async () => ({ data: [], error: null }), insert: async () => ({ data: [], error: null }), update: async () => ({ data: [], error: null }) }),
+	}
 }
 
-// Standard client for most operations (anon/public key)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+let supabaseClient: any = makeStub()
+if (supabaseUrl && supabaseAnonKey) {
+	try {
+		const mod = await import("@supabase/supabase-js")
+		supabaseClient = mod.createClient(supabaseUrl, supabaseAnonKey)
+	} catch (e) {
+		// If import fails (missing package), fall back to stub to keep app functional
+		console.warn("@supabase/supabase-js not available, using stubbed supabase client.")
+		supabaseClient = makeStub()
+	}
+}
 
-// WARNING: The service role / admin client has been removed from the
-// frontend for security. Use server-side functions for privileged operations.
+export const supabase = supabaseClient

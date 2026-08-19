@@ -1,4 +1,13 @@
-import { supabase } from "./supabase"
+// Backend proxy helper — route client-side logical requests to server endpoints
+async function backendCall(method: string, endpoint: string, body?: any) {
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  const res = await fetch(`/api/v1${endpoint}`, { method, headers, body: body ? JSON.stringify(body) : undefined })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Backend call failed ${method} ${endpoint}: ${res.status} ${text}`)
+  }
+  return await res.json()
+}
 
 // ── IN-MEMORY MOCKS (Phase 3) ──
 let mockExpenses: any[] = [
@@ -83,16 +92,13 @@ export async function handleSupabaseApiRequest(
 
   // ── IN-MEMORY INTERCEPTORS FOR PAYMENTS, BANKING, PAYROLL ──
   if (path === "/payments/record" && method === "POST") {
+    // Proxy to backend finance payments endpoint
     const paymentId = "PAY-" + Math.floor(Math.random() * 10000)
-    const { error } = await supabase.from("payments").insert([{
-      order_id: body.paymentId || "ORD-0",
-      amount: parseFloat(String(body.amount).replace(/[^0-9.]/g, '')) || 0,
-      payment_method: "bank_transfer",
-      bank_reference_number: body.transferRef,
-      idempotency_key: "PAY-" + Math.floor(Math.random() * 100000),
-      registered_by_user_id: "USR-001"
-    }])
-    if (error) throw error
+    await backendCall("POST", "/finance/payments", {
+      paymentId: body.paymentId,
+      amount: body.amount,
+      transferRef: body.transferRef,
+    })
     return { success: true, ref: paymentId }
   }
 
@@ -168,29 +174,23 @@ export async function handleSupabaseApiRequest(
 
   // ── Custom Actions ──
   if (path === "/receiving" && method === "POST") {
-    await supabase.from("lots").insert([{
-      lot_number: body.lotId || `LOT-${Math.floor(Math.random() * 10000)}`,
-      coffee_type: "Raw Coffee",
-      origin: "Local",
-      quantity: body.confirmedQty || 0,
-      qc_status: "pending"
-    }])
+    await backendCall("POST", "/receiving", body)
     return { success: true }
   }
   if (path.startsWith("/orders/") && path.endsWith("/confirm") && method === "POST") {
-    await supabase.from("orders").update({ status: "PROCESSING" }).eq("id", parts[1])
+    await backendCall("POST", `${path}`)
     return { success: true }
   }
   if (path.startsWith("/orders/") && path.endsWith("/reject") && method === "POST") {
-    await supabase.from("orders").update({ status: "CANCELLED" }).eq("id", parts[1])
+    await backendCall("POST", `${path}`)
     return { success: true }
   }
   if (path.startsWith("/roasting/") && path.endsWith("/start") && method === "POST") {
-    await supabase.from("roasting_batches").update({ status: "ROASTING" }).eq("id", parts[1])
+    await backendCall("POST", `${path}`)
     return { success: true }
   }
   if (path.startsWith("/roasting/") && path.endsWith("/complete") && method === "POST") {
-    await supabase.from("roasting_batches").update({ status: "COMPLETED", actual_roasted_quantity: body.actualYield }).eq("id", parts[1])
+    await backendCall("POST", `${path}`, body)
     return { success: true }
   }
 
@@ -208,44 +208,9 @@ export async function handleSupabaseApiRequest(
   const id = parts[idPos]
 
   if (method === "GET" && !id) {
-    let query = supabase.from(table).select("*")
-    if (table !== "customers" && table !== "users") {
-      query = query.order("created_at", { ascending: false })
-    }
-    if (table === "orders") {
-      query = supabase.from(table).select("*").order("created_at", { ascending: false })
-    }
-    const { data, error } = await query
-    if (error) {
-      console.error(`[Supabase API] Error fetching ${table}:`, error)
-      return path.startsWith("/inventory/lots") || path.startsWith("/inventory/green") || path.startsWith("/inventory/roasted") || path.startsWith("/inventory/packaging")
-        ? { lots: [], total: 0, page: 1, pageSize: 10 }
-        : []
-    }
-    
-    if (table === "orders" && data && data.length > 0) {
-      const orderIds = data.map((d: any) => d.id)
-      const customerIds = [...new Set(data.map((d: any) => d.customer_id).filter(Boolean))]
-
-      const [itemsRes, customersRes] = await Promise.all([
-        supabase.from("order_items").select("*").in("order_id", orderIds),
-        supabase.from("customers").select("*").in("id", customerIds)
-      ])
-
-      const itemsData = itemsRes.data || []
-      const customersData = customersRes.data || []
-
-      data.forEach((order: any) => {
-        order.items = itemsData.filter((i: any) => i.order_id === order.id)
-        order.customer = customersData.find((c: any) => c.id === order.customer_id) || null
-      })
-    }
-
-    const mapped = camelizeKeys(data) || []
-    if (path.startsWith("/inventory/lots") || path.startsWith("/inventory/green") || path.startsWith("/inventory/roasted") || path.startsWith("/inventory/packaging")) {
-       return { lots: mapped, total: mapped.length, page: 1, pageSize: mapped.length || 10 }
-    }
-    return mapped
+    // Proxy read list to backend
+    const data = await backendCall("GET", path)
+    return data
   }
 
   if (method === "POST" && !id) {
@@ -282,34 +247,18 @@ export async function handleSupabaseApiRequest(
         total_amount: totalAmount,
       }
     }
-    const { data, error } = await supabase.from(table).insert([dbBody]).select()
-    if (error) throw error
-    
-    if (table === "orders" && body.items && body.items.length > 0) {
-      const orderId = data[0].id
-      const orderItems = body.items.map((item: any) => ({
-        order_id: orderId,
-        coffee_product_id: item.coffeeProductId || item.coffeeType || "Unknown",
-        quantity: item.quantity || 0,
-        unit_price: item.unitPrice || 0,
-        status: "pending-confirmation"
-      }))
-      await supabase.from("order_items").insert(orderItems)
-    }
-
-    return camelizeKeys(data[0])
+    const created = await backendCall("POST", path, dbBody)
+    return created
   }
 
   if (method === "GET" && id) {
-    const { data, error } = await supabase.from(table).select("*").eq("id", id).single()
-    if (error) throw error
-    return camelizeKeys(data)
+    const data = await backendCall("GET", path)
+    return data
   }
 
-  if (method === "PUT" && id) {
-    const { data, error } = await supabase.from(table).update(body).eq("id", id).select()
-    if (error) throw error
-    return camelizeKeys(data[0])
+  if ((method === "PUT" || method === "PATCH") && id) {
+    const data = await backendCall(method, path, body)
+    return data
   }
 
   console.warn(`[Supabase API] Endpoint ${method} ${endpoint} falling back to default mock array/object`)
@@ -318,21 +267,17 @@ export async function handleSupabaseApiRequest(
 }
 
 async function getManagerDashboard() {
-  const [
-    { data: ordersData },
-    { data: roastingBatches },
-    { data: customersData }
-  ] = await Promise.all([
-    supabase.from("orders").select("*, customers(*)").order("created_at", { ascending: false }),
-    supabase.from("roasting_batches").select("*").eq("status", "ROASTING").order("created_at", { ascending: false }),
-    supabase.from("customers").select("*").order("created_at", { ascending: false })
+  const [orders, batches, customers] = await Promise.all([
+    backendCall("GET", "/orders"),
+    backendCall("GET", "/roasting?status=ROASTING"),
+    backendCall("GET", "/customers"),
   ])
 
-  const orders = ordersData || []
-  const customers = customersData || []
-  const batches = roastingBatches || []
+  const ordersArr = orders || []
+  const customersArr = customers || []
+  const batchesArr = batches || []
 
-  const activeOrders = orders.filter(
+  const activeOrders = ordersArr.filter(
     (o: any) => !["CANCELLED", "DELIVERED", "COMPLETED"].includes(o.status)
   )
 
@@ -340,18 +285,18 @@ async function getManagerDashboard() {
     {
       label: "Orders in Progress",
       value: activeOrders.length.toString(),
-      sub: `${orders.filter((o: any) => o.status === "PENDING_MANAGER_CONFIRMATION").length} awaiting confirmation`,
+      sub: `${ordersArr.filter((o: any) => o.status === "PENDING_MANAGER_CONFIRMATION").length} awaiting confirmation`,
       icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
     },
     {
       label: "Total Active Customers",
-      value: `${customers.length} clients`,
+      value: `${customersArr.length} clients`,
       sub: `Active customers in database`,
       icon: "M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75",
     },
     {
       label: "Active Roasting",
-      value: `${batches.length} batches`,
+      value: `${batchesArr.length} batches`,
       sub: "In progress",
       icon: "M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0",
     },

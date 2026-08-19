@@ -1,12 +1,9 @@
 import { useEffect } from "react"
-import { supabase } from "../lib/supabase"
 
 export type RealtimePayload = {
   eventType: string
-  schema: string
   table: string
   record: any
-  old_record?: any
 }
 
 export default function useSupabaseRealtime(
@@ -17,28 +14,36 @@ export default function useSupabaseRealtime(
   useEffect(() => {
     if (!enabled) return
 
-    const channel = supabase
-      .channel(`realtime-${table}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table },
-        (payload) => {
-          try {
-            onChange(payload as RealtimePayload)
-          } catch (e) {
-            // swallow handler errors
-            console.error("realtime handler error", e)
-          }
-        },
-      )
-      .subscribe()
+    // Prefer server-sent events from backend realtime stream
+    const url = `/api/v1/realtime/stream?channel=${encodeURIComponent(table)}`
+    let es: EventSource | null = null
+    try {
+      es = new EventSource(url)
+    } catch (e) {
+      console.warn("EventSource not available", e)
+      es = null
+    }
+
+    if (!es) return
+
+    const onMessage = (ev: MessageEvent) => {
+      try {
+        const parsed = JSON.parse(ev.data)
+        onChange({ eventType: "update", table, record: parsed })
+      } catch (err) {
+        console.error("realtime parse error", err)
+      }
+    }
+
+    es.addEventListener("message", onMessage)
+
+    es.addEventListener("error", () => {
+      // server closed or error — close locally
+      try { es?.close() } catch (e) {}
+    })
 
     return () => {
-      try {
-        supabase.removeChannel(channel)
-      } catch (e) {
-        // ignore
-      }
+      try { es?.removeEventListener("message", onMessage); es?.close() } catch (e) {}
     }
   }, [table, onChange, enabled])
 }

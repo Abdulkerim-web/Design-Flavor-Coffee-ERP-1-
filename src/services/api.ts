@@ -116,10 +116,14 @@ export async function apiRequest<T>(
   }
 
   try {
-    const { handleSupabaseApiRequest } = await import("../lib/supabase-api")
-    return await handleSupabaseApiRequest(endpoint, method, body, currentUserRole) as T
+    const res = await fetch(url, options)
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`API ${method} ${url} failed: ${res.status} ${text}`)
+    }
+    return (await res.json()) as T
   } catch (err) {
-    console.error(`[Supabase API Error] ${method} ${url}`, err)
+    console.error(`[API Error] ${method} ${url}`, err)
     throw err
   }
 }

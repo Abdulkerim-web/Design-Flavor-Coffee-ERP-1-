@@ -9,11 +9,13 @@ import { FeasibilityController } from "./master-data/feasibility.controller"
 import { RoastingController } from "./master-data/roasting.controller"
 import { PackingController } from "./master-data/packing.controller"
 import { DeliveryController } from "./master-data/delivery.controller"
+import { DeliveriesController } from "./master-data/deliveries.controller"
 import { ReceivingController } from "./master-data/receiving.controller"
 
 import { CustomersController } from "./master-data/customers.controller"
 import { OrdersController } from "./master-data/orders.controller"
 import { DashboardController } from "./master-data/dashboard.controller"
+import { RealtimeController } from "./master-data/realtime.controller"
 
 import { AppController } from "./app.controller"
 import { AuthController } from "./auth/auth.controller"
@@ -29,11 +31,13 @@ import { RoastingService } from "./master-data/roasting.service"
 import { PackingService } from "./master-data/packing.service"
 import { DeliveryService } from "./master-data/delivery.service"
 import { PaymentService } from "./master-data/payment.service"
+import { SupabaseAdminService } from "./services/supabase-admin.service"
 import { BankLedgerService } from "./master-data/bank_ledger.service"
 import { PayrollService } from "./master-data/payroll.service"
 import { ProfitEngineService } from "./master-data/profit_engine.service"
 import { ReportingService } from "./master-data/reporting.service"
 import { NotificationService } from "./master-data/notification.service"
+import { RealtimeService } from "./services/realtime.service"
 import { UsersService } from "./users/users.service"
 
 import { AllEntities } from "./entities" // Auto-syncs schema in dev
@@ -67,8 +71,12 @@ import { AllEntities } from "./entities" // Auto-syncs schema in dev
     DashboardController,
     AppController,
     AuthController,
+    RealtimeController,
+    DeliveriesController,
   ],
   providers: [
+    RealtimeService,
+    SupabaseAdminService,
     SeederService,
     AppService,
     OrdersService,

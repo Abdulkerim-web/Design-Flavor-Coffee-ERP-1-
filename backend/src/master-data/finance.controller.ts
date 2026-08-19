@@ -1,7 +1,10 @@
 import { Controller, Post, Get, Body, Param } from "@nestjs/common"
+import { SupabaseAdminService } from "../services/supabase-admin.service"
 
 @Controller("finance")
 export class FinanceController {
+  constructor(private readonly admin: SupabaseAdminService) {}
+
   @Get("payments")
   async getPayments() {
     return []
@@ -9,7 +12,7 @@ export class FinanceController {
 
   @Post("payments")
   async receivePayment(@Body() body: any) {
-    return { success: true }
+    return await this.admin.recordPayment(body)
   }
 
   @Get("ledger")
