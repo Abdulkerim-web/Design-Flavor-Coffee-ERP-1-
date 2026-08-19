@@ -1985,13 +1985,115 @@ const MobileBrandHeader = () => (
 export default function Login() {
   const [screen, setScreen] = useState<Screen>("login")
   const [visible, setVisible] = useState(false)
+  const [showSplash, setShowSplash] = useState(true)
+  const [splashText, setSplashText] = useState("Initializing Enterprise Security Layer…")
   const { isMobile, isTablet } = useBreakpoint()
   const isNarrow = isMobile || isTablet
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 40)
-    return () => clearTimeout(t)
+    const t1 = setTimeout(() => setSplashText("Syncing Real-Time Supabase Engine…"), 1000)
+    const t2 = setTimeout(() => setSplashText("Loading Design Flavor Coffee ERP…"), 2000)
+    const t3 = setTimeout(() => {
+      setShowSplash(false)
+      setVisible(true)
+    }, 3000)
+
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
+    }
   }, [])
+
+  if (showSplash) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 9999,
+          background: "linear-gradient(135deg, #0D1F15 0%, #1A2E22 50%, #0B140E 100%)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#FFFFFF",
+          fontFamily: "Inter, system-ui, sans-serif",
+        }}
+      >
+        <style>{`
+          @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); opacity: 0.85; filter: drop-shadow(0 0 15px rgba(74,222,128,0.4)); }
+            50% { transform: scale(1.08); opacity: 1; filter: drop-shadow(0 0 35px rgba(74,222,128,0.8)); }
+          }
+          @keyframes progressFill {
+            0% { width: 0%; }
+            100% { width: 100%; }
+          }
+        `}</style>
+        
+        {/* Animated Brand Emblem */}
+        <div style={{ animation: "pulseGlow 2s infinite ease-in-out", marginBottom: 24 }}>
+          <div
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: 24,
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.15)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
+            }}
+          >
+            <BrandMark size={48} />
+          </div>
+        </div>
+
+        <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 26, fontWeight: 700, margin: "0 0 8px", letterSpacing: "-0.02em" }}>
+          Design Flavor Coffee ERP
+        </h2>
+        <div style={{ fontSize: 13, color: "#A7F3D0", fontFamily: "DM Mono, monospace", marginBottom: 28, height: 20 }}>
+          {splashText}
+        </div>
+
+        {/* 3-Second Loading Bar */}
+        <div style={{ width: 280, height: 4, background: "rgba(255,255,255,0.12)", borderRadius: 999, overflow: "hidden", position: "relative" }}>
+          <div
+            style={{
+              height: "100%",
+              background: "linear-gradient(90deg, #34D399, #10B981, #F59E0B)",
+              borderRadius: 999,
+              animation: "progressFill 3s linear forwards",
+            }}
+          />
+        </div>
+
+        <button
+          onClick={() => {
+            setShowSplash(false)
+            setVisible(true)
+          }}
+          style={{
+            marginTop: 32,
+            background: "transparent",
+            border: "1px solid rgba(255,255,255,0.2)",
+            color: "rgba(255,255,255,0.7)",
+            fontSize: 12,
+            padding: "6px 16px",
+            borderRadius: 20,
+            cursor: "pointer",
+            transition: "all 0.2s",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget.style.color = "#FFFFFF"); (e.currentTarget.style.borderColor = "#FFFFFF"); }}
+          onMouseLeave={(e) => { (e.currentTarget.style.color = "rgba(255,255,255,0.7)"); (e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"); }}
+        >
+          Skip Intro →
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div
