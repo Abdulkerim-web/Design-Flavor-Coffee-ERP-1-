@@ -29,6 +29,7 @@ import type {
 import { useAuth } from "../contexts/AuthContext"
 import { can } from "../lib/can"
 import { useToast } from "../contexts/ToastContext"
+import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 
 // ─── View routing ──────────────────────────────────────────────────────────────
 
@@ -3783,6 +3784,8 @@ export default function Banking({ routeParams }: { routeParams?: { id?: string }
       setLoading(false)
     })
   }, [refreshCount])
+
+  useSupabaseRealtime("banking", () => setRefreshCount((c) => c + 1))
 
   // Conditional returns after all hooks
   if (!canView) return <AccessDenied />

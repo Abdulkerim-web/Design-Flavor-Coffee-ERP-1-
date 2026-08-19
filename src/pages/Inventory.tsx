@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "../contexts/AuthContext"
 import { can } from "../lib/can"
 import { useBreakpoint } from "../hooks/useBreakpoint"
+import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 import {
   getInventoryDashboardStats,
   getAttentionItems,
@@ -1611,6 +1612,8 @@ function DashboardView({
   useEffect(() => {
     load()
   }, [load])
+
+  useSupabaseRealtime("inventory_lots", load)
 
   return (
     <div>

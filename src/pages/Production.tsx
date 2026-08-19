@@ -2053,7 +2053,10 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
     load()
   }, [load])
 
-  // Realtime: refresh when deliveries change
+  // Realtime: refresh when roasting jobs or deliveries change
+  useSupabaseRealtime("roasting_jobs", () => {
+    void load()
+  })
   useSupabaseRealtime("deliveries", () => {
     void load()
   })

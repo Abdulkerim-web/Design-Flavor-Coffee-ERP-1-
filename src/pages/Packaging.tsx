@@ -19,6 +19,7 @@ import {
   reviewPackingDiscrepancy,
 } from "../services/operations"
 import { apiRequest } from "../services/api"
+import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 import type {
   PackingJob,
   PackingMaterialEntry,
@@ -2661,6 +2662,8 @@ export default function Packaging() {
   const handleRefreshList = () => {
     setListRefreshKey((k) => k + 1)
   }
+
+  useSupabaseRealtime("packing_jobs", handleRefreshList)
 
   if (view === "list") {
     return <ListView key={listRefreshKey} onSelect={handleSelectJob} />
