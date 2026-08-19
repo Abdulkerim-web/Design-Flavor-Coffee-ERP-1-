@@ -2057,13 +2057,20 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
         notes: r.notes || "",
         timeline: [],
       }))
-      setJobs(mapped)
-      // Compute stats from the fetched data
-      setStats({
-        waiting: mapped.filter((j) => j.status === "waiting").length,
-        active: mapped.filter((j) => j.status === "active").length,
-        completedToday: mapped.filter((j) => j.status === "completed").length,
-        needsReview: mapped.filter((j) => j.status === "needs-review" || j.status === "discrepancy").length,
+      setJobs((prev) => {
+        const tempItems = prev.filter((p) => p.id.startsWith("temp-"))
+        const allItems = [...tempItems, ...mapped]
+        // Deduplicate if needed
+        const uniqueMap = new Map<string, RoastingJob>()
+        allItems.forEach((item) => uniqueMap.set(item.id, item))
+        const finalJobs = Array.from(uniqueMap.values())
+        setStats({
+          waiting: finalJobs.filter((j) => j.status === "waiting").length,
+          active: finalJobs.filter((j) => j.status === "active").length,
+          completedToday: finalJobs.filter((j) => j.status === "completed").length,
+          needsReview: finalJobs.filter((j) => j.status === "needs-review" || j.status === "discrepancy").length,
+        })
+        return finalJobs
       })
     } catch {
       setError("Unable to load roasting jobs.")

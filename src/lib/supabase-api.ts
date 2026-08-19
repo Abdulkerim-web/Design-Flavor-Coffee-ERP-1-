@@ -487,7 +487,88 @@ export async function handleSupabaseApiRequest(
       }
     }
 
+// In-memory metadata map for roasting batches (preserves coffee profile name & notes)
+const roastingBatchMetaMap = new Map<string, { coffee?: string; notes?: string }>()
+
+async function ensureDefaultOrderAndItem() {
+  const { data: existingOrder } = await supabaseAdmin
+    .from("orders")
+    .select("id, customer_id")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single()
+
+  if (existingOrder?.id) {
+    const { data: existingItem } = await supabaseAdmin
+      .from("order_items")
+      .select("id")
+      .eq("order_id", existingOrder.id)
+      .limit(1)
+      .single()
+    return {
+      orderId: existingOrder.id,
+      orderItemId: existingItem?.id || "00000000-0000-0000-0000-000000000000",
+      customerId: existingOrder.customer_id || "00000000-0000-0000-0000-000000000000",
+    }
+  }
+
+  // Create default customer & order if none exists in DB
+  let customerId = "00000000-0000-0000-0000-000000000000"
+  const { data: cust } = await supabaseAdmin.from("customers").select("id").limit(1).single()
+  if (cust?.id) {
+    customerId = cust.id
+  } else {
+    const { data: newCust } = await supabaseAdmin
+      .from("customers")
+      .insert([{ name: "Default Customer", business_number: `CUS-${Math.floor(Math.random() * 9000 + 1000)}`, status: "active" }])
+      .select()
+    if (newCust?.[0]?.id) customerId = newCust[0].id
+  }
+
+  const { data: newOrder } = await supabaseAdmin
+    .from("orders")
+    .insert([{
+      orderNumber: `ORD-${Math.floor(Math.random() * 9000 + 1000)}`,
+      customer_id: customerId,
+      status: "pending-confirmation",
+      branch_id: "BRN-001",
+      sales_rep_id: "USR-003",
+      pre_vat_amount: 1000,
+      vat_rate: 15.0,
+      vat_amount: 150,
+      total_amount: 1150,
+    }])
+    .select()
+
+  const orderId = newOrder?.[0]?.id || "00000000-0000-0000-0000-000000000000"
+  const { data: newItem } = await supabaseAdmin
+    .from("order_items")
+    .insert([{
+      order_id: orderId,
+      coffee_product_id: "Guji Grade 1 Natural",
+      quantity: 60,
+      unit_price: 100,
+      status: "pending-confirmation",
+    }])
+    .select()
+
+  const orderItemId = newItem?.[0]?.id || "00000000-0000-0000-0000-000000000000"
+  return { orderId, orderItemId, customerId }
+}
+
     const mapped = camelizeKeys(data) || []
+
+    if (table === "roasting_batches") {
+      mapped.forEach((b: any) => {
+        const meta = roastingBatchMetaMap.get(b.id)
+        if (meta) {
+          if (meta.coffee) b.coffee = meta.coffee
+          if (meta.notes) b.notes = meta.notes
+        }
+        if (!b.coffee) b.coffee = "Guji Grade 1 Natural"
+      })
+      return mapped
+    }
 
     // Normalize delivery_records statuses to UI expected values
     if (table === "delivery_records") {
@@ -554,10 +635,20 @@ export async function handleSupabaseApiRequest(
       const vatRate = 15.0
       const vatAmount = preVatAmount * (vatRate / 100)
       const totalAmount = preVatAmount + vatAmount
+      let customerId = body.customerId
+      if (!customerId || customerId.trim() === "" || !customerId.includes("-")) {
+        const custName = body.customerName || body.customerId || "New Customer"
+        const { data: newCust } = await supabaseAdmin.from("customers").insert([{
+          name: custName,
+          business_number: `CUS-${Math.floor(Math.random() * 10000)}`,
+          status: "active"
+        }]).select()
+        if (newCust?.[0]?.id) customerId = newCust[0].id
+      }
       dbBody = {
         orderNumber: `ORD-${Math.floor(Math.random() * 10000)}`,
         status: "pending-confirmation",
-        customer_id: body.customerId,
+        customer_id: customerId,
         branch_id: "BRN-001",
         sales_rep_id: "USR-003",
         is_urgent: body.urgent || false,
@@ -568,28 +659,13 @@ export async function handleSupabaseApiRequest(
       }
     } else if (table === "roasting_batches") {
       const qty = parseFloat(body.quantity || body.greenInputQty || "60") || 60
-      // Resolve a real order_id — use first available order from DB if not provided
       let resolvedOrderId: string | null = body.orderId || body.order_id || null
       let resolvedOrderItemId = "00000000-0000-0000-0000-000000000000"
-      if (!resolvedOrderId) {
-        const { data: firstOrder } = await supabaseAdmin
-          .from("orders")
-          .select("id")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single()
-        resolvedOrderId = firstOrder?.id || null
-        if (resolvedOrderId) {
-          const { data: firstItem } = await supabaseAdmin
-            .from("order_items")
-            .select("id")
-            .eq("order_id", resolvedOrderId)
-            .limit(1)
-            .single()
-          if (firstItem?.id) resolvedOrderItemId = firstItem.id
-        }
+      if (!resolvedOrderId || resolvedOrderId.startsWith("temp-")) {
+        const defaults = await ensureDefaultOrderAndItem()
+        resolvedOrderId = defaults.orderId
+        resolvedOrderItemId = defaults.orderItemId
       }
-      // Only use exact columns that exist in the DB
       dbBody = {
         order_id: resolvedOrderId,
         order_item_id: resolvedOrderItemId,
@@ -600,20 +676,13 @@ export async function handleSupabaseApiRequest(
         acceptable_range_percentage: 5.0,
       }
     } else if (table === "delivery_records") {
-      // Resolve order_id and customer_id (both required)
       let resolvedDeliveryOrderId: string | null = body.orderId || body.order_id || null
       let resolvedCustomerId: string | null = body.customerId || body.customer_id || null
-      if (!resolvedDeliveryOrderId || !resolvedCustomerId) {
-        const { data: firstOrder } = await supabaseAdmin
-          .from("orders")
-          .select("id, customer_id")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single()
-        if (!resolvedDeliveryOrderId) resolvedDeliveryOrderId = firstOrder?.id || null
-        if (!resolvedCustomerId) resolvedCustomerId = firstOrder?.customer_id || null
+      if (!resolvedDeliveryOrderId || !resolvedCustomerId || resolvedDeliveryOrderId.startsWith("temp-")) {
+        const defaults = await ensureDefaultOrderAndItem()
+        resolvedDeliveryOrderId = defaults.orderId
+        resolvedCustomerId = defaults.customerId
       }
-      // Only use exact columns that exist in the DB
       dbBody = {
         order_id: resolvedDeliveryOrderId,
         customer_id: resolvedCustomerId,
@@ -623,6 +692,13 @@ export async function handleSupabaseApiRequest(
 
     const { data, error } = await supabaseAdmin.from(table).insert([dbBody]).select()
     if (error) throw error
+
+    if (table === "roasting_batches" && data?.[0]?.id) {
+      roastingBatchMetaMap.set(data[0].id, {
+        coffee: body.coffee || body.coffeeType || "Guji Grade 1 Natural",
+        notes: body.notes || "",
+      })
+    }
 
     if (table === "orders" && body.items && body.items.length > 0 && data?.[0]) {
       const orderId = data[0].id

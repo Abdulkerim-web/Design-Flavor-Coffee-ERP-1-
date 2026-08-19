@@ -4573,23 +4573,48 @@ const NewOrderView: FC<{ onBack: () => void }> = ({ onBack }) => {
       </div>
 
       <SCard title="Customer">
-        <Lbl label="Select customer" required htmlFor="o-cust" />
-        <Sel
-          id="o-cust"
-          value={form.customerId}
-          onChange={(v) => {
-            setForm((f) => ({ ...f, customerId: v }))
-            setUrgentContinue(false)
-            if (errors.customer) setErrors((p) => ({ ...p, customer: "" }))
-          }}
-          options={liveCustomers.map((c) => ({
-            value: c.id,
-            label: `${c.name} (${c.ref})`,
-          }))}
-          placeholder={customersLoading ? "Loading customers…" : liveCustomers.length === 0 ? "No customers — add one first" : "Select a customer…"}
-          error={errors.customer}
-          disabled={customersLoading}
-        />
+        <Lbl label="Select or type customer name" required htmlFor="o-cust" />
+        <div style={{ display: "grid", gap: 10 }}>
+          <Sel
+            id="o-cust"
+            value={form.customerId}
+            onChange={(v) => {
+              setForm((f) => ({ ...f, customerId: v }))
+              setUrgentContinue(false)
+              if (errors.customer) setErrors((p) => ({ ...p, customer: "" }))
+            }}
+            options={liveCustomers.map((c) => ({
+              value: c.id,
+              label: `${c.name} (${c.ref})`,
+            }))}
+            placeholder="-- Select an Existing Customer --"
+            error={errors.customer}
+            disabled={customersLoading}
+          />
+          <div style={{ fontSize: 12, color: "var(--text-muted)", margin: "2px 0" }}>OR enter customer name directly:</div>
+          <input
+            type="text"
+            placeholder="Type customer name e.g. Addis Coffee House"
+            value={liveCustomers.some(c => c.id === form.customerId) ? "" : form.customerId}
+            onChange={(e) => {
+              const val = e.target.value
+              setForm((f) => ({ ...f, customerId: val }))
+              setUrgentContinue(false)
+              if (errors.customer) setErrors((p) => ({ ...p, customer: "" }))
+            }}
+            style={{
+              width: "100%",
+              height: 38,
+              padding: "0 12px",
+              borderRadius: 8,
+              border: "1px solid var(--border-neutral)",
+              background: "var(--surface-01)",
+              color: "var(--text-primary)",
+              fontSize: 13.5,
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
         <Err msg={errors.customer} />
         {selectedCustomer && (
           <div
