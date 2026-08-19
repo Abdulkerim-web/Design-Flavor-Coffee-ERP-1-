@@ -1,5 +1,5 @@
 import { FC, useState, useEffect } from "react"
-import { listOrders, confirmOrder } from "../services/orders"
+import { listOrders, confirmOrder, rejectOrder } from "../services/orders"
 import { listExpensesFull, approveExpense, rejectExpense } from "../services/finance-ops"
 import { useAuth } from "../contexts/AuthContext"
 import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
@@ -78,7 +78,7 @@ export default function Approvals() {
   const handleReject = async (item: ApprovalItem) => {
     setProcessing(item.id)
     if (item.type === "Order Approval") {
-      await fetch(import.meta.env.VITE_API_BASE_URL + `/orders/${item.id}/reject`, { method: "POST" }).catch(() => {})
+      await rejectOrder(item.id, "Rejected by manager", currentUser?.id || "MANAGER-1")
     } else {
       await rejectExpense(item.id, "Rejected by manager")
     }

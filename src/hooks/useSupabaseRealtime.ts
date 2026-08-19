@@ -29,7 +29,12 @@ export default function useSupabaseRealtime(
     const onMessage = (ev: MessageEvent) => {
       try {
         const parsed = JSON.parse(ev.data)
-        onChange({ eventType: "update", table, record: parsed })
+        // If backend sends normalized payload use it directly, otherwise wrap
+        if (parsed && parsed.eventType && parsed.table && parsed.record) {
+          onChange(parsed)
+        } else {
+          onChange({ eventType: "update", table, record: parsed })
+        }
       } catch (err) {
         console.error("realtime parse error", err)
       }

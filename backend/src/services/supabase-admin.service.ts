@@ -36,8 +36,8 @@ export class SupabaseAdminService {
         driverUserId: payload.driverUserId || null,
       })
       const saved = await this.deliveryRepo.save(record)
-      // publish realtime event for subscribers
-      this.realtime.publish('deliveries', saved)
+      // publish realtime event for subscribers with normalized payload
+      this.realtime.publish('deliveries', { eventType: 'insert', table: 'deliveries', record: saved })
       return { success: true, data: saved }
     } catch (err) {
       this.logger.error("createDelivery failed", err as any)
@@ -62,7 +62,7 @@ export class SupabaseAdminService {
         registeredByUserId: registeredBy,
       })
       const saved = await this.paymentRepo.save(payment)
-      this.realtime.publish('payments', saved)
+      this.realtime.publish('payments', { eventType: 'insert', table: 'payments', record: saved })
       return { success: true, data: saved }
     } catch (err) {
       this.logger.error("recordPayment failed", err as any)
