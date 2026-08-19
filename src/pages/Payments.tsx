@@ -1441,11 +1441,19 @@ function PaymentListView({
         }),
       ])
       if (sumRes.data) setSummary(sumRes.data)
-      else if (sumRes.error) throw new Error(sumRes.error)
-      if (listRes.data) setPayments(listRes.data)
-      else if (listRes.error) throw new Error(listRes.error)
+      const fetched = listRes.data || []
+      const savedLocal = getSavedPayments()
+      const combined = [...savedLocal, ...fetched]
+      const uniqueMap = new Map<string, PaymentRecord>()
+      combined.forEach((item) => uniqueMap.set(item.id, item))
+      setPayments(Array.from(uniqueMap.values()))
     } catch {
-      setError("Failed to load payments. Please try again.")
+      const savedLocal = getSavedPayments()
+      if (savedLocal.length > 0) {
+        setPayments(savedLocal)
+      } else {
+        setError("Failed to load payments. Please try again.")
+      }
     } finally {
       setLoading(false)
     }
@@ -2226,9 +2234,15 @@ function PaymentDetailView({
     setLoading(true)
     setError(null)
     try {
-      const res = await getPayment(paymentId)
-      if (res.data) setPayment(res.data)
-      else throw new Error(res.error ?? "Not found")
+      const savedLocal = getSavedPayments()
+      const localPayment = savedLocal.find((p) => p.id === paymentId)
+      if (localPayment) {
+        setPayment(localPayment)
+      } else {
+        const res = await getPayment(paymentId)
+        if (res.data) setPayment(res.data)
+        else throw new Error(res.error ?? "Not found")
+      }
     } catch {
       setError("Failed to load payment details.")
     } finally {

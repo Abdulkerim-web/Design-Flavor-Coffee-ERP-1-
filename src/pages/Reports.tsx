@@ -994,7 +994,7 @@ function CatalogCard({ t, onOpen }: { t: ReportTemplate onOpen: () => void }) {
         }}
       >
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-          {t.tags.slice(0, 2).map((tag) => (
+          {(t.tags || []).slice(0, 2).map((tag) => (
             <span
               key={tag}
               style={{
@@ -1817,6 +1817,17 @@ export default function Reports() {
               </div>
             ))}
         </div>
+        {showCreateModal && (
+          <CreateCustomReportModal
+            onClose={() => setShowCreateModal(false)}
+            onCreate={(newReport) => {
+              setCustomReports((prev) => [newReport, ...prev])
+              setSelected(newReport)
+              setView("studio")
+              setShowCreateModal(false)
+            }}
+          />
+        )}
       </div>
     )
   }
@@ -2140,7 +2151,7 @@ export default function Reports() {
                 maxWidth: 200,
               }}
             >
-              {selected.tags.map((tag) => (
+              {(selected.tags || []).map((tag) => (
                 <span
                   key={tag}
                   style={{

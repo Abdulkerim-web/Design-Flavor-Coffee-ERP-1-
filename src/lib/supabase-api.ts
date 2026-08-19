@@ -214,17 +214,17 @@ export async function handleSupabaseApiRequest(
     if (method === "POST") {
       if (path.endsWith("/submit")) {
         mockPayroll.status = "pending-approval"
-        return { data: mockPayroll }
+        return mockPayroll
       }
       if (path.endsWith("/approve")) {
         mockPayroll.status = "approved"
-        return { data: mockPayroll }
+        return mockPayroll
       }
       if (path.endsWith("/finalize")) {
         mockPayroll.status = "paid"
-        return { data: mockPayroll }
+        return mockPayroll
       }
-      return { data: mockPayroll }
+      return mockPayroll
     }
   }
 

@@ -345,44 +345,77 @@ function PayrollRunDetail({
 
   async function handleSubmitForApproval() {
     setSubmitting(true)
-    const updated: PayrollRun = { ...run, status: "pending-approval" }
+    const updatedTimeline = [
+      ...(run.timeline || []),
+      {
+        id: `tl-${Date.now()}`,
+        action: "Submitted for Approval",
+        actor: "Payroll Administrator",
+        timestamp: new Date().toLocaleTimeString(),
+        note: "Submitted for manager review.",
+      },
+    ]
+    const updated: PayrollRun = { ...run, status: "pending-approval", timeline: updatedTimeline }
     try {
       localStorage.setItem("erp_payroll_run", JSON.stringify(updated))
     } catch {}
     onRunUpdated(updated)
     try {
       const r = await submitPayrollForApproval(run.id)
-      if (r.data) onRunUpdated(r.data)
+      const payload = (r.data as any)?.data || r.data
+      if (payload && payload.status) onRunUpdated({ ...updated, ...payload })
     } catch {}
     showToast("Payroll submitted for approval — Manager alerted!")
     setSubmitting(false)
   }
 
   async function handleApprove() {
-    const updated: PayrollRun = { ...run, status: "approved" }
+    const updatedTimeline = [
+      ...(run.timeline || []),
+      {
+        id: `tl-${Date.now()}`,
+        action: "Approved",
+        actor: "General Manager",
+        timestamp: new Date().toLocaleTimeString(),
+        note: "Approved for bank disbursement.",
+      },
+    ]
+    const updated: PayrollRun = { ...run, status: "approved", timeline: updatedTimeline }
     try {
       localStorage.setItem("erp_payroll_run", JSON.stringify(updated))
     } catch {}
     onRunUpdated(updated)
     try {
       const r = await approvePayrollRun(run.id, "current-user")
-      if (r.data) onRunUpdated(r.data)
+      const payload = (r.data as any)?.data || r.data
+      if (payload && payload.status) onRunUpdated({ ...updated, ...payload })
     } catch {}
     showToast("Payroll run approved.")
     setModal(null)
   }
 
   async function handleFinalize() {
-    const updated: PayrollRun = { ...run, status: "paid" }
+    const updatedTimeline = [
+      ...(run.timeline || []),
+      {
+        id: `tl-${Date.now()}`,
+        action: "Finalized & Disbursed",
+        actor: "Finance Director",
+        timestamp: new Date().toLocaleTimeString(),
+        note: "Salaries disbursed to staff accounts via CBE Direct.",
+      },
+    ]
+    const updated: PayrollRun = { ...run, status: "paid", timeline: updatedTimeline }
     try {
       localStorage.setItem("erp_payroll_run", JSON.stringify(updated))
     } catch {}
     onRunUpdated(updated)
     try {
       const r = await finalizePayrollRun(run.id)
-      if (r.data) onRunUpdated(r.data)
+      const payload = (r.data as any)?.data || r.data
+      if (payload && payload.status) onRunUpdated({ ...updated, ...payload })
     } catch {}
-    showToast("Payroll run finalized.")
+    showToast("Payroll run finalized & salaries disbursed successfully!")
     setModal(null)
   }
 
@@ -717,11 +750,11 @@ function PayrollRunDetail({
               Run Timeline
             </div>
             <div className="space-y-0">
-              {run.timeline.map((e, i) => (
+              {(run.timeline || []).map((e, i) => (
                 <div key={e.id} className="flex gap-3">
                   <div className="flex flex-col items-center">
                     <div className="w-2.5 h-2.5 rounded-full bg-[var(--sem-success)] flex-shrink-0 mt-0.5" />
-                    {i < run.timeline.length - 1 && (
+                    {i < (run.timeline || []).length - 1 && (
                       <div className="w-px flex-1 bg-[var(--border-neutral)] mt-1 min-h-[16px]" />
                     )}
                   </div>
