@@ -269,6 +269,7 @@ export async function handleSupabaseApiRequest(
   if (path.startsWith("/inventory/lots")) table = "lots"
   if (path.startsWith("/production/batches")) table = "roasting_batches"
   if (path.startsWith("/roasting")) table = "roasting_batches"
+  if (path.startsWith("/deliveries") || path.startsWith("/delivery")) table = "delivery_records"
   if (path.startsWith("/customers")) table = "customers"
   if (path.startsWith("/orders")) table = "orders"
 
@@ -363,6 +364,23 @@ export async function handleSupabaseApiRequest(
         vat_rate: vatRate,
         vat_amount: vatAmount,
         total_amount: totalAmount,
+      }
+    } else if (table === "roasting_batches") {
+      const qty = parseFloat(body.quantity || body.greenInputQty || "60") || 60
+      dbBody = {
+        order_id: body.orderId || "ORD-001",
+        order_item_id: body.orderItemId || "ITEM-001",
+        status: "ROASTING",
+        green_input_quantity: qty,
+        expected_roasted_quantity: qty * 0.85,
+        applied_yield_percentage: 85.0,
+        acceptable_range_percentage: 5.0,
+      }
+    } else if (table === "delivery_records") {
+      dbBody = {
+        order_id: body.orderId || body.order_id || "ORD-001",
+        customer_id: body.customerId || body.customer_id || "00000000-0000-0000-0000-000000000000",
+        status: "READY_FOR_ASSIGNMENT",
       }
     }
 

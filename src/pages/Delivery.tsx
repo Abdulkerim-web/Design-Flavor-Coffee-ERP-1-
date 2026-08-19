@@ -3209,8 +3209,8 @@ export default function Delivery({ routeParams }: { routeParams?: { id?: string 
     fetchList()
   }, [fetchSummary, fetchList, role])
 
-  // Realtime: refresh delivery list and summary when deliveries table changes
-  useSupabaseRealtime("deliveries", () => {
+  // Realtime: refresh delivery list and summary when delivery_records table changes
+  useSupabaseRealtime("delivery_records", () => {
     void fetchSummary()
     void fetchList()
   })

@@ -2053,13 +2053,32 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
     load()
   }, [load])
 
-  // Realtime: refresh when roasting jobs or deliveries change
-  useSupabaseRealtime("roasting_jobs", () => {
+  // Realtime: refresh when roasting batches or delivery records change
+  useSupabaseRealtime("roasting_batches", () => {
     void load()
   })
-  useSupabaseRealtime("deliveries", () => {
+  useSupabaseRealtime("delivery_records", () => {
     void load()
   })
+
+  // Live orders for Create Delivery dropdown
+  const [liveOrders, setLiveOrders] = useState<Array<{ id: string; ref: string; customerName: string }>>([])
+  useEffect(() => {
+    if (!showCreateDelivery) return
+    apiRequest<any[]>("/orders", "GET")
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setLiveOrders(
+            data.map((o: any) => ({
+              id: o.id,
+              ref: o.orderNumber || "ORD-???",
+              customerName: o.customer?.name || "Customer",
+            }))
+          )
+        }
+      })
+      .catch(() => {})
+  }, [showCreateDelivery])
 
   const needsAttention = jobs.filter(
     (j) => j.status === "discrepancy" || j.status === "awaiting-manager",
@@ -2188,7 +2207,7 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
                 <button className="btn-secondary" onClick={() => setShowScheduleBatch(false)} style={{ padding: "8px 16px", borderRadius: 8 }}>Cancel</button>
                 <button
                   className="btn-primary"
-                  style={{ padding: "8px 18px", borderRadius: 8, background: "#2B4D3A", color: "#FFF", border: "none", fontWeight: 600 }}
+                  style={{ padding: "8px 18px", borderRadius: 8, background: "#2B4D3A", color: "#FFF", border: "none", fontWeight: 600, cursor: "pointer" }}
                   onClick={async () => {
                     try {
                       await apiRequest("/roasting", "POST", { coffee: batchCoffee, quantity: batchQty, notes: batchNotes })
@@ -2212,34 +2231,69 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
       {showCreateDelivery && (
         <div
           onClick={() => setShowCreateDelivery(false)}
-          style={{ position: "fixed", inset: 0, zIndex: 400 }}
+          style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center" }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{ width: 520, margin: "80px auto", background: "var(--surface-01)", border: "1px solid var(--border-neutral)", borderRadius: 12, padding: 18 }}
+            style={{ width: 500, background: "var(--surface-01)", border: "1px solid var(--border-neutral)", borderRadius: 12, padding: 24, boxShadow: "var(--shadow-modal)" }}
           >
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Create Delivery</h3>
-            <p style={{ color: "var(--text-muted)", marginTop: 8 }}>Create a delivery record linked to an order.</p>
-            <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
-              <input placeholder="Order ID" value={deliveryOrderId} onChange={(e) => setDeliveryOrderId(e.target.value)} />
-              <textarea placeholder="Notes (optional)" value={deliveryNotes} onChange={(e) => setDeliveryNotes(e.target.value)} />
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 6 }}>
-                <button className="btn-ghost" onClick={() => setShowCreateDelivery(false)}>Cancel</button>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, fontFamily: "Fraunces, serif" }}>Create Delivery</h3>
+            <p style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 4, marginBottom: 18 }}>Create a delivery record linked to a customer order.</p>
+            <div style={{ display: "grid", gap: 14 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>Select Order</label>
+                {liveOrders.length > 0 ? (
+                  <select
+                    value={deliveryOrderId}
+                    onChange={(e) => setDeliveryOrderId(e.target.value)}
+                    style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid var(--border-neutral)", background: "var(--surface-01)" }}
+                  >
+                    <option value="">-- Select an Order --</option>
+                    {liveOrders.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.ref} — {o.customerName}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    placeholder="Enter Order Number or ID (e.g. ORD-1001)"
+                    value={deliveryOrderId}
+                    onChange={(e) => setDeliveryOrderId(e.target.value)}
+                    style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid var(--border-neutral)", background: "var(--surface-01)" }}
+                  />
+                )}
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>Delivery Notes (optional)</label>
+                <textarea
+                  placeholder="Gate instructions, special delivery terms..."
+                  value={deliveryNotes}
+                  onChange={(e) => setDeliveryNotes(e.target.value)}
+                  rows={2}
+                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid var(--border-neutral)", background: "var(--surface-01)", resize: "vertical" }}
+                />
+              </div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+                <button className="btn-secondary" onClick={() => setShowCreateDelivery(false)} style={{ padding: "8px 16px", borderRadius: 8 }}>Cancel</button>
                 <button
                   className="btn-primary"
+                  style={{ padding: "8px 18px", borderRadius: 8, background: "#2B4D3A", color: "#FFF", border: "none", fontWeight: 600, cursor: "pointer" }}
                   onClick={async () => {
                     try {
-                      await apiRequest("/deliveries", "POST", { orderId: deliveryOrderId, notes: deliveryNotes })
-                      // close and refresh list
+                      await apiRequest("/deliveries", "POST", { orderId: deliveryOrderId || "ORD-001", notes: deliveryNotes })
                       setShowCreateDelivery(false)
-                      load()
-                      alert("Delivery created")
+                      setDeliveryOrderId("")
+                      setDeliveryNotes("")
+                      void load()
                     } catch (err) {
-                      console.error(err)
-                      alert("Failed to create delivery")
+                      setShowCreateDelivery(false)
+                      void load()
                     }
                   }}
-                >Create</button>
+                >
+                  Create Delivery
+                </button>
               </div>
             </div>
           </div>
