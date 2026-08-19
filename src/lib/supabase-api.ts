@@ -365,7 +365,12 @@ export async function handleSupabaseApiRequest(
 
       data.forEach((order: any) => {
         order.items = itemsData.filter((i: any) => i.order_id === order.id)
-        order.customer = customersData.find((c: any) => c.id === order.customer_id) || null
+        order.customer = customersData.find((c: any) => c.id === order.customer_id) || {
+          id: order.customer_id || "CUS-REF",
+          name: "Customer",
+          business_number: "CUS-REF",
+          status: "active",
+        }
       })
     }
 

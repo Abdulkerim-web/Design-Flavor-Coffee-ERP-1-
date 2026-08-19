@@ -2742,7 +2742,7 @@ const OrderListView: FC<{
                               fontWeight: 500,
                             }}
                           >
-                            {o.customer.name}
+                            {o.customer?.name ?? "Customer"}
                           </div>
                           <div
                             style={{
@@ -2752,7 +2752,7 @@ const OrderListView: FC<{
                               marginTop: 1,
                             }}
                           >
-                            {o.customer.ref}
+                            {o.customer?.ref ?? "CUS-REF"}
                           </div>
                         </td>
                         <td
@@ -2942,7 +2942,7 @@ const OrderListView: FC<{
                         marginBottom: 2,
                       }}
                     >
-                      {o.customer.name}
+                      {o.customer?.name ?? "Customer"}
                     </div>
                     <div
                       style={{

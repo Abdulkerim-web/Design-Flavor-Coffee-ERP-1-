@@ -136,17 +136,19 @@ export async function listOrders(
       ref: o.orderNumber || "ORD-UNKNOWN",
       status: o.status || "PENDING_MANAGER_APPROVAL",
       urgent: o.isUrgent || false,
-      customer: o.customer ? {
-        id: o.customer.id,
-        name: o.customer.name,
-        ref: o.customer.businessNumber || "CUS-REF",
-        status: o.customer.status || "active",
-      } : {
-        id: o.customerId,
-        name: "Unknown Customer",
-        ref: "CUS-UNKNOWN",
-        status: "active",
-      },
+      customer: o.customer
+        ? {
+            id: o.customer.id || o.customerId || "CUS-REF",
+            name: o.customer.name || "Customer",
+            ref: o.customer.businessNumber || o.customer.ref || "CUS-REF",
+            status: o.customer.status || "active",
+          }
+        : {
+            id: o.customerId || "CUS-REF",
+            name: "Customer",
+            ref: "CUS-REF",
+            status: "active",
+          },
       salesRep: o.salesRepId ? { id: o.salesRepId, name: "Sales Rep" } : null,
       items:
         o.items?.map((item: any) => ({
@@ -179,8 +181,8 @@ export async function listOrders(
       if (
         q &&
         !o.ref.toLowerCase().includes(q) &&
-        !o.customer.name.toLowerCase().includes(q) &&
-        !o.customer.ref.toLowerCase().includes(q)
+        !(o.customer?.name ?? "").toLowerCase().includes(q) &&
+        !(o.customer?.ref ?? "").toLowerCase().includes(q)
       )
         return false
       if (filters.status && o.status !== filters.status) return false

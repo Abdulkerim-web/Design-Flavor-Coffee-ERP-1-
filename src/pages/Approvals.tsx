@@ -38,7 +38,7 @@ export default function Approvals() {
             id: o.id,
             ref: o.ref,
             type: "Order Approval",
-            desc: `${o.customer.name} — ${o.total}`,
+            desc: `${o.customer?.name ?? "Customer"} — ${o.total}`,
             originalData: o
           })
         })
