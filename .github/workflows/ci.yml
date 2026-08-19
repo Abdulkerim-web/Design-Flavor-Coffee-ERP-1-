@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install root deps
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Build backend
+        working-directory: backend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Start backend (sqlite in-memory)
+        working-directory: backend
+        env:
+          TYPEORM_ENGINE: sqlite
+          NODE_ENV: production
+          PORT: 3000
+        run: |
+          nohup npm run start:prod &
+          # wait for server to be ready
+          for i in {1..30}; do
+            if curl -sSf http://localhost:3000/api/v1/orders >/dev/null 2>&1; then
+              echo "backend up"
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Run smoke test
+        env:
+          # Ensure smoke test points to local API
+          NODE_OPTIONS: --no-warnings
+        run: |
+          node scripts/smoke-test.mjs

@@ -85,6 +85,7 @@ export class SupabaseAdminService {
         salesRepId: payload.salesRepId || payload.salesRep || null,
       })
       const saved = await this.customerRepo.save(customer)
+      this.realtime.publish('customers', { eventType: 'insert', table: 'customers', record: saved })
       return { success: true, data: saved }
     } catch (err) {
       this.logger.error("createCustomer failed", err as any)
@@ -108,6 +109,7 @@ export class SupabaseAdminService {
         totalAmount: payload.totalAmount || 0,
       })
       const saved = await this.orderRepo.save(order)
+      this.realtime.publish('orders', { eventType: 'insert', table: 'orders', record: saved })
       return { success: true, data: saved }
     } catch (err) {
       this.logger.error("createOrder failed", err as any)

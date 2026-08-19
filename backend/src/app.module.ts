@@ -46,18 +46,28 @@ import { AllEntities } from "./entities" // Auto-syncs schema in dev
   imports: [
     TypeOrmModule.forFeature(AllEntities),
     ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forRoot({
-      type: "postgres",
-      url:
-        process.env.DATABASE_URL ||
-        "postgresql://postgres.udvtogofulclohhvdnzc:Lx3MLqIBcFeL4uh7@aws-0-eu-central-1.pooler.supabase.com:6543/postgres",
-      extra: { ssl: { rejectUnauthorized: false } },
-      entities: AllEntities,
-      // Disable automatic schema synchronization by default to avoid
-      // runtime migration/index-creation errors. Enable in development
-      // only by setting TYPEORM_SYNCHRONIZE=true in the environment.
-      synchronize: process.env.TYPEORM_SYNCHRONIZE === "true",
-    }),
+    // Allow selecting sqlite in CI by setting TYPEORM_ENGINE=sqlite
+    TypeOrmModule.forRoot(
+      process.env.TYPEORM_ENGINE === "sqlite"
+        ? {
+            type: "sqlite",
+            database: ":memory:",
+            entities: AllEntities,
+            synchronize: true,
+          }
+        : {
+            type: "postgres",
+            url:
+              process.env.DATABASE_URL ||
+              "postgresql://postgres.udvtogofulclohhvdnzc:Lx3MLqIBcFeL4uh7@aws-0-eu-central-1.pooler.supabase.com:6543/postgres",
+            extra: { ssl: { rejectUnauthorized: false } },
+            entities: AllEntities,
+            // Disable automatic schema synchronization by default to avoid
+            // runtime migration/index-creation errors. Enable in development
+            // only by setting TYPEORM_SYNCHRONIZE=true in the environment.
+            synchronize: process.env.TYPEORM_SYNCHRONIZE === "true",
+          },
+    ),
   ],
   controllers: [
     CustomersController,
