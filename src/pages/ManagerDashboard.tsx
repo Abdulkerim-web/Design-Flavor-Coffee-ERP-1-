@@ -4,6 +4,7 @@ import { useBreakpoint } from "../hooks/useBreakpoint"
 import { useAuth } from "../contexts/AuthContext"
 import { canRead } from "../lib/rbac"
 import { CustomerFormModal } from "../components/CustomerFormModal"
+import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 
 /* ─────────────────────────────────────────────────────────────
    TYPES — These mirror the shape of PHP API responses.
@@ -136,32 +137,9 @@ const ORDER_STATUSES: OrderStatus[] = [
   { label: "Payment Pending", count: 0, color: "#DC2626" },
 ]
 
-const INVENTORY_CATEGORIES: InventoryItem[] = [
-  {
-    label: "Green Coffee",
-    onHand: "2,450 KG",
-    reserved: "1,200 KG",
-    available: "1,250 KG",
-    unit: "KG",
-    alert: true,
-  },
-  {
-    label: "Roasted Coffee",
-    onHand: "320 KG",
-    reserved: "245 KG",
-    available: "75 KG",
-    unit: "KG",
-  },
-  {
-    label: "Packaging Materials",
-    onHand: "8,200",
-    reserved: "3,400",
-    available: "4,800",
-    unit: "units",
-  },
-]
+const INVENTORY_CATEGORIES: InventoryItem[] = []
 
-const LOW_STOCK_COUNT = 5
+const LOW_STOCK_COUNT = 0
 
 const FINANCE_ROWS: Record<DateRange, FinanceRow[]> = {
   today: [
@@ -1203,6 +1181,11 @@ export default function ManagerDashboard({
   useEffect(() => {
     loadDashboard()
   }, [loadDashboard])
+
+  // Realtime: refresh dashboard whenever orders, customers, or roasting data changes
+  useSupabaseRealtime("orders", loadDashboard)
+  useSupabaseRealtime("customers", loadDashboard)
+  useSupabaseRealtime("roasting_batches", loadDashboard)
 
   // Update finance when range changes
   useEffect(() => {

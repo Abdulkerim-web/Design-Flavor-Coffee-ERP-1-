@@ -160,48 +160,7 @@ const PACKAGINGS = [
   "Bulk Sack (25 KG)",
 ]
 
-const CUSTOMER_OPTIONS: CustomerOption[] = [
-  {
-    id: "c1",
-    name: "Hilton Addis Ababa",
-    ref: "CUS-0001",
-    status: "active",
-    salesRep: "Hiwot Tadesse",
-    phone: "+251 11 517 0000",
-  },
-  {
-    id: "c2",
-    name: "Ethiopian Airlines Catering",
-    ref: "CUS-0002",
-    status: "active",
-    salesRep: "Hiwot Tadesse",
-    phone: "+251 11 665 0000",
-  },
-  {
-    id: "c3",
-    name: "Sunrise Cafe",
-    ref: "CUS-0003",
-    status: "active",
-    salesRep: "Bereket Assefa",
-    phone: "+251 91 234 5678",
-  },
-  {
-    id: "c4",
-    name: "Sheraton Addis",
-    ref: "CUS-0004",
-    status: "active",
-    salesRep: "Hiwot Tadesse",
-    phone: "+251 11 517 1717",
-  },
-  {
-    id: "c5",
-    name: "Mocha House",
-    ref: "CUS-0005",
-    status: "pending",
-    salesRep: "Bereket Assefa",
-    phone: "+251 92 345 6789",
-  },
-]
+const CUSTOMER_OPTIONS: CustomerOption[] = []
 
 const mkTl = (status: OrderStatusKey): TimelineEvent[] => {
   const d = (
