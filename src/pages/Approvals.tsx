@@ -55,6 +55,22 @@ export default function Approvals() {
           })
         })
       }
+
+      try {
+        const rawPayroll = localStorage.getItem("erp_payroll_run")
+        if (rawPayroll) {
+          const pay = JSON.parse(rawPayroll)
+          if (pay && pay.status === "pending-approval") {
+            newItems.push({
+              id: pay.id || "run-aug-2026",
+              ref: `PAYROLL-${pay.period || "2026-08"}`,
+              type: "Payroll Approval",
+              desc: `Monthly Payroll Run (${pay.period || "Current"}) — ${pay.totalAmount || "ETB 148,500"} (${pay.employeeCount || 12} Employees)`,
+              originalData: pay
+            })
+          }
+        }
+      } catch {}
       
       setItems(newItems)
       setLoading(false)
@@ -71,6 +87,16 @@ export default function Approvals() {
     if (item.type === "Order Approval") {
       await confirmOrder(item.id)
       toast.success("Order approved", { description: `${item.ref} has been confirmed.` })
+    } else if (item.type === "Payroll Approval") {
+      try {
+        const rawPayroll = localStorage.getItem("erp_payroll_run")
+        if (rawPayroll) {
+          const pay = JSON.parse(rawPayroll)
+          pay.status = "approved"
+          localStorage.setItem("erp_payroll_run", JSON.stringify(pay))
+        }
+      } catch {}
+      toast.success("Payroll approved", { description: `${item.ref} has been approved.` })
     } else {
       await approveExpense(item.id, currentUser?.id || "MANAGER-1")
       toast.success("Expense approved", { description: `${item.ref} has been approved.` })

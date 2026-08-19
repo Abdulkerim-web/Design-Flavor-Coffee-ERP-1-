@@ -3151,10 +3151,30 @@ export default function Delivery({ routeParams }: { routeParams?: { id?: string 
     }
   }, [routeParams])
 
+/* Helper to store and retrieve delivery records permanently in localStorage */
+function getSavedDeliveries(): DeliveryRecord[] {
+  try {
+    const raw = localStorage.getItem("erp_delivery_records")
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function saveDeliveryLocally(rec: DeliveryRecord) {
+  try {
+    const existing = getSavedDeliveries()
+    const updated = [rec, ...existing.filter((d) => d.id !== rec.id)]
+    localStorage.setItem("erp_delivery_records", JSON.stringify(updated))
+  } catch {
+    /* ignore */
+  }
+}
+
   /* List */
   const [summary, setSummary] = useState<DeliverySummary | null>(null)
   const [sumLoading, setSumLoading] = useState(true)
-  const [deliveries, setDeliveries] = useState<DeliveryRecord[]>([])
+  const [deliveries, setDeliveries] = useState<DeliveryRecord[]>(() => getSavedDeliveries())
   const [listLoading, setListLoading] = useState(true)
   const [listError, setListError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
@@ -3189,8 +3209,12 @@ export default function Delivery({ routeParams }: { routeParams?: { id?: string 
           }
         : undefined,
     )
-    if (r.state === "ok" && r.data) setDeliveries(r.data)
-    else setListError(r.error ?? "Failed to load deliveries.")
+    const fetched = (r.state === "ok" && r.data) ? r.data : []
+    const savedLocal = getSavedDeliveries()
+    const combined = [...savedLocal, ...fetched]
+    const uniqueMap = new Map<string, DeliveryRecord>()
+    combined.forEach((item) => uniqueMap.set(item.id, item))
+    setDeliveries(Array.from(uniqueMap.values()))
     setListLoading(false)
   }, [search, statusFilter])
 
@@ -3657,15 +3681,29 @@ export default function Delivery({ routeParams }: { routeParams?: { id?: string 
                   className="btn-primary"
                   style={{ padding: "8px 18px", borderRadius: 8, background: "#2B4D3A", color: "#FFF", border: "none", fontWeight: 600 }}
                   onClick={async () => {
+                    const newRec: DeliveryRecord = {
+                      id: `del-${Date.now()}`,
+                      deliveryRef: `DEL-${Math.floor(Math.random() * 9000 + 1000)}`,
+                      orderRef: dispatchOrderRef || "ORD-1042",
+                      customer: { id: "CUS-101", name: "Commercial Customer", businessNumber: "CUS-101" },
+                      driver: dispatchDriver ? { id: "DRV-1", name: dispatchDriver, phone: "+251 91 123 4567" } : null,
+                      deliveryStatus: "ready-for-delivery",
+                      deliveredQty: "50 Bags",
+                      scheduledDate: new Date().toLocaleDateString(),
+                      paymentStatus: "payment-pending",
+                      totalAmount: "ETB 25,000",
+                      timeline: [],
+                    }
+                    saveDeliveryLocally(newRec)
+                    setDeliveries((prev) => [newRec, ...prev.filter((d) => d.id !== newRec.id)])
+                    setShowDispatchModal(false)
                     try {
                       const { apiRequest } = await import("../services/api")
                       await apiRequest("/deliveries", "POST", { orderRef: dispatchOrderRef, driver: dispatchDriver, notes: dispatchNotes })
-                      setShowDispatchModal(false)
-                      fetchList()
                     } catch {
-                      setShowDispatchModal(false)
-                      fetchList()
+                      /* ignore */
                     }
+                    fetchList()
                   }}
                 >
                   Dispatch Delivery

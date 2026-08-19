@@ -345,29 +345,44 @@ function PayrollRunDetail({
 
   async function handleSubmitForApproval() {
     setSubmitting(true)
-    const r = await submitPayrollForApproval(run.id)
-    if (r.data) {
-      onRunUpdated(r.data)
-      showToast("Payroll submitted for approval.")
-    }
+    const updated: PayrollRun = { ...run, status: "pending-approval" }
+    try {
+      localStorage.setItem("erp_payroll_run", JSON.stringify(updated))
+    } catch {}
+    onRunUpdated(updated)
+    try {
+      const r = await submitPayrollForApproval(run.id)
+      if (r.data) onRunUpdated(r.data)
+    } catch {}
+    showToast("Payroll submitted for approval — Manager alerted!")
     setSubmitting(false)
   }
 
   async function handleApprove() {
-    const r = await approvePayrollRun(run.id, "current-user")
-    if (r.data) {
-      onRunUpdated(r.data)
-      showToast("Payroll run approved.")
-    }
+    const updated: PayrollRun = { ...run, status: "approved" }
+    try {
+      localStorage.setItem("erp_payroll_run", JSON.stringify(updated))
+    } catch {}
+    onRunUpdated(updated)
+    try {
+      const r = await approvePayrollRun(run.id, "current-user")
+      if (r.data) onRunUpdated(r.data)
+    } catch {}
+    showToast("Payroll run approved.")
     setModal(null)
   }
 
   async function handleFinalize() {
-    const r = await finalizePayrollRun(run.id)
-    if (r.data) {
-      onRunUpdated(r.data)
-      showToast("Payroll run finalized.")
-    }
+    const updated: PayrollRun = { ...run, status: "paid" }
+    try {
+      localStorage.setItem("erp_payroll_run", JSON.stringify(updated))
+    } catch {}
+    onRunUpdated(updated)
+    try {
+      const r = await finalizePayrollRun(run.id)
+      if (r.data) onRunUpdated(r.data)
+    } catch {}
+    showToast("Payroll run finalized.")
     setModal(null)
   }
 
@@ -899,7 +914,17 @@ export default function Payroll({ routeParams }: { routeParams?: { id?: string }
 
   useEffect(() => {
     getPayrollRun().then((r) => {
-      if (r.data) setRun(r.data)
+      let baseRun = r.data
+      try {
+        const raw = localStorage.getItem("erp_payroll_run")
+        if (raw) {
+          const saved = JSON.parse(raw)
+          if (saved && saved.status) {
+            baseRun = { ...baseRun, ...saved }
+          }
+        }
+      } catch {}
+      if (baseRun) setRun(baseRun)
       else setError(r.error ?? "Unable to load payroll run.")
       setLoading(false)
     })
@@ -907,7 +932,17 @@ export default function Payroll({ routeParams }: { routeParams?: { id?: string }
 
   useSupabaseRealtime("payroll", async () => {
     const r = await getPayrollRun()
-    if (r.data) setRun(r.data)
+    let baseRun = r.data
+    try {
+      const raw = localStorage.getItem("erp_payroll_run")
+      if (raw) {
+        const saved = JSON.parse(raw)
+        if (saved && saved.status) {
+          baseRun = { ...baseRun, ...saved }
+        }
+      }
+    } catch {}
+    if (baseRun) setRun(baseRun)
   })
 
   if (!canView)

@@ -212,7 +212,19 @@ export async function handleSupabaseApiRequest(
       return null
     }
     if (method === "POST") {
-      return { success: true }
+      if (path.endsWith("/submit")) {
+        mockPayroll.status = "pending-approval"
+        return { data: mockPayroll }
+      }
+      if (path.endsWith("/approve")) {
+        mockPayroll.status = "approved"
+        return { data: mockPayroll }
+      }
+      if (path.endsWith("/finalize")) {
+        mockPayroll.status = "paid"
+        return { data: mockPayroll }
+      }
+      return { data: mockPayroll }
     }
   }
 
@@ -804,6 +816,18 @@ async function getManagerDashboard() {
   }))
 
   const attentionCards = []
+  if (mockPayroll.status === "pending-approval") {
+    attentionCards.push({
+      id: "payroll-approval-card",
+      severity: "warning",
+      category: "Payroll Approval",
+      title: `Monthly Payroll Run (${mockPayroll.period || "Current"}) Pending Approval`,
+      description: `Total Net Pay: ${mockPayroll.totalAmount || "ETB 148,500"} | ${mockPayroll.employeeCount || 12} Employees`,
+      primaryAction: "Review Payroll",
+      module: "payroll",
+      age: "Needs Action",
+    })
+  }
   const recentCustomers = customersArr.slice(0, 3)
   for (const c of recentCustomers) {
     attentionCards.push({
@@ -828,9 +852,10 @@ async function getManagerDashboard() {
 }
 
 function camelizeKeys(obj: any): any {
+  if (obj === null || obj === undefined) return obj
   if (Array.isArray(obj)) {
     return obj.map((v) => camelizeKeys(v))
-  } else if (obj !== null && obj.constructor === Object) {
+  } else if (typeof obj === "object" && obj && obj.constructor === Object) {
     return Object.keys(obj).reduce((result, key) => {
       const camelKey = key.replace(/_([a-z])/g, (g) => g[1].toUpperCase())
       result[camelKey] = camelizeKeys(obj[key])
