@@ -2032,22 +2032,46 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
     setLoading(true)
     setError("")
     try {
-      const [jobsRes, statsRes] = await Promise.all([
-        listRoastingJobs({
-          status: statusFilter || undefined,
-          search: search || undefined,
-        }),
-        getRoastingDashboardStats(),
-      ])
-      if (jobsRes.error) throw new Error(jobsRes.error)
-      setJobs(jobsRes.data ?? [])
-      if (statsRes.data) setStats(statsRes.data)
+      // Fetch roasting batches directly from Supabase via apiRequest
+      const raw = await apiRequest<any[]>("/roasting", "GET").catch(() => [])
+      const items: any[] = Array.isArray(raw) ? raw : []
+      const mapped: RoastingJob[] = items.map((r: any) => ({
+        id: r.id,
+        ref: r.batchNumber || `RST-${String(r.id).slice(0, 6).toUpperCase()}`,
+        orderRef: r.order?.orderNumber || r.orderId || "—",
+        customer: r.customer?.name ?? r.order?.customer?.name ?? "—",
+        coffee: r.coffee || "Guji Grade 1 Natural",
+        roastLevel: "Medium",
+        targetQty: (r.targetQuantity || r.greenInputQuantity || r.green_input_quantity || 60) + " KG",
+        roastedQty: r.actualRoastedQuantity ? r.actualRoastedQuantity + " KG" : "-",
+        yield: r.appliedYieldPercentage ? r.appliedYieldPercentage + "%" : "-",
+        status:
+          r.status === "COMPLETED" ? "completed"
+          : r.status === "ROASTING" ? "active"
+          : "waiting",
+        urgent: r.isUrgent || false,
+        roaster: "Head Roaster",
+        startedAt: r.createdAt || r.created_at ? new Date(r.createdAt || r.created_at).toLocaleDateString() : "-",
+        completedAt: r.updatedAt || r.updated_at ? new Date(r.updatedAt || r.updated_at).toLocaleDateString() : "-",
+        machine: "Roaster 1",
+        notes: r.notes || "",
+        timeline: [],
+      }))
+      setJobs(mapped)
+      // Compute stats from the fetched data
+      setStats({
+        waiting: mapped.filter((j) => j.status === "waiting").length,
+        active: mapped.filter((j) => j.status === "active").length,
+        completedToday: mapped.filter((j) => j.status === "completed").length,
+        needsReview: mapped.filter((j) => j.status === "needs-review" || j.status === "discrepancy").length,
+      })
     } catch {
       setError("Unable to load roasting jobs.")
     } finally {
       setLoading(false)
     }
   }, [statusFilter, search])
+
 
   useEffect(() => {
     load()
