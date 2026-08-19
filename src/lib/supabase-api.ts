@@ -10,76 +10,17 @@ const supabaseServiceRoleKey =
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
 
 // ── IN-MEMORY MOCKS ──
-let mockExpenses: any[] = [
-  {
-    id: "exp-1",
-    ref: "EXP-1001",
-    category: "Supplies",
-    description: "Office supplies",
-    amount: "ETB 2,500",
-    date: new Date().toISOString(),
-    requestedBy: "Admin",
-    status: "approved",
-    hasDocument: false,
-    timeline: [],
-  },
-]
+let mockExpenses: any[] = []
 let mockPayments: any[] = []
 let mockPayroll: any = {
   id: "pr-1",
   period: "August 2026",
   status: "draft",
-  employeeCount: 4,
-  totalAmount: "ETB 147,500",
-  pendingReviewCount: 1,
+  employeeCount: 0,
+  totalAmount: "ETB 0",
+  pendingReviewCount: 0,
   changesCount: 0,
-  employees: [
-    {
-      id: "emp-1",
-      name: "Hiwot Tadesse",
-      role: "Sales Representative",
-      baseAmount: "ETB 25,000",
-      adjustments: "ETB 3,500",
-      finalAmount: "ETB 28,500",
-      reviewStatus: "ok",
-      paymentStatus: "pending",
-      changeHistory: [],
-    },
-    {
-      id: "emp-2",
-      name: "Dawit Haile",
-      role: "Head Roaster",
-      baseAmount: "ETB 38,000",
-      adjustments: "ETB 0.00",
-      finalAmount: "ETB 38,000",
-      reviewStatus: "needs-review",
-      reviewReason: "Overtime hours verification required",
-      paymentStatus: "pending",
-      changeHistory: [],
-    },
-    {
-      id: "emp-3",
-      name: "Tigist Alemu",
-      role: "Senior Accountant",
-      baseAmount: "ETB 45,000",
-      adjustments: "ETB 0.00",
-      finalAmount: "ETB 45,000",
-      reviewStatus: "ok",
-      paymentStatus: "pending",
-      changeHistory: [],
-    },
-    {
-      id: "emp-4",
-      name: "Yohannes Mesfin",
-      role: "Logistics Lead",
-      baseAmount: "ETB 36,000",
-      adjustments: "ETB 0.00",
-      finalAmount: "ETB 36,000",
-      reviewStatus: "ok",
-      paymentStatus: "pending",
-      changeHistory: [],
-    },
-  ],
+  employees: [],
   timeline: [],
 }
 let mockBanking: any[] = []

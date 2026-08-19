@@ -13,6 +13,7 @@ import type {
 } from "../services/finance-ops"
 import { useAuth } from "../contexts/AuthContext"
 import { can } from "../lib/can"
+import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 
 type View = "dashboard" | "run-detail" | "employee-detail"
 
@@ -903,6 +904,11 @@ export default function Payroll({ routeParams }: { routeParams?: { id?: string }
       setLoading(false)
     })
   }, [])
+
+  useSupabaseRealtime("payroll", async () => {
+    const r = await getPayrollRun()
+    if (r.data) setRun(r.data)
+  })
 
   if (!canView)
     return (
