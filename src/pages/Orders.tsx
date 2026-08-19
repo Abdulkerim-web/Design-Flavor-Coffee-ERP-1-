@@ -1726,16 +1726,25 @@ const OrderListView: FC<{
     const ms =
       !q ||
       o.ref.toLowerCase().includes(q) ||
-      o.customer.name.toLowerCase().includes(q) ||
-      o.customer.ref.toLowerCase().includes(q)
+      (o.customer?.name ?? "").toLowerCase().includes(q) ||
+      (o.customer?.ref ?? "").toLowerCase().includes(q)
     const mSt = !filters.status || o.status === filters.status
     const mPy =
-      !filters.paymentStatus || o.payment.status === filters.paymentStatus
+      !filters.paymentStatus || o.payment?.status === filters.paymentStatus
     const mU =
       !filters.urgency || (filters.urgency === "urgent" ? o.urgent : !o.urgent)
-    const mCu = !filters.customer || o.customer.id === filters.customer
+    const mCu = !filters.customer || o.customer?.id === filters.customer
     return ms && mSt && mPy && mU && mCu
   })
+
+  const uniqueCustomers = Array.from(
+    new Map(
+      orders
+        .map((o) => o.customer)
+        .filter((c): c is { id: string; name: string; ref: string; status: string } => Boolean(c && c.id))
+        .map((c) => [c.id, c])
+    ).values()
+  )
 
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE)
   const hasFilters = Object.values(filters).some(Boolean)
@@ -1766,7 +1775,7 @@ const OrderListView: FC<{
     urgency: { label: "Urgency", urgent: "Urgent", normal: "Normal" },
     customer: {
       label: "Customer",
-      ...Object.fromEntries(CUSTOMER_OPTIONS.map((c) => [c.id, c.name])),
+      ...Object.fromEntries(uniqueCustomers.map((c) => [c.id, c.name])),
     },
   }
 
@@ -2005,7 +2014,7 @@ const OrderListView: FC<{
               label: "Customer",
               options: [
                 { v: "", l: "All customers" },
-                ...CUSTOMER_OPTIONS.map((c) => ({ v: c.id, l: c.name })),
+                ...uniqueCustomers.map((c) => ({ v: c.id, l: c.name })),
               ],
             },
           ].map((f) => (

@@ -1107,7 +1107,7 @@ function CustomerVerificationModal({
                     color: "var(--text-primary)",
                   }}
                 >
-                  {delivery.customer.name}
+                  {delivery.customer?.name ?? "Customer"}
                 </div>
               </div>
               <div>
@@ -1406,7 +1406,7 @@ function DisputeReviewModal({
                     color: "var(--text-primary)",
                   }}
                 >
-                  {delivery.customer.name}
+                  {delivery.customer?.name ?? "Customer"}
                 </div>
               </div>
               <div>
@@ -1806,7 +1806,7 @@ function ManagerDetailView({
                 marginBottom: 4,
               }}
             >
-              {delivery.customer.name}
+              {delivery.customer?.name ?? "Customer"}
             </div>
             {delivery.customer.branch && (
               <div
@@ -2269,7 +2269,7 @@ function StaffCard({
               fontFamily: "Inter",
             }}
           >
-            {delivery.customer.name}
+            {delivery.customer?.name ?? "Customer"}
           </div>
           {delivery.customer.branch && (
             <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
@@ -2473,7 +2473,7 @@ function StaffDetailView({
                 fontFamily: "Inter",
               }}
             >
-              {delivery.customer.name}
+              {delivery.customer?.name ?? "Customer"}
             </div>
             {delivery.customer.branch && (
               <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
@@ -3022,7 +3022,7 @@ function ManagerTable({
                     color: "var(--text-primary)",
                   }}
                 >
-                  {d.customer.name}
+                  {d.customer?.name ?? "Customer"}
                 </div>
               </td>
               <td
@@ -3872,7 +3872,7 @@ export default function Delivery({ routeParams }: { routeParams?: { id?: string 
                       marginBottom: 4,
                     }}
                   >
-                    {d.customer.name}
+                    {d.customer?.name ?? "Customer"}
                   </div>
                   <div
                     style={{

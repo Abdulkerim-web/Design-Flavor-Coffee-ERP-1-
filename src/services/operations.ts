@@ -61,20 +61,20 @@ export async function listRoastingJobs(filters?: {
   search?: string
 }) {
   const raw = await apiRequest<any[]>("/roasting", "GET").catch(() => [])
-  return raw.map((r) => ({
+  return raw.map((r: any) => ({
     id: r.id,
-    ref: r.batchNumber || "RST-000",
-    orderRef: "ORD-UNKNOWN",
-    customer: "Customer",
-    coffee: "Coffee Product",
+    ref: r.batchNumber || `RST-${String(r.id).slice(0, 6).toUpperCase()}`,
+    orderRef: r.order?.orderNumber || r.orderId || "ORD-001",
+    customer: r.customer?.name || "Customer",
+    coffee: r.coffee || "Guji Grade 1 Natural",
     roastLevel: "Medium",
-    targetQty: r.targetQuantity + " KG",
+    targetQty: (r.targetQuantity || r.greenInputQuantity || 60) + " KG",
     roastedQty: r.actualRoastedQuantity ? r.actualRoastedQuantity + " KG" : "-",
-    yield: r.yieldPercentage ? r.yieldPercentage + "%" : "-",
-    status: r.status === "COMPLETED" ? "completed" : "waiting",
+    yield: r.appliedYieldPercentage ? r.appliedYieldPercentage + "%" : "-",
+    status: r.status === "COMPLETED" ? "completed" : r.status === "ROASTING" ? "active" : "waiting",
     roaster: "Head Roaster",
-    startedAt: r.startedAt || "-",
-    completedAt: r.completedAt || "-",
+    startedAt: r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-",
+    completedAt: r.updatedAt ? new Date(r.updatedAt).toLocaleDateString() : "-",
     machine: "Roaster 1",
     timeline: [],
   }))

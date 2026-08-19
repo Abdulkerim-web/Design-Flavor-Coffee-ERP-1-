@@ -508,7 +508,7 @@ function RecordPaymentModal({
                 fontFamily: "DM Mono",
               }}
             >
-              {payment.orderRef} · {payment.customer.name}
+              {payment.orderRef} · {payment.customer?.name ?? "Customer"}
             </div>
           </div>
           <button
@@ -2348,7 +2348,7 @@ function PaymentDetailView({
                     margin: 0,
                   }}
                 >
-                  {payment.customer.name}
+                  {payment.customer?.name ?? "Customer"}
                 </h2>
                 <div
                   style={{
@@ -3072,7 +3072,7 @@ function OutstandingPaymentsView({
                           marginTop: 2,
                         }}
                       >
-                        {p.customer.name}
+                        {p.customer?.name ?? "Customer"}
                       </div>
                     </div>
                     <StatusPill status={p.paymentStatus} />
@@ -3244,7 +3244,7 @@ function OutstandingPaymentsView({
                           color: "var(--text-primary)",
                         }}
                       >
-                        {p.customer.name}
+                        {p.customer?.name ?? "Customer"}
                       </td>
                       <td
                         style={{
@@ -3595,7 +3595,7 @@ function OverduePaymentsView({
                       fontFamily: "Inter",
                     }}
                   >
-                    {p.customer.name}
+                    {p.customer?.name ?? "Customer"}
                   </div>
                   {p.daysRemaining && (
                     <div

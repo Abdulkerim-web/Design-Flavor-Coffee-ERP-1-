@@ -316,6 +316,19 @@ export async function handleSupabaseApiRequest(
       })
     }
 
+    if ((table === "roasting_batches" || table === "delivery_records") && data && data.length > 0) {
+      const orderIds = [...new Set(data.map((d: any) => d.order_id).filter(Boolean))]
+      if (orderIds.length > 0) {
+        const { data: ordersData } = await supabaseAdmin.from("orders").select("*, customer:customers(*)").in("id", orderIds)
+        const ordersMap = new Map((ordersData || []).map((o: any) => [o.id, o]))
+        data.forEach((item: any) => {
+          const ord = ordersMap.get(item.order_id)
+          item.order = ord
+          item.customer = ord?.customer || { id: "CUS-001", name: "Customer", business_number: "CUS-001" }
+        })
+      }
+    }
+
     const mapped = camelizeKeys(data) || []
     if (
       path.startsWith("/inventory/lots") ||
