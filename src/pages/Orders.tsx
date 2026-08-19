@@ -3822,9 +3822,38 @@ const NewOrderView: FC<{ onBack: () => void }> = ({ onBack }) => {
   } | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const pricingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const selectedCustomer = CUSTOMER_OPTIONS.find(
-    (c) => c.id === form.customerId,
-  )
+
+  // ── Fetch real customers from Supabase ──
+  const [liveCustomers, setLiveCustomers] = useState<CustomerOption[]>([])
+  const [customersLoading, setCustomersLoading] = useState(true)
+  useEffect(() => {
+    async function fetchCustomers() {
+      setCustomersLoading(true)
+      try {
+        const { apiRequest } = await import("../services/api")
+        const data = await apiRequest<any[]>("/customers", "GET")
+        if (Array.isArray(data)) {
+          setLiveCustomers(
+            data.map((c: any) => ({
+              id: c.id,
+              name: c.name || "Unknown",
+              ref: c.businessNumber || c.business_number || "CUS-???",
+              status: c.status === "active" ? "active" : "pending",
+              salesRep: c.salesRepId || "",
+              phone: c.phone || "",
+            }))
+          )
+        }
+      } catch (e) {
+        console.error("Failed to load customers", e)
+      } finally {
+        setCustomersLoading(false)
+      }
+    }
+    fetchCustomers()
+  }, [])
+
+  const selectedCustomer = liveCustomers.find((c) => c.id === form.customerId)
   const isPendingCustomer = selectedCustomer?.status === "pending"
 
   const refreshPricing = useCallback((lines: NewOrderLine[]) => {
@@ -4544,12 +4573,13 @@ const NewOrderView: FC<{ onBack: () => void }> = ({ onBack }) => {
             setUrgentContinue(false)
             if (errors.customer) setErrors((p) => ({ ...p, customer: "" }))
           }}
-          options={CUSTOMER_OPTIONS.map((c) => ({
+          options={liveCustomers.map((c) => ({
             value: c.id,
             label: `${c.name} (${c.ref})`,
           }))}
-          placeholder="Select a customer…"
+          placeholder={customersLoading ? "Loading customers…" : liveCustomers.length === 0 ? "No customers — add one first" : "Select a customer…"}
           error={errors.customer}
+          disabled={customersLoading}
         />
         <Err msg={errors.customer} />
         {selectedCustomer && (
