@@ -986,45 +986,92 @@ function LoginScreen({
             const rc = role ? ROLES[role] : null
             const isDisabled = acc.label === "Disabled Account"
             return (
-              <div
+              <button
                 key={acc.email}
+                type="button"
+                onClick={async () => {
+                  if (isDisabled) {
+                    fillDemo(acc.email)
+                    setBanner({
+                      title: "Account Disabled",
+                      message: "This account has been deactivated for security reasons.",
+                    })
+                    return
+                  }
+                  fillDemo(acc.email)
+                  setLoading(true)
+                  const res = await login(acc.email, "demo")
+                  setLoading(false)
+                  if (!res.ok) {
+                    triggerShake()
+                    if (res.error === "disabled") onAccountUnavailable()
+                  }
+                }}
                 style={{
-                  padding: "3px 9px",
-                  borderRadius: 999,
+                  padding: "6px 14px",
+                  borderRadius: 20,
                   border: `1px solid ${
-                    isDisabled ? "#FECACA" : "var(--border-neutral)"
+                    isDisabled ? "rgba(220,38,38,0.3)" : "rgba(43,77,58,0.3)"
                   }`,
                   background: isDisabled
-                    ? "rgba(220,38,38,0.04)"
-                    : "var(--surface-02)",
-                  fontSize: 11.5,
+                    ? "rgba(220,38,38,0.06)"
+                    : "rgba(43,77,58,0.08)",
+                  fontSize: 12,
                   fontFamily: "Inter",
+                  fontWeight: 600,
                   cursor: "pointer",
                   color: isDisabled
                     ? "var(--sem-danger)"
-                    : (rc?.color ?? "var(--text-secondary)"),
+                    : (rc?.color ?? "var(--text-primary)"),
                   display: "flex",
                   alignItems: "center",
-                  gap: 4,
-                  lineHeight: "20px",
-                  transition: "all 0.12s ease",
+                  gap: 6,
+                  transition: "all 0.15s ease",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.transform = "translateY(-1px)"
+                  el.style.background = isDisabled ? "rgba(220,38,38,0.12)" : "rgba(43,77,58,0.16)"
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.transform = "translateY(0)"
+                  el.style.background = isDisabled ? "rgba(220,38,38,0.06)" : "rgba(43,77,58,0.08)"
                 }}
               >
-                {isDisabled && (
+                {isDisabled ? (
                   <svg
-                    width="9"
-                    height="9"
+                    width="12"
+                    height="12"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="3"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                   >
-                    <path d="M18 6L6 18M6 6l12 12" />
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                ) : (
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
                   </svg>
                 )}
-                {acc.label}
-              </div>
+                <span>{acc.label}</span>
+                <span style={{ fontSize: 10, opacity: 0.7, fontFamily: "DM Mono" }}>
+                  (Click to Login)
+                </span>
+              </button>
             )
           })}
         </div>

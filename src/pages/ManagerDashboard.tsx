@@ -1433,75 +1433,93 @@ export default function ManagerDashboard({
       {/* ── Page header ─────────────────────────────────── */}
       <div
         style={{
+          background: "linear-gradient(135deg, #1C2E22 0%, #2B4D3A 100%)",
+          borderRadius: 16,
+          padding: isMobile ? "20px 18px" : "24px 28px",
+          marginBottom: 24,
+          color: "#FFFFFF",
+          boxShadow: "0 10px 25px rgba(0,0,0,0.12)",
           display: "flex",
-          alignItems: "flex-start",
+          alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: 22,
-          gap: 12,
+          gap: 16,
           flexWrap: "wrap",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        <div>
+        <div style={{ position: "relative", zIndex: 1 }}>
           <div
             style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "3px 10px",
+              borderRadius: 20,
+              background: "rgba(255,255,255,0.12)",
+              backdropFilter: "blur(4px)",
               fontSize: 11,
               fontFamily: "DM Mono",
-              letterSpacing: "0.09em",
+              letterSpacing: "0.08em",
               textTransform: "uppercase",
-              color: "var(--text-muted)",
-              marginBottom: 5,
+              color: "#E2E8F0",
+              marginBottom: 8,
             }}
           >
-            Overview
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4ADE80" }} />
+            General Manager Portal • Real-Time ERP Operations
           </div>
           <h1
             style={{
-              fontSize: 21,
-              fontWeight: 700,
-              color: "var(--text-primary)",
+              fontSize: isMobile ? 22 : 26,
+              fontWeight: 800,
+              color: "#FFFFFF",
               margin: 0,
-              letterSpacing: "-0.02em",
+              letterSpacing: "-0.03em",
+              lineHeight: 1.2,
             }}
           >
-            Manager Dashboard
+            Welcome back, {currentUser?.name || "General Manager"} 👋
           </h1>
           <p
             style={{
-              fontSize: 13,
-              color: "var(--text-secondary)",
-              margin: "4px 0 0",
+              fontSize: 13.5,
+              color: "rgba(255,255,255,0.72)",
+              margin: "6px 0 0",
               lineHeight: 1.4,
+              maxWidth: 540,
             }}
           >
-            Overview of today's operations and items requiring your attention.
+            Here is your live real-time executive dashboard summarizing coffee roasting schedules, inventory, and pending approvals.
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10, position: "relative", zIndex: 1 }}>
           {loadState === "ok" && (
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
-                padding: "4px 10px",
-                borderRadius: 999,
-                background: "var(--surface-01)",
-                border: "1px solid var(--border-neutral)",
+                padding: "6px 12px",
+                borderRadius: 20,
+                background: "rgba(255,255,255,0.14)",
                 fontSize: 11.5,
-                color: "var(--text-muted)",
+                color: "#FFFFFF",
                 fontFamily: "DM Mono",
+                fontWeight: 600,
               }}
             >
               <div
                 style={{
-                  width: 5,
-                  height: 5,
+                  width: 6,
+                  height: 6,
                   borderRadius: "50%",
-                  background: "#16A34A",
-                  boxShadow: "0 0 0 2px rgba(22,163,74,0.2)",
+                  background: "#4ADE80",
+                  boxShadow: "0 0 0 3px rgba(74,222,128,0.3)",
                 }}
               />
-              Updated {lastUpdated}
+              Synced {lastUpdated}
             </div>
           )}
           <button
@@ -1510,35 +1528,32 @@ export default function ManagerDashboard({
               setTimeout(() => {
                 setLoadState("ok")
                 setLastUpdated("just now")
-              }, 800)
+              }, 600)
             }}
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: 7,
-              border: "1px solid var(--border-neutral)",
-              background: "var(--surface-01)",
+              padding: "7px 16px",
+              borderRadius: 10,
+              border: "1px solid rgba(255,255,255,0.25)",
+              background: "rgba(255,255,255,0.15)",
+              color: "#FFFFFF",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              color: "var(--text-muted)",
-              transition: "all 0.15s",
+              gap: 6,
+              fontSize: 12.5,
+              fontWeight: 600,
+              fontFamily: "Inter",
+              transition: "all 0.15s ease",
             }}
-            title="Refresh dashboard"
+            onMouseEnter={(e) => {
+              ;(e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.28)"
+            }}
+            onMouseLeave={(e) => {
+              ;(e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.15)"
+            }}
           >
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            >
-              <polyline points="1 4 1 10 7 10" />
-              <path d="M3.51 15a9 9 0 102.13-9.36L1 10" />
-            </svg>
+            <SvgIcon d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" size={14} stroke="#FFFFFF" />
+            Refresh Data
           </button>
         </div>
       </div>
