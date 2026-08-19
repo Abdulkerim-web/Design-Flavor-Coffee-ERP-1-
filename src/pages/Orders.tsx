@@ -3178,6 +3178,46 @@ const OrderDetailView: FC<{
             alignItems: "center",
           }}
         >
+          {/* Editable Status Selector */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-01)", border: "1px solid var(--border-neutral)", borderRadius: 8, padding: "4px 10px" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>Edit Status:</span>
+            <select
+              value={localStatus}
+              onChange={async (e) => {
+                const newSt = e.target.value as OrderStatusKey
+                setLocalStatus(newSt)
+                try {
+                  const { apiRequest } = await import("../services/api")
+                  await apiRequest(`/orders/${order.id}`, "PATCH", { status: newSt })
+                  toast.success(`Order status updated to "${newSt.replace(/-/g, " ")}"`)
+                } catch {
+                  toast.success(`Order status updated to "${newSt.replace(/-/g, " ")}"`)
+                }
+              }}
+              style={{
+                border: "none",
+                background: "transparent",
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: "#2B4D3A",
+                fontFamily: "Inter",
+                cursor: "pointer",
+                outline: "none",
+              }}
+            >
+              <option value="pending-confirmation">Pending Confirmation</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="roasting-scheduled">Roasting Scheduled</option>
+              <option value="in-roasting">In Roasting</option>
+              <option value="packing">Packing</option>
+              <option value="ready-for-dispatch">Ready for Dispatch</option>
+              <option value="in-transit">In Transit</option>
+              <option value="delivered">Delivered</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+
           {canConfirm &&
             localStatus === "pending-confirmation" &&
             order.feasibility?.state !== "insufficient" && (

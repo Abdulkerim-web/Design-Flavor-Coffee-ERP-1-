@@ -2,6 +2,7 @@ import { FC, useState, useEffect } from "react"
 import { listOrders, confirmOrder, rejectOrder } from "../services/orders"
 import { listExpensesFull, approveExpense, rejectExpense } from "../services/finance-ops"
 import { useAuth } from "../contexts/AuthContext"
+import { useToast } from "../contexts/ToastContext"
 import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 
 type ApprovalItem = {
@@ -14,6 +15,7 @@ type ApprovalItem = {
 
 export default function Approvals() {
   const { currentUser } = useAuth()
+  const toast = useToast()
   const [items, setItems] = useState<ApprovalItem[]>([])
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState<string | null>(null)
@@ -68,8 +70,10 @@ export default function Approvals() {
     setProcessing(item.id)
     if (item.type === "Order Approval") {
       await confirmOrder(item.id)
+      toast.success("Order approved", { description: `${item.ref} has been confirmed.` })
     } else {
       await approveExpense(item.id, currentUser?.id || "MANAGER-1")
+      toast.success("Expense approved", { description: `${item.ref} has been approved.` })
     }
     setProcessing(null)
     setRefreshCount(c => c + 1)
@@ -79,8 +83,10 @@ export default function Approvals() {
     setProcessing(item.id)
     if (item.type === "Order Approval") {
       await rejectOrder(item.id, "Rejected by manager", currentUser?.id || "MANAGER-1")
+      toast.error("Order rejected", { description: `${item.ref} was rejected.` })
     } else {
       await rejectExpense(item.id, "Rejected by manager")
+      toast.error("Expense rejected", { description: `${item.ref} was rejected.` })
     }
     setProcessing(null)
     setRefreshCount(c => c + 1)

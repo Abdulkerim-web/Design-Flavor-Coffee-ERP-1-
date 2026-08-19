@@ -511,7 +511,7 @@ function PayrollRunDetail({
                   </tr>
                 </thead>
                 <tbody>
-                  {run.employees.map((emp) => (
+                  {(run.employees || []).map((emp) => (
                     <tr
                       key={emp.id}
                       className={`border-b border-[var(--border-neutral)] hover:bg-[var(--border-neutral)]/20 transition-colors ${
@@ -582,7 +582,7 @@ function PayrollRunDetail({
             </div>
             {/* Mobile */}
             <div className="lg:hidden divide-y divide-[var(--border-neutral)]">
-              {run.employees.map((emp) => (
+              {(run.employees || []).map((emp) => (
                 <div
                   key={emp.id}
                   className={`px-4 py-4 ${
@@ -944,7 +944,7 @@ export default function Payroll({ routeParams }: { routeParams?: { id?: string }
   }
 
   if (view === "employee-detail" && run && selectedEmployeeId) {
-    const emp = run.employees.find((e) => e.id === selectedEmployeeId)
+    const emp = (run.employees || []).find((e) => e.id === selectedEmployeeId)
     if (emp)
       return (
         <EmployeePayrollDetail
@@ -1084,7 +1084,7 @@ export default function Payroll({ routeParams }: { routeParams?: { id?: string }
                   </tr>
                 </thead>
                 <tbody>
-                  {run.employees.map((emp) => (
+                  {(run.employees || []).map((emp) => (
                     <tr
                       key={emp.id}
                       className={`border-b border-[var(--border-neutral)] ${
@@ -1123,7 +1123,7 @@ export default function Payroll({ routeParams }: { routeParams?: { id?: string }
             </div>
             {/* Mobile: card list */}
             <div className="sm:hidden divide-y divide-[var(--border-neutral)]">
-              {run.employees.map((emp) => (
+              {(run.employees || []).map((emp) => (
                 <div
                   key={emp.id}
                   className={`px-4 py-4 ${
