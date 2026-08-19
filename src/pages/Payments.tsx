@@ -447,6 +447,8 @@ function RecordPaymentModal({
         date,
         documentName: docName,
         notes: notes.trim() || undefined,
+        // Pass orderId so backend can link to order correctly
+        ...({ orderId: (payment as any).orderId } as any),
       })
       onSuccess()
     } catch {

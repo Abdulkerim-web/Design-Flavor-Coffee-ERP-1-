@@ -162,22 +162,46 @@ export async function handleSupabaseApiRequest(
 
   // ── PAYMENTS RECORD ──
   if (path === "/payments/record" && method === "POST") {
-    const paymentId = "PAY-" + Math.floor(Math.random() * 10000)
     const numericAmount = parseFloat(String(body.amount || "0").replace(/[^0-9.]/g, "")) || 0
-    const { error } = await supabaseAdmin.from("payments").insert([
+    // paymentId here is the PaymentRecord.id which maps to a payment UUID or we need the order_id
+    // Try to find the order_id: first check if paymentId is a payment row UUID
+    let resolvedOrderId: string | null = body.orderId || body.order_id || null
+    if (!resolvedOrderId && body.paymentId) {
+      // paymentId could be a payments row id — look up its order_id
+      const { data: existingPay } = await supabaseAdmin
+        .from("payments")
+        .select("order_id")
+        .eq("id", body.paymentId)
+        .single()
+      resolvedOrderId = existingPay?.order_id || null
+    }
+    if (!resolvedOrderId) {
+      // Fall back to most recent order
+      const { data: firstOrder } = await supabaseAdmin
+        .from("orders")
+        .select("id")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single()
+      resolvedOrderId = firstOrder?.id || null
+    }
+    const idempotencyKey = `PAY-${Date.now()}-${Math.floor(Math.random() * 100000)}`
+    const { data: inserted, error: payErr } = await supabaseAdmin.from("payments").insert([
       {
-        order_id: body.paymentId || body.orderId || "ORD-0",
+        order_id: resolvedOrderId,
         amount: numericAmount,
         payment_method: "bank_transfer",
-        bank_reference_number: body.transferRef || "",
-        idempotency_key: "PAY-" + Math.floor(Math.random() * 100000),
-        registered_by_user_id: "USR-001",
+        bank_reference_number: body.transferRef || body.bankRef || "",
+        idempotency_key: idempotencyKey,
+        registered_by_user_id: body.registeredByUserId || "USR-001",
       },
-    ])
-    if (error) {
-      console.error("[Supabase API] Error recording payment:", error)
+    ]).select()
+    if (payErr) {
+      console.error("[Supabase API] Error recording payment:", payErr)
+      throw payErr
     }
-    return { success: true, ref: paymentId }
+    const ref = inserted?.[0]?.id ? `PAY-${String(inserted[0].id).slice(0, 6).toUpperCase()}` : idempotencyKey
+    return { success: true, ref }
   }
 
   // ── PAYROLL ──
@@ -192,20 +216,37 @@ export async function handleSupabaseApiRequest(
     }
   }
 
-  // ── TRANSACTIONS & EXPENSES APPROVAL ──
+  // ── TRANSACTIONS — save to payments table ──
   if (path === "/finance/transactions" && method === "POST") {
-    const newTx = {
-      id: "tx-" + Math.floor(Math.random() * 10000),
-      ref: "TXN-" + Math.floor(Math.random() * 10000),
+    const numericAmount = parseFloat(String(body.amount || "0").replace(/[^0-9.]/g, "")) || 0
+    // Get a real order_id to attach this transaction to
+    const { data: firstOrder } = await supabaseAdmin
+      .from("orders")
+      .select("id")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single()
+    const idempotencyKey = `TXN-${Date.now()}-${Math.floor(Math.random() * 100000)}`
+    const { data: inserted, error: txErr } = await supabaseAdmin.from("payments").insert([{
+      order_id: body.orderId || firstOrder?.id || null,
+      amount: numericAmount,
+      payment_method: body.method || "bank_transfer",
+      bank_reference_number: body.ref || body.reference || "",
+      idempotency_key: idempotencyKey,
+      registered_by_user_id: "USR-001",
+    }]).select()
+    if (txErr) console.error("[Supabase API] Transaction error:", txErr)
+    const txId = inserted?.[0]?.id || idempotencyKey
+    return {
+      id: txId,
+      ref: `TXN-${String(txId).slice(0, 6).toUpperCase()}`,
       date: body.date || new Date().toISOString(),
       description: body.description || "",
-      amount: "ETB " + (body.amount || "0"),
+      amount: `ETB ${numericAmount.toLocaleString()}`,
       type: body.type || "deposit",
       direction: body.direction || "inbound",
       status: "cleared",
     }
-    mockBanking.unshift(newTx)
-    return newTx
   }
 
   if (path === "/finance/accounts" && method === "GET") return mockBankAccounts
@@ -303,39 +344,40 @@ export async function handleSupabaseApiRequest(
         transactions: [],
       }
     }
-    // List all payments
-    const { data: pays } = await supabaseAdmin.from("payments").select("*").order("created_at", { ascending: false })
+    // List payments = all orders + their payment totals
+    const [{ data: allOrders }, { data: pays }] = await Promise.all([
+      supabaseAdmin.from("orders").select("*, customer:customers(*)").order("created_at", { ascending: false }),
+      supabaseAdmin.from("payments").select("*"),
+    ])
     const payList = pays || []
-    // Group by order_id for PaymentRecord structure
-    const grouped: Record<string, any> = {}
+    const orderList = allOrders || []
+
+    // Group payments by order_id
+    const payByOrder: Record<string, { totalPaid: number; transactions: any[]; latestId: string }> = {}
     for (const p of payList) {
-      const oid = p.order_id || "no-order"
-      if (!grouped[oid]) {
-        grouped[oid] = { orderId: oid, totalPaid: 0, transactions: [], latestId: p.id }
-      }
-      grouped[oid].totalPaid += parseFloat(p.amount || 0)
-      grouped[oid].transactions.push(p)
+      const oid = p.order_id || ""
+      if (!payByOrder[oid]) payByOrder[oid] = { totalPaid: 0, transactions: [], latestId: p.id }
+      payByOrder[oid].totalPaid += parseFloat(p.amount || 0)
+      payByOrder[oid].transactions.push(p)
     }
-    // Get order details
-    const orderIds = Object.keys(grouped).filter((id) => id !== "no-order")
-    const ordersMap = new Map<string, any>()
-    if (orderIds.length > 0) {
-      const { data: orders } = await supabaseAdmin.from("orders").select("*, customer:customers(*)").in("id", orderIds)
-      ;(orders || []).forEach((o: any) => ordersMap.set(o.id, o))
-    }
-    return Object.values(grouped).map((g: any) => {
-      const ord = ordersMap.get(g.orderId)
-      const totalAmt = parseFloat(ord?.totalAmount || 0) || g.totalPaid
+
+    return orderList.map((ord: any) => {
+      const g = payByOrder[ord.id] || { totalPaid: 0, transactions: [], latestId: ord.id }
+      const totalAmt = parseFloat(ord.total_amount || 0) || 0
+      const paidAmt = g.totalPaid
+      const remaining = Math.max(0, totalAmt - paidAmt)
+      const isPaid = paidAmt > 0 && remaining <= 0
       return {
         id: g.latestId,
-        ref: `PAY-${String(g.latestId || "").slice(0, 6).toUpperCase()}`,
-        orderRef: ord?.orderNumber || "—",
-        customer: ord?.customer || { id: "—", name: "—" },
+        orderId: ord.id,
+        ref: `PAY-${String(ord.id).slice(0, 6).toUpperCase()}`,
+        orderRef: ord.orderNumber || "—",
+        customer: ord.customer || { id: "—", name: "—" },
         totalAmount: `ETB ${totalAmt.toLocaleString()}`,
-        paidAmount: `ETB ${g.totalPaid.toLocaleString()}`,
-        remainingAmount: `ETB ${Math.max(0, totalAmt - g.totalPaid).toLocaleString()}`,
-        paymentStatus: g.totalPaid >= totalAmt ? "paid" : "partially-paid",
-        paymentDeadline: null,
+        paidAmount: `ETB ${paidAmt.toLocaleString()}`,
+        remainingAmount: `ETB ${remaining.toLocaleString()}`,
+        paymentStatus: isPaid ? "paid" : paidAmt > 0 ? "partially-paid" : "payment-pending",
+        paymentDeadline: ord.payment_deadline_at ? new Date(ord.payment_deadline_at).toLocaleDateString() : null,
         daysRemaining: "—",
         daysRemainingNum: 0,
         transactions: g.transactions.map((t: any) => ({
@@ -528,31 +570,54 @@ export async function handleSupabaseApiRequest(
       const qty = parseFloat(body.quantity || body.greenInputQty || "60") || 60
       // Resolve a real order_id — use first available order from DB if not provided
       let resolvedOrderId: string | null = body.orderId || body.order_id || null
+      let resolvedOrderItemId = "00000000-0000-0000-0000-000000000000"
       if (!resolvedOrderId) {
-        const { data: firstOrder } = await supabaseAdmin.from("orders").select("id").limit(1).single()
+        const { data: firstOrder } = await supabaseAdmin
+          .from("orders")
+          .select("id")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single()
         resolvedOrderId = firstOrder?.id || null
+        if (resolvedOrderId) {
+          const { data: firstItem } = await supabaseAdmin
+            .from("order_items")
+            .select("id")
+            .eq("order_id", resolvedOrderId)
+            .limit(1)
+            .single()
+          if (firstItem?.id) resolvedOrderItemId = firstItem.id
+        }
       }
+      // Only use exact columns that exist in the DB
       dbBody = {
         order_id: resolvedOrderId,
+        order_item_id: resolvedOrderItemId,
         status: "SCHEDULED",
-        coffee: body.coffee || body.coffeeType || "Guji Grade 1 Natural",
         green_input_quantity: qty,
         expected_roasted_quantity: qty * 0.85,
         applied_yield_percentage: 85.0,
         acceptable_range_percentage: 5.0,
-        notes: body.notes || null,
       }
     } else if (table === "delivery_records") {
-      // Resolve a real order_id if not provided
+      // Resolve order_id and customer_id (both required)
       let resolvedDeliveryOrderId: string | null = body.orderId || body.order_id || null
-      if (!resolvedDeliveryOrderId) {
-        const { data: firstOrder } = await supabaseAdmin.from("orders").select("id, customer_id").limit(1).single()
-        resolvedDeliveryOrderId = firstOrder?.id || null
+      let resolvedCustomerId: string | null = body.customerId || body.customer_id || null
+      if (!resolvedDeliveryOrderId || !resolvedCustomerId) {
+        const { data: firstOrder } = await supabaseAdmin
+          .from("orders")
+          .select("id, customer_id")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single()
+        if (!resolvedDeliveryOrderId) resolvedDeliveryOrderId = firstOrder?.id || null
+        if (!resolvedCustomerId) resolvedCustomerId = firstOrder?.customer_id || null
       }
+      // Only use exact columns that exist in the DB
       dbBody = {
         order_id: resolvedDeliveryOrderId,
+        customer_id: resolvedCustomerId,
         status: "READY_FOR_ASSIGNMENT",
-        notes: body.notes || null,
       }
     }
 
