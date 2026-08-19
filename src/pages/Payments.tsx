@@ -1866,7 +1866,7 @@ function PaymentListView({
                             fontSize: 13,
                           }}
                         >
-                          {p.customer.name}
+                          {p.customer?.name ?? "Customer"}
                         </div>
                         <div
                           style={{
@@ -1875,7 +1875,7 @@ function PaymentListView({
                             marginTop: 1,
                           }}
                         >
-                          {p.customer.contactName}
+                          {p.customer?.contactName ?? "—"}
                         </div>
                       </td>
                       <td
@@ -2036,7 +2036,7 @@ function PaymentListView({
                         fontSize: 14,
                       }}
                     >
-                      {p.customer.name}
+                      {p.customer?.name ?? "Customer"}
                     </div>
                     <div
                       style={{

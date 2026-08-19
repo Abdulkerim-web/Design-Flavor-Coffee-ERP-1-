@@ -441,7 +441,7 @@ export default function Finance() {
                         </span>
                       </div>
                       <div className="text-[13px] font-semibold text-[var(--text-primary)] mb-1">
-                        {p.customer.name}
+                        {p.customer?.name ?? "Customer"}
                       </div>
                       <div className="text-[11px] text-red-600 dark:text-red-400 font-mono">
                         {p.daysRemaining ?? "Overdue"}
