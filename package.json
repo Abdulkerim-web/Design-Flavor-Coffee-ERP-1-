@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "concurrently \"vite --host 0.0.0.0\" \"cd backend && npm run start:dev\"",
     "build": "vite build",
+    "deploy:vercel": "vercel --prod --confirm",
+    "vercel:link": "vercel link --confirm",
     "preview": "vite preview",
     "format": "oxfmt"
   },
