@@ -2209,14 +2209,36 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
                   className="btn-primary"
                   style={{ padding: "8px 18px", borderRadius: 8, background: "#2B4D3A", color: "#FFF", border: "none", fontWeight: 600, cursor: "pointer" }}
                   onClick={async () => {
+                    // Optimistic update — show the new batch immediately
+                    const optimisticJob = {
+                      id: `temp-${Date.now()}`,
+                      ref: `RST-${Math.floor(Math.random() * 9000 + 1000)}`,
+                      orderRef: "—",
+                      customer: "—",
+                      coffee: batchCoffee,
+                      roastLevel: "Medium",
+                      targetQty: batchQty + " KG",
+                      roastedQty: "-",
+                      yield: "-",
+                      status: "waiting" as const,
+                      urgent: false,
+                      roaster: "Head Roaster",
+                      startedAt: new Date().toLocaleDateString(),
+                      completedAt: "-",
+                      machine: "Roaster 1",
+                      notes: batchNotes,
+                      timeline: [],
+                    }
+                    setJobs((prev) => [optimisticJob, ...prev])
+                    setShowScheduleBatch(false)
+                    setBatchNotes("")
+                    // Save to DB and refresh with real data
                     try {
                       await apiRequest("/roasting", "POST", { coffee: batchCoffee, quantity: batchQty, notes: batchNotes })
-                      setShowScheduleBatch(false)
-                      void load()
                     } catch {
-                      setShowScheduleBatch(false)
-                      void load()
+                      /* ignore */
                     }
+                    void load()
                   }}
                 >
                   Schedule Batch
@@ -2280,16 +2302,19 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
                   className="btn-primary"
                   style={{ padding: "8px 18px", borderRadius: 8, background: "#2B4D3A", color: "#FFF", border: "none", fontWeight: 600, cursor: "pointer" }}
                   onClick={async () => {
+                    const selectedOrder = liveOrders.find((o) => o.id === deliveryOrderId)
+                    setShowCreateDelivery(false)
+                    setDeliveryOrderId("")
+                    setDeliveryNotes("")
                     try {
-                      await apiRequest("/deliveries", "POST", { orderId: deliveryOrderId || "ORD-001", notes: deliveryNotes })
-                      setShowCreateDelivery(false)
-                      setDeliveryOrderId("")
-                      setDeliveryNotes("")
-                      void load()
-                    } catch (err) {
-                      setShowCreateDelivery(false)
-                      void load()
+                      await apiRequest("/deliveries", "POST", {
+                        orderId: deliveryOrderId || undefined,
+                        notes: deliveryNotes,
+                      })
+                    } catch {
+                      /* ignore */
                     }
+                    void load()
                   }}
                 >
                   Create Delivery

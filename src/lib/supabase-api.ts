@@ -252,26 +252,105 @@ export async function handleSupabaseApiRequest(
   if (path === "/inventory/attention" && method === "GET") return []
   if (path === "/finance/banking/summary" && method === "GET")
     return { totalBalance: "ETB 150000", unassignedDeposits: "ETB 0", pendingReconciliations: 0, alerts: [] }
-  if (path === "/finance/expenses/summary" && method === "GET")
+  if (path === "/finance/expenses/summary" && method === "GET") {
+    const { data: expList } = await supabaseAdmin.from("expenses").select("*")
+    const list = expList || []
     return {
-      pendingApproval: mockExpenses.filter((e) => e.status === "pending-approval").length,
-      toPay: mockExpenses.filter((e) => e.status === "approved").length,
-      recentTotal:
-        "ETB " +
-        mockExpenses
-          .reduce((sum, e) => sum + parseFloat(String(e.amount).replace(/[^0-9.]/g, "") || "0"), 0)
-          .toLocaleString(),
+      pendingApproval: list.filter((e: any) => e.status === "pending-approval" || e.status === "requested").length,
+      toPay: list.filter((e: any) => e.status === "approved").length,
+      recentTotal: "ETB " + list.reduce((sum: number, e: any) => sum + (parseFloat(e.amount) || 0), 0).toLocaleString(),
     }
-  if (path === "/delivery/summary" && method === "GET") return { pending: 0, inTransit: 0, completedToday: 0 }
-  if (path === "/payments/summary" && method === "GET")
+  }
+  if (path === "/delivery/summary" && method === "GET") {
+    const { data: deliveries } = await supabaseAdmin.from("delivery_records").select("status")
+    const dl = deliveries || []
     return {
-      receivedToday:
-        "ETB " +
-        mockBanking
-          .reduce((sum, t) => sum + parseFloat(String(t.amount).replace(/[^0-9.]/g, "") || "0"), 0)
-          .toLocaleString(),
+      pending: dl.filter((d: any) => d.status === "READY_FOR_ASSIGNMENT").length,
+      inTransit: dl.filter((d: any) => d.status === "OUT_FOR_DELIVERY").length,
+      completedToday: dl.filter((d: any) => d.status === "FULLY_DELIVERED").length,
+    }
+  }
+  if (path === "/payments/summary" && method === "GET") {
+    const { data: payList } = await supabaseAdmin.from("payments").select("*")
+    const total = (payList || []).reduce((sum: number, p: any) => sum + (parseFloat(p.amount) || 0), 0)
+    return {
+      receivedToday: "ETB " + total.toLocaleString(),
       pendingVerification: 0,
     }
+  }
+
+  // /payments GET — list all payments joined with orders and customers
+  if (path.startsWith("/payments") && method === "GET" && !path.includes("/record") && !path.includes("/transaction") && !path.includes("/summary")) {
+    const paymentId = parts[1]
+    if (paymentId) {
+      // Single payment
+      const { data: pay } = await supabaseAdmin.from("payments").select("*").eq("id", paymentId).single()
+      if (!pay) return null
+      const { data: ord } = await supabaseAdmin.from("orders").select("*, customer:customers(*)").eq("id", pay.order_id).single()
+      const amt = parseFloat(pay.amount || 0)
+      return {
+        id: pay.id,
+        ref: `PAY-${String(pay.id).slice(0, 6).toUpperCase()}`,
+        orderRef: ord?.orderNumber || "—",
+        customer: ord?.customer || { id: "—", name: "—" },
+        totalAmount: `ETB ${amt.toLocaleString()}`,
+        paidAmount: `ETB ${amt.toLocaleString()}`,
+        remainingAmount: "ETB 0",
+        paymentStatus: "partially-paid",
+        paymentDeadline: null,
+        daysRemaining: "—",
+        daysRemainingNum: 0,
+        transactions: [],
+      }
+    }
+    // List all payments
+    const { data: pays } = await supabaseAdmin.from("payments").select("*").order("created_at", { ascending: false })
+    const payList = pays || []
+    // Group by order_id for PaymentRecord structure
+    const grouped: Record<string, any> = {}
+    for (const p of payList) {
+      const oid = p.order_id || "no-order"
+      if (!grouped[oid]) {
+        grouped[oid] = { orderId: oid, totalPaid: 0, transactions: [], latestId: p.id }
+      }
+      grouped[oid].totalPaid += parseFloat(p.amount || 0)
+      grouped[oid].transactions.push(p)
+    }
+    // Get order details
+    const orderIds = Object.keys(grouped).filter((id) => id !== "no-order")
+    const ordersMap = new Map<string, any>()
+    if (orderIds.length > 0) {
+      const { data: orders } = await supabaseAdmin.from("orders").select("*, customer:customers(*)").in("id", orderIds)
+      ;(orders || []).forEach((o: any) => ordersMap.set(o.id, o))
+    }
+    return Object.values(grouped).map((g: any) => {
+      const ord = ordersMap.get(g.orderId)
+      const totalAmt = parseFloat(ord?.totalAmount || 0) || g.totalPaid
+      return {
+        id: g.latestId,
+        ref: `PAY-${String(g.latestId || "").slice(0, 6).toUpperCase()}`,
+        orderRef: ord?.orderNumber || "—",
+        customer: ord?.customer || { id: "—", name: "—" },
+        totalAmount: `ETB ${totalAmt.toLocaleString()}`,
+        paidAmount: `ETB ${g.totalPaid.toLocaleString()}`,
+        remainingAmount: `ETB ${Math.max(0, totalAmt - g.totalPaid).toLocaleString()}`,
+        paymentStatus: g.totalPaid >= totalAmt ? "paid" : "partially-paid",
+        paymentDeadline: null,
+        daysRemaining: "—",
+        daysRemainingNum: 0,
+        transactions: g.transactions.map((t: any) => ({
+          id: t.id,
+          ref: `TXN-${String(t.id).slice(0, 6).toUpperCase()}`,
+          amount: `ETB ${parseFloat(t.amount || 0).toLocaleString()}`,
+          bankRef: t.bank_reference_number || "—",
+          method: "bank_transfer",
+          recordedAt: t.created_at ? new Date(t.created_at).toLocaleDateString() : "—",
+          verificationStatus: "pending-verification",
+        })),
+      }
+    })
+  }
+
 
   // ── Custom Actions ──
   if (path === "/receiving" && method === "POST") {
@@ -367,6 +446,36 @@ export async function handleSupabaseApiRequest(
     }
 
     const mapped = camelizeKeys(data) || []
+
+    // Normalize delivery_records statuses to UI expected values
+    if (table === "delivery_records") {
+      const statusMap: Record<string, string> = {
+        READY_FOR_ASSIGNMENT: "ready-for-delivery",
+        ASSIGNED: "assigned",
+        OUT_FOR_DELIVERY: "out-for-delivery",
+        PARTIALLY_DELIVERED: "partially-delivered",
+        AWAITING_CONFIRMATION: "awaiting-confirmation",
+        FULLY_DELIVERED: "fully-delivered",
+        DELIVERY_DISPUTED: "delivery-disputed",
+        FAILED_ATTEMPT: "failed-attempt",
+        VERIFIED: "verified",
+      }
+      mapped.forEach((d: any) => {
+        if (d.status && statusMap[d.status]) d.deliveryStatus = statusMap[d.status]
+        else d.deliveryStatus = d.deliveryStatus || d.status || "ready-for-delivery"
+        if (!d.deliveryRef) d.deliveryRef = `DEL-${String(d.id || "").slice(0, 6).toUpperCase()}`
+        if (!d.orderRef) d.orderRef = d.order?.orderNumber || "—"
+        if (!d.customer) d.customer = d.order?.customer || { id: "—", name: "—", businessNumber: "—" }
+        if (!d.deliveredQty) d.deliveredQty = "—"
+        if (!d.scheduledDate) d.scheduledDate = d.createdAt ? new Date(d.createdAt).toLocaleDateString() : "—"
+        if (!d.driver) d.driver = null
+        if (!d.timeline) d.timeline = []
+        if (!d.paymentStatus) d.paymentStatus = "payment-pending"
+        if (!d.totalAmount) d.totalAmount = "—"
+      })
+      return mapped
+    }
+
     if (
       path.startsWith("/inventory/lots") ||
       path.startsWith("/inventory/green") ||
@@ -417,20 +526,33 @@ export async function handleSupabaseApiRequest(
       }
     } else if (table === "roasting_batches") {
       const qty = parseFloat(body.quantity || body.greenInputQty || "60") || 60
+      // Resolve a real order_id — use first available order from DB if not provided
+      let resolvedOrderId: string | null = body.orderId || body.order_id || null
+      if (!resolvedOrderId) {
+        const { data: firstOrder } = await supabaseAdmin.from("orders").select("id").limit(1).single()
+        resolvedOrderId = firstOrder?.id || null
+      }
       dbBody = {
-        order_id: body.orderId || "ORD-001",
-        order_item_id: body.orderItemId || "ITEM-001",
-        status: "ROASTING",
+        order_id: resolvedOrderId,
+        status: "SCHEDULED",
+        coffee: body.coffee || body.coffeeType || "Guji Grade 1 Natural",
         green_input_quantity: qty,
         expected_roasted_quantity: qty * 0.85,
         applied_yield_percentage: 85.0,
         acceptable_range_percentage: 5.0,
+        notes: body.notes || null,
       }
     } else if (table === "delivery_records") {
+      // Resolve a real order_id if not provided
+      let resolvedDeliveryOrderId: string | null = body.orderId || body.order_id || null
+      if (!resolvedDeliveryOrderId) {
+        const { data: firstOrder } = await supabaseAdmin.from("orders").select("id, customer_id").limit(1).single()
+        resolvedDeliveryOrderId = firstOrder?.id || null
+      }
       dbBody = {
-        order_id: body.orderId || body.order_id || "ORD-001",
-        customer_id: body.customerId || body.customer_id || "00000000-0000-0000-0000-000000000000",
+        order_id: resolvedDeliveryOrderId,
         status: "READY_FOR_ASSIGNMENT",
+        notes: body.notes || null,
       }
     }
 

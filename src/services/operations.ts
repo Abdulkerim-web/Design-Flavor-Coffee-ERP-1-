@@ -60,29 +60,46 @@ export async function listRoastingJobs(filters?: {
   status?: RoastingJobStatus
   search?: string
 }) {
-  const raw = await apiRequest<any[]>("/roasting", "GET").catch(() => [])
-  return raw.map((r: any) => ({
-    id: r.id,
-    ref: r.batchNumber || `RST-${String(r.id).slice(0, 6).toUpperCase()}`,
-    orderRef: r.order?.orderNumber || r.orderId || "ORD-001",
-    customer: r.customer?.name || "Customer",
-    coffee: r.coffee || "Guji Grade 1 Natural",
-    roastLevel: "Medium",
-    targetQty: (r.targetQuantity || r.greenInputQuantity || 60) + " KG",
-    roastedQty: r.actualRoastedQuantity ? r.actualRoastedQuantity + " KG" : "-",
-    yield: r.appliedYieldPercentage ? r.appliedYieldPercentage + "%" : "-",
-    status: r.status === "COMPLETED" ? "completed" : r.status === "ROASTING" ? "active" : "waiting",
-    roaster: "Head Roaster",
-    startedAt: r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-",
-    completedAt: r.updatedAt ? new Date(r.updatedAt).toLocaleDateString() : "-",
-    machine: "Roaster 1",
-    timeline: [],
-  }))
+  try {
+    const raw = await apiRequest<any[]>("/roasting", "GET").catch(() => [])
+    const items = Array.isArray(raw) ? raw : []
+    return {
+      data: items.map((r: any) => ({
+        id: r.id,
+        ref: r.batchNumber || `RST-${String(r.id).slice(0, 6).toUpperCase()}`,
+        orderRef: r.order?.orderNumber || r.orderId || "—",
+        customer: r.customer?.name ?? r.order?.customer?.name ?? "—",
+        coffee: r.coffee || r.coffeeType || "Guji Grade 1 Natural",
+        roastLevel: "Medium",
+        targetQty: (r.targetQuantity || r.greenInputQuantity || r.green_input_quantity || 60) + " KG",
+        roastedQty: r.actualRoastedQuantity ? r.actualRoastedQuantity + " KG" : "-",
+        yield: r.appliedYieldPercentage ? r.appliedYieldPercentage + "%" : "-",
+        status:
+          r.status === "COMPLETED"
+            ? "completed"
+            : r.status === "ROASTING"
+            ? "active"
+            : r.status === "SCHEDULED"
+            ? "waiting"
+            : "waiting",
+        urgent: false,
+        roaster: "Head Roaster",
+        startedAt: r.createdAt || r.created_at ? new Date(r.createdAt || r.created_at).toLocaleDateString() : "-",
+        completedAt: r.updatedAt || r.updated_at ? new Date(r.updatedAt || r.updated_at).toLocaleDateString() : "-",
+        machine: "Roaster 1",
+        notes: r.notes || "",
+        timeline: [],
+      })),
+      error: null,
+    }
+  } catch (err: any) {
+    return { data: [], error: err?.message || "Failed to load roasting jobs" }
+  }
 }
 
 export async function getRoastingJob(id: string) {
-  const jobs = await listRoastingJobs()
-  return jobs.find((j) => j.id === id)
+  const { data: jobs } = await listRoastingJobs()
+  return (jobs ?? []).find((j) => j.id === id) ?? null
 }
 
 export async function startRoasting(jobId: string) {
@@ -97,12 +114,14 @@ export async function completeBatch(
 }
 
 export async function getRoastingDashboardStats() {
-  const jobs = await listRoastingJobs()
+  const { data: jobs = [] } = await listRoastingJobs()
+  const waiting = (jobs ?? []).filter((j) => j.status === "waiting").length
+  const active = (jobs ?? []).filter((j) => j.status === "active").length
+  const completed = (jobs ?? []).filter((j) => j.status === "completed").length
+  const needsReview = (jobs ?? []).filter((j) => j.status === "needs-review" || j.status === "discrepancy").length
   return {
-    waiting: jobs.length,
-    active: 0,
-    completedToday: jobs.length,
-    needsReview: 0,
+    data: { waiting, active, completedToday: completed, needsReview },
+    error: null,
   }
 }
 
