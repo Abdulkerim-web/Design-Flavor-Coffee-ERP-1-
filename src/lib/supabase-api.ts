@@ -60,49 +60,94 @@ export async function handleSupabaseApiRequest(
   // ── IN-MEMORY INTERCEPTORS FOR FINANCE & EXPENSES ──
   if (path.startsWith("/finance/expenses")) {
     if (method === "GET") {
-      if (path === "/finance/expenses") return mockExpenses
+      if (path === "/finance/expenses") {
+        const { data, error } = await supabaseAdmin.from("expenses").select("*").order("created_at", { ascending: false })
+        if (error || !data) return []
+        return data.map((e: any) => ({
+          id: e.id,
+          ref: `EXP-${String(e.id).slice(0, 6).toUpperCase()}`,
+          category: e.category,
+          description: e.description,
+          amount: `ETB ${parseFloat(e.amount || 0).toLocaleString()}`,
+          date: e.created_at ? new Date(e.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
+          requestedBy: e.requested_by_user_id || "Admin",
+          status: e.status || "pending-approval",
+          hasDocument: false,
+          timeline: [],
+        }))
+      }
       if (path === "/finance/expenses/summary") {
+        const { data } = await supabaseAdmin.from("expenses").select("*")
+        const list = data || []
+        const pendingCount = list.filter((e: any) => e.status === "pending-approval" || e.status === "requested").length
+        const approvedCount = list.filter((e: any) => e.status === "approved").length
+        const total = list.reduce((sum: number, e: any) => sum + (parseFloat(e.amount) || 0), 0)
         return {
-          pendingApproval: mockExpenses.filter((e) => e.status === "pending-approval").length,
-          toPay: mockExpenses.filter((e) => e.status === "approved").length,
-          recentTotal: "ETB 2,500",
+          pendingApproval: pendingCount,
+          toPay: approvedCount,
+          recentTotal: `ETB ${total.toLocaleString()}`,
         }
       }
       if (path.includes("/approve")) {
         const id = parts[2]
-        const idx = mockExpenses.findIndex((e) => e.id === id)
-        if (idx !== -1) mockExpenses[idx].status = "approved"
-        return mockExpenses[idx]
+        await supabaseAdmin.from("expenses").update({ status: "approved" }).eq("id", id)
+        return { success: true }
       }
       if (path.includes("/reject")) {
         const id = parts[2]
-        const idx = mockExpenses.findIndex((e) => e.id === id)
-        if (idx !== -1) mockExpenses[idx].status = "rejected"
-        return mockExpenses[idx]
+        await supabaseAdmin.from("expenses").update({ status: "rejected" }).eq("id", id)
+        return { success: true }
       }
       if (path.includes("/pay")) {
         const id = parts[2]
-        const idx = mockExpenses.findIndex((e) => e.id === id)
-        if (idx !== -1) mockExpenses[idx].status = "paid"
-        return mockExpenses[idx]
+        await supabaseAdmin.from("expenses").update({ status: "paid" }).eq("id", id)
+        return { success: true }
       }
-      if (parts.length === 3) return mockExpenses.find((e) => e.id === parts[2])
+      if (parts.length === 3) {
+        const { data } = await supabaseAdmin.from("expenses").select("*").eq("id", parts[2]).single()
+        if (!data) return null
+        return {
+          id: data.id,
+          ref: `EXP-${String(data.id).slice(0, 6).toUpperCase()}`,
+          category: data.category,
+          description: data.description,
+          amount: `ETB ${parseFloat(data.amount || 0).toLocaleString()}`,
+          date: data.created_at ? new Date(data.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
+          requestedBy: data.requested_by_user_id || "Admin",
+          status: data.status || "pending-approval",
+          hasDocument: false,
+          timeline: [],
+        }
+      }
     }
     if (method === "POST" && path === "/finance/expenses") {
-      const newExp = {
-        id: "exp-" + Math.floor(Math.random() * 10000),
-        ref: "EXP-" + Math.floor(Math.random() * 10000),
-        category: body.category || "Unknown",
-        description: body.description || "",
-        amount: "ETB " + (body.amount || "0"),
-        date: new Date().toISOString(),
+      const numAmount = parseFloat(String(body.amount || "0").replace(/[^0-9.]/g, "")) || 0
+      const { data, error } = await supabaseAdmin
+        .from("expenses")
+        .insert([
+          {
+            category: body.category || "General",
+            description: body.description || "",
+            amount: numAmount,
+            status: "pending-approval",
+            requested_by_user_id: "USR-001",
+          },
+        ])
+        .select()
+      if (error || !data?.[0]) throw error || new Error("Failed to create expense")
+      const e = data[0]
+      return {
+        id: e.id,
+        ref: `EXP-${String(e.id).slice(0, 6).toUpperCase()}`,
+        category: e.category,
+        description: e.description,
+        amount: `ETB ${numAmount.toLocaleString()}`,
+        date: e.created_at ? new Date(e.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
         requestedBy: "Admin",
-        status: "pending-approval",
+        status: e.status || "pending-approval",
         hasDocument: false,
         timeline: [],
       }
-      mockExpenses = [newExp, ...mockExpenses]
-      return newExp
     }
   }
 
@@ -121,7 +166,7 @@ export async function handleSupabaseApiRequest(
     const numericAmount = parseFloat(String(body.amount || "0").replace(/[^0-9.]/g, "")) || 0
     const { error } = await supabaseAdmin.from("payments").insert([
       {
-        order_id: body.paymentId || "ORD-0",
+        order_id: body.paymentId || body.orderId || "ORD-0",
         amount: numericAmount,
         payment_method: "bank_transfer",
         bank_reference_number: body.transferRef || "",
@@ -163,17 +208,6 @@ export async function handleSupabaseApiRequest(
     return newTx
   }
 
-  if (path.startsWith("/finance/expenses/") && method === "POST") {
-    const action = parts[parts.length - 1]
-    const id = parts[parts.length - 2]
-    const expense = mockExpenses.find((e) => e.id === id)
-    if (expense) {
-      if (action === "approve") expense.status = "approved"
-      if (action === "reject") expense.status = "rejected"
-      return expense
-    }
-  }
-
   if (path === "/finance/accounts" && method === "GET") return mockBankAccounts
 
   // ── Dashboards & Summaries ──
@@ -181,25 +215,28 @@ export async function handleSupabaseApiRequest(
   if (path === "/dashboard/sales" && method === "GET") return { kpiCards: [], attentionCards: [], orderStatuses: [] }
 
   if ((path === "/dashboard/finance" || path === "/finance/dashboard") && method === "GET") {
-    const expensesTotal = mockExpenses.reduce(
-      (sum, e) => sum + parseFloat(String(e.amount).replace(/[^0-9.]/g, "") || "0"),
-      0
-    )
-    const txTotal = mockBanking.reduce(
-      (sum, t) => sum + parseFloat(String(t.amount).replace(/[^0-9.]/g, "") || "0"),
-      0
-    )
+    const [{ data: expData }, { data: payData }] = await Promise.all([
+      supabaseAdmin.from("expenses").select("*"),
+      supabaseAdmin.from("payments").select("*")
+    ])
+    const expList = expData || []
+    const payList = payData || []
+
+    const expensesTotal = expList.reduce((sum: number, e: any) => sum + (parseFloat(e.amount) || 0), 0)
+    const paymentsTotal = payList.reduce((sum: number, p: any) => sum + (parseFloat(p.amount) || 0), 0)
+    const pendingCount = expList.filter((e: any) => e.status === "pending-approval" || e.status === "requested").length
+
     return {
-      totalCustomerPayments: "ETB " + txTotal.toLocaleString(),
+      totalCustomerPayments: "ETB " + paymentsTotal.toLocaleString(),
       outstandingBalances: "ETB 0",
       overdueCount: 0,
       thisMonthExpenses: "ETB " + expensesTotal.toLocaleString(),
       pendingExpenseApprovals: "ETB 0",
-      pendingExpenseCount: mockExpenses.filter((e) => e.status === "pending-approval").length,
+      pendingExpenseCount: pendingCount,
       currentPayrollTotal: "ETB 0",
       payrollPeriod: "Current",
       payrollStatus: "draft",
-      totalBankBalance: "ETB 150000",
+      totalBankBalance: "ETB " + paymentsTotal.toLocaleString(),
       alerts: [],
     }
   }

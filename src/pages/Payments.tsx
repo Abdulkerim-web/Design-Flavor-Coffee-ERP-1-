@@ -3738,6 +3738,10 @@ export default function Payments({ routeParams }: { routeParams?: { id?: string 
   } | null>(null)
   const [listKey, setListKey] = useState(0)
 
+  // Realtime updates: reload list when payments or orders change
+  useSupabaseRealtime("payments", () => setListKey((k) => k + 1))
+  useSupabaseRealtime("orders", () => setListKey((k) => k + 1))
+
   if (!can(role as any, "payments.view")) {
     return (
       <div style={{ padding: 48, textAlign: "center" }}>

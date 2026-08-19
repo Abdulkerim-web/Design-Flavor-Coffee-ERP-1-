@@ -2664,6 +2664,7 @@ export default function Packaging() {
   }
 
   useSupabaseRealtime("packing_jobs", handleRefreshList)
+  useSupabaseRealtime("roasting_batches", handleRefreshList)
 
   if (view === "list") {
     return <ListView key={listRefreshKey} onSelect={handleSelectJob} />
