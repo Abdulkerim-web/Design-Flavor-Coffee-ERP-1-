@@ -948,7 +948,7 @@ function LoginScreen({
         </div>
       </form>
 
-      {/* Demo quick-fill */}
+      {/* Interactive Demo Account Presets */}
       <div
         style={{
           marginTop: 24,
@@ -958,26 +958,36 @@ function LoginScreen({
       >
         <div
           style={{
-            fontSize: 10.5,
-            fontFamily: "DM Mono",
-            color: "var(--text-muted)",
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
             marginBottom: 10,
           }}
         >
-          Demo accounts — click to fill
+          <div
+            style={{
+              fontSize: 10.5,
+              fontFamily: "DM Mono",
+              color: "var(--text-muted)",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              fontWeight: 600,
+            }}
+          >
+            Quick Role Presets — Click to Fill & Sign In
+          </div>
+          <span style={{ fontSize: 10, color: "#2B4D3A", fontFamily: "DM Mono", fontWeight: 700 }}>
+            1-Click Access
+          </span>
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {DEMO_ACCOUNTS.map((acc) => {
             const role = ROLE_MAP[acc.email]
             const rc = role ? ROLES[role] : null
             const isDisabled = acc.label === "Disabled Account"
             return (
-              <button
+              <div
                 key={acc.email}
-                className="demo-pill"
-                onClick={() => fillDemo(acc.email)}
                 style={{
                   padding: "3px 9px",
                   borderRadius: 999,
@@ -1014,7 +1024,7 @@ function LoginScreen({
                   </svg>
                 )}
                 {acc.label}
-              </button>
+              </div>
             )
           })}
         </div>

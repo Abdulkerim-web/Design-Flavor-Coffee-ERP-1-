@@ -864,24 +864,46 @@ const KpiCardUI: FC<{
   setFinanceRange: (r: DateRange) => void
   onNavigate?: (id: string) => void
 }> = ({ card, financeRange, setFinanceRange, onNavigate }) => (
-  <Card style={{ padding: "16px 18px" }}>
+  <Card
+    style={{
+      padding: "18px 20px",
+      transition: "transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease",
+      cursor: "pointer",
+      position: "relative",
+      overflow: "hidden",
+      background: "var(--surface-01)",
+    }}
+    onMouseEnter={(e) => {
+      const el = e.currentTarget as HTMLDivElement
+      el.style.transform = "translateY(-3px)"
+      el.style.boxShadow = "0 8px 20px rgba(0,0,0,0.06)"
+      el.style.borderColor = "#2B4D3A"
+    }}
+    onMouseLeave={(e) => {
+      const el = e.currentTarget as HTMLDivElement
+      el.style.transform = "translateY(0)"
+      el.style.boxShadow = "none"
+      el.style.borderColor = "var(--border-neutral)"
+    }}
+  >
     <div
       style={{
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "space-between",
         gap: 8,
-        marginBottom: 8,
+        marginBottom: 10,
       }}
     >
       <div
         style={{
           fontSize: 12,
-          fontWeight: 500,
+          fontWeight: 600,
           color: "var(--text-muted)",
           fontFamily: "Inter",
           lineHeight: 1.3,
           flex: 1,
+          letterSpacing: "0.01em",
         }}
       >
         {card.label}
