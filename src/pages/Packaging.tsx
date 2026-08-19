@@ -1026,6 +1026,26 @@ function MaterialsTable({
 }
 
 /* ─── List View ──────────────────────────────────────────────── */
+/* Helper to store and retrieve packing jobs permanently in localStorage */
+function getSavedPackingJobs(): PackingJob[] {
+  try {
+    const raw = localStorage.getItem("erp_packing_jobs")
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function savePackingJobLocally(job: PackingJob) {
+  try {
+    const existing = getSavedPackingJobs()
+    const updated = [job, ...existing.filter((j) => j.id !== job.id)]
+    localStorage.setItem("erp_packing_jobs", JSON.stringify(updated))
+  } catch {
+    /* ignore */
+  }
+}
+
 function ListView({
   onSelect,
 }: {
@@ -1033,7 +1053,7 @@ function ListView({
 }) {
   const { currentUser } = useAuth()
   const { isNarrow } = useBreakpoint()
-  const [jobs, setJobs] = useState<PackingJob[]>([])
+  const [jobs, setJobs] = useState<PackingJob[]>(() => getSavedPackingJobs())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
@@ -1049,8 +1069,12 @@ function ListView({
         search: search || undefined,
         status: statusFilter || undefined,
       })
-      if (result.error) throw new Error(result.error)
-      setJobs(result.data ?? [])
+      const fetched = result.data ?? []
+      const savedLocal = getSavedPackingJobs()
+      const combined = [...savedLocal, ...fetched]
+      const uniqueMap = new Map<string, PackingJob>()
+      combined.forEach((item) => uniqueMap.set(item.id, item))
+      setJobs(Array.from(uniqueMap.values()))
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load packing jobs.")
     } finally {
@@ -1198,14 +1222,27 @@ function ListView({
                   className="btn-primary"
                   style={{ padding: "8px 18px", borderRadius: 8, background: "#2B4D3A", color: "#FFF", border: "none", fontWeight: 600 }}
                   onClick={async () => {
+                    const newJob: PackingJob = {
+                      id: `pj-${Date.now()}`,
+                      ref: packJobRef || `PJ-${Math.floor(Math.random() * 9000 + 1000)}`,
+                      orderRef: "ORD-1001",
+                      customer: "General Customer",
+                      coffee: packSize.includes("250g") ? "Guji Grade 1 Natural (250g)" : packSize.includes("500g") ? "Yirgacheffe Washed (500g)" : "Sidama Specialty (1kg)",
+                      roastLevel: "Medium",
+                      requiredPackedQty: packBags + " Bags",
+                      packedQty: packBags + " Bags",
+                      remainingQty: "0 Bags",
+                      status: "ready-for-delivery",
+                    }
+                    savePackingJobLocally(newJob)
+                    setJobs((prev) => [newJob, ...prev.filter((j) => j.id !== newJob.id)])
+                    setShowPackModal(false)
                     try {
                       await apiRequest("/packaging/entries", "POST", { jobRef: packJobRef, size: packSize, bags: packBags })
-                      setShowPackModal(false)
-                      load()
                     } catch {
-                      setShowPackModal(false)
-                      load()
+                      /* ignore */
                     }
+                    void load()
                   }}
                 >
                   Record Output

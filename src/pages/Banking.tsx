@@ -1294,18 +1294,34 @@ function NewTransactionView({
           >
             Bank Account <span style={{ color: "var(--sem-danger)" }}>*</span>
           </label>
-          <select
-            className="input-field"
-            style={{ width: "100%" }}
-            value={form.accountId}
-            onChange={(e) => set("accountId", e.target.value)}
-          >
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.bankName} — {a.maskedAccountNumber}
-              </option>
-            ))}
-          </select>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {accounts.length > 0 && (
+              <select
+                className="input-field"
+                style={{ width: "100%" }}
+                value={accounts.some((a) => a.id === form.accountId) ? form.accountId : ""}
+                onChange={(e) => set("accountId", e.target.value)}
+              >
+                <option value="">-- Select Available Bank Account --</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.bankName} — {a.maskedAccountNumber}
+                  </option>
+                ))}
+              </select>
+            )}
+            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: accounts.length > 0 ? 2 : 0 }}>
+              {accounts.length > 0 ? "OR enter/type bank account details directly:" : "Enter bank account details:"}
+            </div>
+            <input
+              type="text"
+              className="input-field"
+              style={{ width: "100%" }}
+              placeholder="e.g. Commercial Bank of Ethiopia - CBE-10001234"
+              value={accounts.some((a) => a.id === form.accountId) ? "" : form.accountId}
+              onChange={(e) => set("accountId", e.target.value)}
+            />
+          </div>
         </div>
         {/* Direction + Type row */}
         <div

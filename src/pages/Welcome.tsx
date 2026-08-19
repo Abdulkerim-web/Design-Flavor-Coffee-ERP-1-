@@ -17,7 +17,7 @@ const BeanSplitPanel = () => (
     style={{
       position: "relative",
       width: "100%",
-      paddingBottom: "66%",
+      paddingBottom: "62%",
       borderRadius: "inherit",
       overflow: "hidden",
     }}
@@ -31,6 +31,7 @@ const BeanSplitPanel = () => (
         backgroundSize: "cover",
         backgroundPosition: "center",
         clipPath: "polygon(0 0, 58% 0, 42% 100%, 0 100%)",
+        transition: "transform 0.6s ease",
       }}
     />
     {/* Right: dark roasted beans */}
@@ -42,6 +43,7 @@ const BeanSplitPanel = () => (
         backgroundSize: "cover",
         backgroundPosition: "center",
         clipPath: "polygon(58% 0, 100% 0, 100% 100%, 42% 100%)",
+        transition: "transform 0.6s ease",
       }}
     />
     {/* Diagonal blend strip */}
@@ -50,7 +52,16 @@ const BeanSplitPanel = () => (
         position: "absolute",
         inset: 0,
         background:
-          "linear-gradient(105deg, transparent 38%, rgba(26,14,6,0.55) 48%, transparent 58%)",
+          "linear-gradient(105deg, transparent 36%, rgba(15, 23, 18, 0.75) 48%, transparent 60%)",
+        pointerEvents: "none",
+      }}
+    />
+    {/* Overlay subtle Vignette */}
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        background: "radial-gradient(circle at center, transparent 40%, rgba(10,14,12,0.6) 100%)",
         pointerEvents: "none",
       }}
     />
@@ -58,64 +69,65 @@ const BeanSplitPanel = () => (
     <div
       style={{
         position: "absolute",
-        bottom: 14,
-        left: 16,
-        fontSize: 10,
-        fontFamily: "DM Mono",
+        bottom: 16,
+        left: 20,
+        fontSize: 11,
+        fontFamily: "DM Mono, monospace",
         fontWeight: 600,
-        letterSpacing: "0.1em",
+        letterSpacing: "0.12em",
         textTransform: "uppercase",
-        color: "rgba(255,255,255,0.85)",
-        textShadow: "0 1px 4px rgba(0,0,0,0.6)",
+        color: "#A7F3D0",
+        background: "rgba(6, 78, 59, 0.75)",
+        backdropFilter: "blur(8px)",
+        padding: "4px 12px",
+        borderRadius: 6,
+        border: "1px solid rgba(52, 211, 153, 0.3)",
       }}
     >
-      Green · Unroasted
+      🌱 Green · Specialty Import
     </div>
     <div
       style={{
         position: "absolute",
-        bottom: 14,
-        right: 16,
-        fontSize: 10,
-        fontFamily: "DM Mono",
+        bottom: 16,
+        right: 20,
+        fontSize: 11,
+        fontFamily: "DM Mono, monospace",
         fontWeight: 600,
-        letterSpacing: "0.1em",
+        letterSpacing: "0.12em",
         textTransform: "uppercase",
-        color: "rgba(255,255,255,0.85)",
-        textShadow: "0 1px 4px rgba(0,0,0,0.6)",
+        color: "#FDE68A",
+        background: "rgba(120, 53, 15, 0.75)",
+        backdropFilter: "blur(8px)",
+        padding: "4px 12px",
+        borderRadius: 6,
+        border: "1px solid rgba(251, 191, 36, 0.3)",
       }}
     >
-      Dark · Roasted
+      🔥 Dark · Artisanal Roast
     </div>
-    {/* Center arrow mark */}
+    {/* Center badge */}
     <div
       style={{
         position: "absolute",
         top: "50%",
         left: "50%",
         transform: "translate(-50%, -50%)",
-        width: 28,
-        height: 28,
-        borderRadius: "50%",
-        background: "rgba(255,255,255,0.12)",
-        backdropFilter: "blur(4px)",
-        border: "1px solid rgba(255,255,255,0.25)",
+        padding: "8px 16px",
+        borderRadius: 30,
+        background: "rgba(15, 23, 18, 0.85)",
+        backdropFilter: "blur(12px)",
+        border: "1px solid rgba(255, 255, 255, 0.2)",
         display: "flex",
         alignItems: "center",
-        justifyContent: "center",
+        gap: 8,
+        boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
       }}
     >
-      <svg
-        width="11"
-        height="11"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="white"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      >
-        <path d="M5 12h14M12 5l7 7-7 7" />
-      </svg>
+      <span style={{ fontSize: 13, color: "#10B981" }}>⚡</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: "#FFF", fontFamily: "DM Mono, monospace" }}>
+        PRECISION TRANSFORM
+      </span>
     </div>
   </div>
 )
@@ -125,7 +137,7 @@ export default function Welcome({ onSignIn, onTeam }: WelcomeProps) {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 60)
+    const t = setTimeout(() => setVisible(true), 40)
     return () => clearTimeout(t)
   }, [])
 
@@ -135,206 +147,292 @@ export default function Welcome({ onSignIn, onTeam }: WelcomeProps) {
     <div
       style={{
         minHeight: "100vh",
-        background: "var(--bg-primary)",
+        background: "#080C0A",
+        color: "#E2E8F0",
         display: "flex",
         flexDirection: "column",
         fontFamily: "Inter, system-ui, sans-serif",
-        overflow: "hidden",
+        position: "relative",
+        overflowX: "hidden",
       }}
     >
       <style>{`
         @keyframes wFadeUp {
-          from { opacity: 0; transform: translateY(20px); }
+          from { opacity: 0; transform: translateY(24px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .w-enter { animation: wFadeUp 0.55s cubic-bezier(0.16,1,0.3,1) both; }
-        .w-enter-2 { animation: wFadeUp 0.55s cubic-bezier(0.16,1,0.3,1) 0.1s both; }
-        .w-enter-3 { animation: wFadeUp 0.55s cubic-bezier(0.16,1,0.3,1) 0.2s both; }
-        .w-enter-4 { animation: wFadeUp 0.55s cubic-bezier(0.16,1,0.3,1) 0.3s both; }
-        .w-btn-primary:hover { background: #1F382A !important; }
-        .w-btn-secondary:hover { background: var(--surface-hover) !important; border-color: var(--brand-primary) !important; color: var(--brand-primary) !important; }
+        @keyframes pulseGlow {
+          0%, 100% { opacity: 0.35; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.08); }
+        }
+        .w-enter { animation: wFadeUp 0.6s cubic-bezier(0.16,1,0.3,1) both; }
+        .w-enter-2 { animation: wFadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.12s both; }
+        .w-enter-3 { animation: wFadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.22s both; }
+        .w-enter-4 { animation: wFadeUp 0.6s cubic-bezier(0.16,1,0.3,1) 0.32s both; }
+        .w-btn-primary {
+          background: linear-gradient(135deg, #2B4D3A 0%, #1B3628 100%);
+          border: 1px solid rgba(74, 222, 128, 0.3);
+          box-shadow: 0 8px 24px rgba(43, 77, 58, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+          transition: all 0.25s ease;
+        }
+        .w-btn-primary:hover {
+          transform: translateY(-2px);
+          background: linear-gradient(135deg, #355E47 0%, #234534 100%);
+          box-shadow: 0 12px 32px rgba(43, 77, 58, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+          border-color: rgba(74, 222, 128, 0.6);
+        }
+        .w-btn-secondary {
+          background: rgba(255, 255, 255, 0.05);
+          backdrop-filter: blur(12px);
+          border: 1.5px solid rgba(255, 255, 255, 0.14);
+          transition: all 0.25s ease;
+        }
+        .w-btn-secondary:hover {
+          transform: translateY(-2px);
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.35);
+          color: #FFFFFF !important;
+        }
+        .feature-card {
+          background: rgba(18, 26, 21, 0.65);
+          backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 14px;
+          padding: 18px 20px;
+          transition: all 0.3s ease;
+        }
+        .feature-card:hover {
+          transform: translateY(-4px);
+          background: rgba(26, 38, 30, 0.85);
+          border-color: rgba(52, 211, 153, 0.3);
+          box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+        }
       `}</style>
 
-      {/* ── Top accent bar ─────────────────────────────────────── */}
+      {/* ── Background Glow Effects ─────────────────────────── */}
       <div
         style={{
-          height: 3,
-          background:
-            "linear-gradient(90deg, #2B4D3A 0%, #4A7C5A 50%, #B8860B 100%)",
-          flexShrink: 0,
-          opacity: visible ? 1 : 0,
-          transition: "opacity 0.4s ease",
+          position: "absolute",
+          top: "-120px",
+          left: "20%",
+          width: "550px",
+          height: "550px",
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(43, 77, 58, 0.35) 0%, transparent 70%)",
+          filter: "blur(80px)",
+          pointerEvents: "none",
+          animation: "pulseGlow 8s ease-in-out infinite",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: "-100px",
+          right: "10%",
+          width: "450px",
+          height: "450px",
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(180, 130, 40, 0.15) 0%, transparent 70%)",
+          filter: "blur(90px)",
+          pointerEvents: "none",
         }}
       />
 
-      {/* ── Main content ───────────────────────────────────────── */}
-      <div
+      {/* ── Floating Header Navbar ───────────────────────────── */}
+      <header
+        style={{
+          width: "100%",
+          maxWidth: 1280,
+          margin: "0 auto",
+          padding: isMobile ? "16px 20px" : "24px 40px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          zIndex: 20,
+          opacity: visible ? 1 : 0,
+          transition: "opacity 0.4s ease",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 12,
+              background: "linear-gradient(135deg, #2B4D3A 0%, #4A7C5A 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 4px 16px rgba(43,77,58,0.4)",
+              border: "1px solid rgba(255,255,255,0.2)",
+            }}
+          >
+            <span style={{ fontSize: 20 }}>☕</span>
+          </div>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#FFFFFF", fontFamily: "Fraunces, serif", letterSpacing: "-0.01em" }}>
+              Flavor Coffee ERP
+            </div>
+            <div style={{ fontSize: 10.5, fontFamily: "DM Mono, monospace", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              Addis Ababa · Operations
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          {!isMobile && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "6px 14px",
+                borderRadius: 20,
+                background: "rgba(16, 185, 129, 0.1)",
+                border: "1px solid rgba(16, 185, 129, 0.25)",
+                fontSize: 12,
+                fontFamily: "DM Mono, monospace",
+                color: "#34D399",
+              }}
+            >
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#10B981", boxShadow: "0 0 10px #10B981" }} />
+              All Systems Operational
+            </div>
+          )}
+          <button
+            onClick={onSignIn}
+            className="w-btn-primary"
+            style={{
+              padding: "9px 20px",
+              borderRadius: 9,
+              color: "#FFF",
+              fontSize: 13.5,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Sign In →
+          </button>
+        </div>
+      </header>
+
+      {/* ── Main Hero Content ──────────────────────────────────── */}
+      <main
         style={{
           flex: 1,
           display: "flex",
           flexDirection: isNarrow ? "column" : "row",
           alignItems: "center",
-          justifyContent: "center",
-          padding: isMobile
-            ? "32px 20px 24px"
-            : isTablet
-              ? "48px 40px"
-              : "0 80px",
-          gap: isMobile ? 32 : isTablet ? 40 : 72,
-          maxWidth: isDesktop ? 1400 : "100%",
+          justifyContent: "space-between",
+          padding: isMobile ? "24px 20px 40px" : isTablet ? "36px 40px" : "40px 60px",
+          gap: isNarrow ? 36 : 60,
+          maxWidth: 1280,
           margin: "0 auto",
           width: "100%",
+          zIndex: 10,
         }}
       >
-        {/* ── Left: Brand + CTAs ─────────────────────────────── */}
+        {/* Left Column: Brand & Hero Copy */}
         <div
           style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: isNarrow ? "center" : "flex-start",
-            textAlign: isNarrow ? "center" : "left",
-            maxWidth: isNarrow ? 480 : 420,
+            flex: isNarrow ? "none" : 1,
+            maxWidth: isNarrow ? 560 : 540,
             width: "100%",
-            flexShrink: 0,
+            textAlign: isNarrow ? "center" : "left",
           }}
         >
-          {/* Logo mark — abstract bean geometry */}
+          {/* Eyebrow Pill */}
           <div
             className="w-enter"
             style={{
-              width: 56,
-              height: 56,
-              borderRadius: 16,
-              background: "linear-gradient(135deg, #2B4D3A 0%, #3D6B54 100%)",
-              display: "flex",
+              display: "inline-flex",
               alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 8px 24px rgba(43,77,58,0.22)",
+              gap: 8,
+              padding: "5px 14px",
+              borderRadius: 20,
+              background: "rgba(43, 77, 58, 0.35)",
+              border: "1px solid rgba(74, 222, 128, 0.25)",
+              color: "#A7F3D0",
+              fontSize: 11.5,
+              fontFamily: "DM Mono, monospace",
+              fontWeight: 600,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
               marginBottom: 20,
             }}
           >
-            <svg
-              width="28"
-              height="28"
-              viewBox="0 0 24 24"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M12 3 C8.5 3 6 7 6 12 C6 17 8.5 21 12 21"
-                stroke="rgba(255,255,255,0.92)"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-              />
-              <path
-                d="M12 3 C15.5 3 18 7 18 12 C18 17 15.5 21 12 21"
-                stroke="rgba(255,255,255,0.92)"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-              />
-              <line
-                x1="12"
-                y1="3"
-                x2="12"
-                y2="21"
-                stroke="rgba(255,255,255,0.32)"
-                strokeWidth="0.9"
-                strokeLinecap="round"
-              />
-            </svg>
+            <span>✨</span> Enterprise Coffee Platform v2.6
           </div>
 
-          {/* Eyebrow label */}
-          <div
-            className="w-enter"
-            style={{
-              fontSize: 11,
-              fontFamily: "DM Mono",
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              color: "var(--text-muted)",
-              marginBottom: 10,
-            }}
-          >
-            Internal Operations Platform
-          </div>
-
-          {/* Company name */}
+          {/* Hero Headline */}
           <h1
             className="w-enter-2"
             style={{
-              fontSize: isMobile ? 30 : isTablet ? 36 : 44,
+              fontSize: isMobile ? 32 : isTablet ? 42 : 52,
               fontWeight: 700,
-              color: "var(--text-primary)",
-              letterSpacing: "-0.03em",
+              fontFamily: "Fraunces, serif",
               lineHeight: 1.1,
-              margin: "0 0 12px",
+              letterSpacing: "-0.02em",
+              color: "#FFFFFF",
+              margin: "0 0 18px",
             }}
           >
-            Flavor Coffee
-            <br />
-            <span style={{ color: "#2B4D3A" }}>Roasters PLC</span>
+            Precision ERP for <br />
+            <span
+              style={{
+                background: "linear-gradient(135deg, #4ADE80 0%, #A7F3D0 50%, #FDE68A 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              Artisanal Coffee
+            </span>
           </h1>
 
-          {/* Description */}
+          {/* Subtitle */}
           <p
             className="w-enter-3"
             style={{
-              fontSize: isMobile ? 14 : 15,
-              color: "var(--text-secondary)",
-              lineHeight: 1.6,
+              fontSize: isMobile ? 14.5 : 16,
+              color: "#94A3B8",
+              lineHeight: 1.65,
               margin: "0 0 32px",
-              maxWidth: 340,
+              maxWidth: isNarrow ? "100%" : 480,
             }}
           >
-            Enterprise resource planning for green bean receiving, roasting
-            production, quality control, delivery logistics, and financial
-            reporting — all in one place.
+            Streamline green bean receiving, roast batch profiling, quality control, customer deliveries, and live financial accounting — engineered for Ethiopia's top coffee roasters.
           </p>
 
-          {/* Actions */}
+          {/* CTA Buttons */}
           <div
             className="w-enter-4"
             style={{
               display: "flex",
               flexDirection: isMobile ? "column" : "row",
-              gap: 12,
-              width: isMobile ? "100%" : "auto",
+              gap: 14,
+              justifyContent: isNarrow ? "center" : "flex-start",
+              marginBottom: 44,
             }}
           >
             <button
               className="w-btn-primary"
               onClick={onSignIn}
               style={{
+                height: 50,
+                padding: "0 32px",
+                borderRadius: 11,
+                color: "#FFFFFF",
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 8,
-                height: 46,
-                padding: "0 28px",
-                borderRadius: 10,
-                border: "none",
-                background: "#2B4D3A",
-                color: "#FFFFFF",
-                fontSize: 14.5,
-                fontWeight: 600,
-                fontFamily: "Inter",
-                cursor: "pointer",
-                transition: "background 0.15s ease, box-shadow 0.15s ease",
-                boxShadow: "0 4px 14px rgba(43,77,58,0.28)",
-                width: isMobile ? "100%" : "auto",
+                gap: 10,
               }}
             >
-              Sign In
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              >
+              Sign In to ERP
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
             </button>
@@ -343,165 +441,140 @@ export default function Welcome({ onSignIn, onTeam }: WelcomeProps) {
               className="w-btn-secondary"
               onClick={onTeam}
               style={{
+                height: 50,
+                padding: "0 26px",
+                borderRadius: 11,
+                color: "#CBD5E1",
+                fontSize: 15,
+                fontWeight: 500,
+                cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 7,
-                height: 46,
-                padding: "0 22px",
-                borderRadius: 10,
-                border: "1.5px solid var(--border-neutral)",
-                background: "var(--surface-01)",
-                color: "var(--text-secondary)",
-                fontSize: 14.5,
-                fontWeight: 500,
-                fontFamily: "Inter",
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-                width: isMobile ? "100%" : "auto",
+                gap: 9,
               }}
             >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-              >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100 8 4 4 0 000-8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
               </svg>
               Meet the Team
             </button>
           </div>
 
-          {/* System status — desktop only inline */}
-          {!isNarrow && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 7,
-                marginTop: 32,
-                fontSize: 12,
-                color: "var(--text-muted)",
-                fontFamily: "DM Mono",
-              }}
-            >
-              <div
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  background: "#16A34A",
-                  boxShadow: "0 0 0 3px rgba(22,163,74,0.18)",
-                }}
-              />
-              All systems operational · Addis Ababa, ET
-            </div>
-          )}
+          {/* Module Highlights Grid */}
+          <div
+            className="w-enter-4"
+            style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+              gap: 12,
+            }}
+          >
+            {[
+              { icon: "🔥", title: "Roasting & QC", desc: "Batch profiling & yield calculations" },
+              { icon: "🚚", title: "Delivery Logistics", desc: "Driver assignment & dispatch tracking" },
+              { icon: "💵", title: "Financial Core", desc: "Real-time payments & expense approvals" },
+              { icon: "📊", title: "Live Intelligence", desc: "Stock feasibility & automated reporting" },
+            ].map((f) => (
+              <div key={f.title} className="feature-card">
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                  <span style={{ fontSize: 16 }}>{f.icon}</span>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: "#F8FAFC" }}>{f.title}</div>
+                </div>
+                <div style={{ fontSize: 12, color: "#94A3B8", lineHeight: 1.4 }}>{f.desc}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* ── Right: Illustration ────────────────────────────── */}
+        {/* Right Column: High-Impact Visual Card */}
         <div
           style={{
             flex: isNarrow ? "none" : 1,
-            maxWidth: isNarrow ? 280 : 480,
+            maxWidth: isNarrow ? 480 : 540,
             width: "100%",
             opacity: visible ? 1 : 0,
-            transform: visible ? "translateY(0)" : "translateY(12px)",
-            transition:
-              "opacity 0.6s ease 0.15s, transform 0.6s cubic-bezier(0.16,1,0.3,1) 0.15s",
+            transform: visible ? "translateY(0)" : "translateY(16px)",
+            transition: "opacity 0.7s ease 0.2s, transform 0.7s cubic-bezier(0.16,1,0.3,1) 0.2s",
           }}
         >
-          {/* Illustration card */}
           <div
             style={{
-              background: "#0D0B09",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: isNarrow ? 16 : 20,
+              background: "rgba(15, 23, 18, 0.8)",
+              backdropFilter: "blur(20px)",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
+              borderRadius: 22,
               overflow: "hidden",
-              boxShadow:
-                "0 20px 48px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.12)",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(43, 77, 58, 0.25)",
             }}
           >
             <BeanSplitPanel />
 
-            {/* Caption row */}
+            {/* Live Operational Status Bar */}
             <div
               style={{
+                padding: "16px 22px",
+                background: "rgba(10, 15, 12, 0.95)",
+                borderTop: "1px solid rgba(255, 255, 255, 0.08)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "12px 16px",
-                borderTop: "1px solid rgba(255,255,255,0.07)",
               }}
             >
               <div>
-                <div
-                  style={{
-                    fontSize: 12.5,
-                    fontWeight: 600,
-                    color: "rgba(255,255,255,0.88)",
-                    fontFamily: "Inter",
-                  }}
-                >
-                  Flavor Coffee Roasters
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: "#F8FAFC" }}>
+                  Flavor Coffee Roasters PLC
                 </div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: "rgba(255,255,255,0.4)",
-                    fontFamily: "DM Mono",
-                    marginTop: 1,
-                  }}
-                >
-                  Est. 2019 · Addis Ababa
+                <div style={{ fontSize: 11.5, fontFamily: "DM Mono, monospace", color: "#64748B", marginTop: 2 }}>
+                  Est. 2019 · Addis Ababa Headquarters
                 </div>
               </div>
+
               <div
                 style={{
-                  fontSize: 10.5,
-                  fontFamily: "DM Mono",
-                  color: "#4ADE80",
-                  background: "rgba(74,222,128,0.1)",
-                  border: "1px solid rgba(74,222,128,0.2)",
-                  padding: "3px 10px",
-                  borderRadius: 999,
+                  padding: "5px 12px",
+                  borderRadius: 20,
+                  background: "rgba(52, 211, 153, 0.12)",
+                  border: "1px solid rgba(52, 211, 153, 0.3)",
+                  color: "#34D399",
+                  fontSize: 11,
+                  fontFamily: "DM Mono, monospace",
+                  fontWeight: 700,
                 }}
               >
-                ERP v2.6
+                ERP ONLINE
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </main>
 
       {/* ── Footer ─────────────────────────────────────────────── */}
-      <div
+      <footer
         style={{
-          flexShrink: 0,
-          padding: isMobile ? "12px 20px" : "16px 80px",
-          borderTop: "1px solid var(--border-neutral)",
+          width: "100%",
+          padding: isMobile ? "20px" : "24px 60px",
+          borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+          background: "rgba(6, 10, 8, 0.9)",
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
+          justifyContent: "space-between",
+          flexDirection: isMobile ? "column" : "row",
+          gap: 12,
+          zIndex: 10,
           opacity: visible ? 1 : 0,
-          transition: "opacity 0.4s ease 0.4s",
+          transition: "opacity 0.4s ease 0.3s",
         }}
       >
-        <span
-          style={{
-            fontSize: 11,
-            fontFamily: "DM Mono",
-            color: "var(--text-muted)",
-            letterSpacing: "0.04em",
-          }}
-        >
-          © 2026 Flavor Coffee Roasters PLC · Internal Use Only
-        </span>
-      </div>
+        <div style={{ fontSize: 12, color: "#64748B", fontFamily: "DM Mono, monospace" }}>
+          © 2026 Flavor Coffee Roasters PLC · Internal Enterprise System
+        </div>
+        <div style={{ display: "flex", gap: 18, fontSize: 12, color: "#94A3B8" }}>
+          <span style={{ cursor: "pointer" }} onClick={onSignIn}>System Login</span>
+          <span>·</span>
+          <span style={{ cursor: "pointer" }} onClick={onTeam}>Engineering Team</span>
+        </div>
+      </footer>
     </div>
   )
 }

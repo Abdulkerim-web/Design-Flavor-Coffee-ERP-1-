@@ -427,6 +427,7 @@ export async function handleSupabaseApiRequest(
   if (path.startsWith("/inventory/lots")) table = "lots"
   if (path.startsWith("/production/batches")) table = "roasting_batches"
   if (path.startsWith("/roasting")) table = "roasting_batches"
+  if (path.startsWith("/packing") || path.startsWith("/packaging")) table = "roasting_batches"
   if (path.startsWith("/deliveries") || path.startsWith("/delivery")) table = "delivery_records"
   if (path.startsWith("/customers")) table = "customers"
   if (path.startsWith("/orders")) table = "orders"

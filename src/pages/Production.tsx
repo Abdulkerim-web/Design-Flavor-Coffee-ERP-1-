@@ -2008,10 +2008,30 @@ function DiscrepancyPanel({ job }: { job: RoastingJob }) {
   )
 }
 
+/* Helper to store and retrieve roasting jobs permanently in localStorage */
+function getSavedRoastingJobs(): RoastingJob[] {
+  try {
+    const raw = localStorage.getItem("erp_roasting_jobs")
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function saveRoastingJobLocally(job: RoastingJob) {
+  try {
+    const existing = getSavedRoastingJobs()
+    const updated = [job, ...existing.filter((j) => j.id !== job.id)]
+    localStorage.setItem("erp_roasting_jobs", JSON.stringify(updated))
+  } catch {
+    /* ignore */
+  }
+}
+
 /* ─── List View ───────────────────────────────────────────────── */
 
 function ListView({ onSelect }: { onSelect: (id: string) => void }) {
-  const [jobs, setJobs] = useState<RoastingJob[]>([])
+  const [jobs, setJobs] = useState<RoastingJob[]>(() => getSavedRoastingJobs())
   const [stats, setStats] = useState<RoastingDashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -2057,12 +2077,13 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
         notes: r.notes || "",
         timeline: [],
       }))
+
+      const savedLocal = getSavedRoastingJobs()
       setJobs((prev) => {
-        const tempItems = prev.filter((p) => p.id.startsWith("temp-"))
-        const allItems = [...tempItems, ...mapped]
-        // Deduplicate if needed
+        const tempItems = prev.filter((p) => p.id.startsWith("temp-") || p.id.startsWith("rst-"))
+        const combined = [...tempItems, ...savedLocal, ...mapped]
         const uniqueMap = new Map<string, RoastingJob>()
-        allItems.forEach((item) => uniqueMap.set(item.id, item))
+        combined.forEach((item) => uniqueMap.set(item.id, item))
         const finalJobs = Array.from(uniqueMap.values())
         setStats({
           waiting: finalJobs.filter((j) => j.status === "waiting").length,
@@ -2260,6 +2281,7 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
                       notes: batchNotes,
                       timeline: [],
                     }
+                    saveRoastingJobLocally(optimisticJob)
                     setJobs((prev) => [optimisticJob, ...prev])
                     setShowScheduleBatch(false)
                     setBatchNotes("")
