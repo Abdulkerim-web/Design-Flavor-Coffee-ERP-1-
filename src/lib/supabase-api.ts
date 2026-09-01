@@ -913,9 +913,30 @@ async function getManagerDashboard() {
       age: "Needs Action",
     })
   }
-  const pendingCustomers = customersArr.filter(
-    (c: any) => !c.status || c.status === "pending" || c.status === "pending_approval" || c.status === "pending-approval"
-  )
+  // Cross-reference localStorage to exclude customers already approved/rejected locally
+  let localOverrides: Record<string, string> = {}
+  try {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem("erp_customers_records") : null
+    if (raw) {
+      const saved = JSON.parse(raw)
+      if (Array.isArray(saved)) {
+        saved.forEach((c: any) => {
+          if (c.id && c.status) localOverrides[c.id] = c.status
+        })
+      }
+    }
+  } catch { /* ignore */ }
+
+  const pendingCustomers = customersArr.filter((c: any) => {
+    const dbStatus = c.status
+    // Check if localStorage has an override for this customer
+    const localStatus = localOverrides[c.id]
+    if (localStatus && localStatus !== "pending" && localStatus !== "pending_approval" && localStatus !== "pending-approval") {
+      // Customer was already approved/rejected locally — exclude from pending queue
+      return false
+    }
+    return !dbStatus || dbStatus === "pending" || dbStatus === "pending_approval" || dbStatus === "pending-approval"
+  })
   for (const c of pendingCustomers) {
     attentionCards.push({
       id: `cus-${c.id}`,

@@ -275,17 +275,52 @@ export async function updateCustomer(
 export async function approveCustomer(id: string, managerId: string) {
   return safeRequest<{ success: boolean }>(async () => {
     const saved = getSavedCustomers()
-    const target = saved.find((c) => c.id === id)
+    let target = saved.find((c) => c.id === id)
     const approvedTime = new Date().toLocaleString("en-US", {
       dateStyle: "medium",
       timeStyle: "short",
     })
+
     if (target) {
       target.status = "approved"
       target.approvedBy = managerId || "General Manager"
       target.approvedAt = approvedTime
       saveCustomerLocally(target)
+    } else {
+      // Customer came from Supabase, not in localStorage yet — create a localStorage override
+      const overrideCust: Customer = {
+        id,
+        ref: "CUS-" + id.slice(0, 6).toUpperCase(),
+        name: "Customer",
+        type: "cafe",
+        status: "approved",
+        contactName: "N/A",
+        contactPhone: "N/A",
+        contactEmail: "N/A",
+        address: "N/A",
+        city: "Addis Ababa",
+        creditLimit: "ETB 0.00",
+        outstandingBalance: "ETB 0.00",
+        salesRep: { id: "USR-003", name: "Yohannes Mesfin", employeeId: "EMP-104" },
+        approvedBy: managerId || "General Manager",
+        approvedAt: approvedTime,
+        createdAt: new Date().toLocaleDateString(),
+      }
+      // Try to enrich from API
+      try {
+        const full = await apiRequest<any>(`/customers/${id}`, "GET")
+        if (full) {
+          overrideCust.name = full.name || overrideCust.name
+          overrideCust.ref = full.businessNumber || full.business_number || overrideCust.ref
+          overrideCust.type = full.type || overrideCust.type
+          overrideCust.contactName = full.contactPerson || full.contact_person || overrideCust.contactName
+          overrideCust.contactPhone = full.phone || overrideCust.contactPhone
+          overrideCust.contactEmail = full.email || overrideCust.contactEmail
+        }
+      } catch { /* ignore */ }
+      saveCustomerLocally(overrideCust)
     }
+
     try {
       await apiRequest<{ success: boolean }>(`/customers/${id}/approve`, "POST", { managerId })
     } catch {
@@ -305,18 +340,54 @@ export async function rejectCustomer(
       throw new Error("Rejection reason is required.")
     }
     const saved = getSavedCustomers()
-    const target = saved.find((c) => c.id === id)
+    let target = saved.find((c) => c.id === id)
     const rejectedTime = new Date().toLocaleString("en-US", {
       dateStyle: "medium",
       timeStyle: "short",
     })
+
     if (target) {
       target.status = "rejected"
       target.rejectedBy = managerId || "General Manager"
       target.rejectedAt = rejectedTime
       target.rejectionReason = reason.trim()
       saveCustomerLocally(target)
+    } else {
+      // Customer came from Supabase, not in localStorage yet — create a localStorage override
+      const overrideCust: Customer = {
+        id,
+        ref: "CUS-" + id.slice(0, 6).toUpperCase(),
+        name: "Customer",
+        type: "cafe",
+        status: "rejected",
+        contactName: "N/A",
+        contactPhone: "N/A",
+        contactEmail: "N/A",
+        address: "N/A",
+        city: "Addis Ababa",
+        creditLimit: "ETB 0.00",
+        outstandingBalance: "ETB 0.00",
+        salesRep: { id: "USR-003", name: "Yohannes Mesfin", employeeId: "EMP-104" },
+        rejectedBy: managerId || "General Manager",
+        rejectedAt: rejectedTime,
+        rejectionReason: reason.trim(),
+        createdAt: new Date().toLocaleDateString(),
+      }
+      // Try to enrich from API
+      try {
+        const full = await apiRequest<any>(`/customers/${id}`, "GET")
+        if (full) {
+          overrideCust.name = full.name || overrideCust.name
+          overrideCust.ref = full.businessNumber || full.business_number || overrideCust.ref
+          overrideCust.type = full.type || overrideCust.type
+          overrideCust.contactName = full.contactPerson || full.contact_person || overrideCust.contactName
+          overrideCust.contactPhone = full.phone || overrideCust.contactPhone
+          overrideCust.contactEmail = full.email || overrideCust.contactEmail
+        }
+      } catch { /* ignore */ }
+      saveCustomerLocally(overrideCust)
     }
+
     try {
       await apiRequest<{ success: boolean }>(`/customers/${id}/reject`, "POST", {
         reason: reason.trim(),
