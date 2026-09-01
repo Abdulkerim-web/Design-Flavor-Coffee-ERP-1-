@@ -84,12 +84,23 @@ export default function Notifications() {
   const { isMobile } = useBreakpoint()
   const toast = useToast()
   const [filter, setFilter] = useState<FilterKey>("all")
-  const [notifs, setNotifs] = useState<Notif[]>(SAMPLE_NOTIFS)
+  const [notifs, setNotifs] = useState<Notif[]>(() => {
+    try {
+      const raw = localStorage.getItem("erp_notifications_list")
+      return raw ? JSON.parse(raw) : SAMPLE_NOTIFS
+    } catch {
+      return SAMPLE_NOTIFS
+    }
+  })
   const [loadState, setLoadState] = useState<LoadState>("loading")
 
   // Simulate initial load
   useEffect(() => {
-    const t = setTimeout(() => setLoadState("ok"), 900)
+    try {
+      const raw = localStorage.getItem("erp_notifications_list")
+      if (raw) setNotifs(JSON.parse(raw))
+    } catch {}
+    const t = setTimeout(() => setLoadState("ok"), 400)
     return () => clearTimeout(t)
   }, [])
 

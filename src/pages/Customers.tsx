@@ -2676,12 +2676,31 @@ const CustomerDetailView: FC<{
 
   const handleApprove = async () => {
     setActionLoading(true)
-    await new Promise((r) => setTimeout(r, 1200))
+    await approveCustomer(customer.id, "General Manager")
+    // Send system notification to sales representative
+    try {
+      const raw = localStorage.getItem("erp_notifications_list")
+      const list = raw ? JSON.parse(raw) : []
+      const notif = {
+        id: Date.now(),
+        category: "info",
+        title: "Customer Registration Approved",
+        what: `Customer "${customer.name}" has been approved by management and is now active.`,
+        why: "Customer request approved by General Manager.",
+        module: "customers",
+        moduleId: customer.id,
+        time: "Just now",
+        timeRaw: Date.now(),
+        read: false,
+      }
+      localStorage.setItem("erp_notifications_list", JSON.stringify([notif, ...list]))
+    } catch {}
+
     setActionLoading(false)
     setApproveOpen(false)
     setLocalStatus("active")
     toast.success("Customer approved", {
-      description: `${customer.name} is now active.`,
+      description: `${customer.name} has been approved by management and is now active.`,
     })
   }
 
@@ -2690,12 +2709,36 @@ const CustomerDetailView: FC<{
       setRejectErr("Rejection reason is required.")
       return
     }
+    setRejectErr(null)
     setActionLoading(true)
-    await new Promise((r) => setTimeout(r, 1200))
+    const reasonText = rejectReason.trim()
+    await rejectCustomer(customer.id, reasonText, "General Manager")
+
+    // Send system notification to sales representative
+    try {
+      const raw = localStorage.getItem("erp_notifications_list")
+      const list = raw ? JSON.parse(raw) : []
+      const notif = {
+        id: Date.now(),
+        category: "warning",
+        title: "Customer Registration Rejected",
+        what: `Your customer registration request for "${customer.name}" has been rejected.`,
+        why: `Reason: ${reasonText}`,
+        module: "customers",
+        moduleId: customer.id,
+        time: "Just now",
+        timeRaw: Date.now(),
+        read: false,
+      }
+      localStorage.setItem("erp_notifications_list", JSON.stringify([notif, ...list]))
+    } catch {}
+
     setActionLoading(false)
     setRejectOpen(false)
     setLocalStatus("rejected")
-    toast.error("Customer rejected", { description: customer.name })
+    toast.error("Customer registration rejected", {
+      description: `Reason: ${reasonText}`,
+    })
   }
 
   const handleDeactivate = async () => {
@@ -3037,50 +3080,91 @@ const CustomerDetailView: FC<{
       {
         activeTab === "overview" && (
           <>
-            {/* Info grid */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-                gap: 16,
-                marginBottom: 16,
-              }}
-            >
-              <Card style={{ padding: 20 }}>
-                <InfoSection title="Contact Information">
-                  <InfoField
-                    label="Contact Person"
-                    value={customer.contactPerson}
-                  />
-                  <InfoField label="Phone" value={customer.phone} mono />
-                  <InfoField label="Email" value={customer.email} mono />
-                  <InfoField label="Address" value={customer.address} />
+              {/* Customer Acquisition Information Card */}
+              <Card style={{ padding: 20, gridColumn: isMobile ? "span 1" : "span 2", borderLeft: "4px solid #2B4D3A", background: "var(--surface-01)", marginBottom: 16 }}>
+                <InfoSection title="Customer Acquisition Information">
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap: 16 }}>
+                    <InfoField
+                      label="Responsible Sales Representative"
+                      value={customer.salesRep?.name || "Yohannes Mesfin"}
+                    />
+                    <InfoField
+                      label="Employee ID"
+                      value={customer.salesRep?.employeeId || "EMP-104"}
+                      mono
+                    />
+                    <InfoField
+                      label="Submitted On"
+                      value={customer.submittedAt || customer.createdAt}
+                      mono
+                    />
+                    <InfoField
+                      label="Acquisition / Request Status"
+                      value={customer.status === "pending" ? "Pending Approval" : customer.status === "approved" || customer.status === "active" ? "Approved & Active" : customer.status === "rejected" ? "Rejected" : customer.status}
+                    />
+                  </div>
+                  {customer.status === "rejected" && (
+                    <div style={{ marginTop: 14, padding: "12px 14px", borderRadius: 8, background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B" }}>
+                      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Rejection Decision Details</div>
+                      <div style={{ fontSize: 12.5, display: "flex", gap: 16, flexWrap: "wrap" }}>
+                        <div><strong>Rejected By:</strong> {customer.rejectedBy || "General Manager"}</div>
+                        <div><strong>Rejected Date:</strong> {customer.rejectedAt || "Recently"}</div>
+                        <div style={{ width: "100%", marginTop: 4 }}><strong>Rejection Reason:</strong> {customer.rejectionReason || "Not specified"}</div>
+                      </div>
+                    </div>
+                  )}
+                  {(customer.status === "approved" || customer.status === "active") && customer.approvedBy && (
+                    <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 8, background: "#ECFDF5", border: "1px solid #A7F3D0", color: "#065F46", fontSize: 12.5 }}>
+                      <strong>Approved By:</strong> {customer.approvedBy} · <strong>Approved Date:</strong> {customer.approvedAt || "Recently"}
+                    </div>
+                  )}
                 </InfoSection>
               </Card>
-              <Card style={{ padding: 20 }}>
-                <InfoSection title="Business Information">
-                  <InfoField
-                    label="Customer Reference"
-                    value={customer.ref}
-                    mono
-                  />
-                  <InfoField
-                    label="Customer Type"
-                    value={TYPE_LABELS[customer.type]}
-                  />
-                  <InfoField label="Location" value={customer.location} />
-                  <InfoField label="Branch" value={customer.branch} />
-                  <InfoField
-                    label="Sales Representative"
-                    value={customer.salesRep?.name}
-                  />
-                  <InfoField
-                    label="Account Created"
-                    value={customer.createdAt}
-                  />
-                </InfoSection>
-              </Card>
-            </div>
+
+              {/* Info grid */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                  gap: 16,
+                  marginBottom: 16,
+                }}
+              >
+                <Card style={{ padding: 20 }}>
+                  <InfoSection title="Contact Information">
+                    <InfoField
+                      label="Contact Person"
+                      value={customer.contactPerson}
+                    />
+                    <InfoField label="Phone" value={customer.phone} mono />
+                    <InfoField label="Email" value={customer.email} mono />
+                    <InfoField label="Address" value={customer.address} />
+                  </InfoSection>
+                </Card>
+                <Card style={{ padding: 20 }}>
+                  <InfoSection title="Business Information">
+                    <InfoField
+                      label="Customer Reference"
+                      value={customer.ref}
+                      mono
+                    />
+                    <InfoField
+                      label="Customer Type"
+                      value={TYPE_LABELS[customer.type]}
+                    />
+                    <InfoField label="Location" value={customer.location} />
+                    <InfoField label="Branch" value={customer.branch} />
+                    <InfoField
+                      label="Sales Representative"
+                      value={customer.salesRep?.name}
+                    />
+                    <InfoField
+                      label="Account Created"
+                      value={customer.createdAt}
+                    />
+                  </InfoSection>
+                </Card>
+              </div>
 
             {/* Summary row */}
             <div

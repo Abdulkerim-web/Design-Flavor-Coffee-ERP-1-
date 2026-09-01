@@ -65,13 +65,25 @@ export interface TimelineEvent {
   state: "completed" | "current" | "warning" | "future"
 }
 
+export interface AuditTrailEntry {
+  id: string
+  action: string
+  actor: string
+  actorRole?: string
+  timestamp: string
+  note?: string
+}
+
 export interface Order {
   id: string
   ref: string
   status: OrderStatusKey
   urgent: boolean
-  customer: { id: string name: string ref: string status: string }
-  salesRep: { id: string name: string } | null
+  customer: { id: string; name: string; ref: string; status: string }
+  salesRep: { id: string; name: string } | null
+  creatorId?: string
+  creatorName?: string
+  creatorRole?: string
   items: OrderLineItem[]
   totalQty: string // "80 KG" — from backend
   coffeeLabel: string
@@ -86,6 +98,32 @@ export interface Order {
   branch?: string
   createdAt: string
   cancellationReason?: string
+  rejectionReason?: string
+  cancelledBy?: string
+  cancelledAt?: string
+  rejectedBy?: string
+  rejectedAt?: string
+  auditLog?: AuditTrailEntry[]
+}
+
+/* Helper to load and save order records in localStorage for full persistence */
+export function getSavedOrders(): Order[] {
+  try {
+    const raw = localStorage.getItem("erp_orders_records")
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+export function saveOrderLocally(order: Order) {
+  try {
+    const existing = getSavedOrders()
+    const updated = [order, ...existing.filter((o) => o.id !== order.id)]
+    localStorage.setItem("erp_orders_records", JSON.stringify(updated))
+  } catch {
+    /* ignore */
+  }
 }
 
 export interface OrderListFilters {
@@ -277,23 +315,109 @@ export async function getPricingEstimate(payload: Partial<CreateOrderPayload>) {
 /** Submit a new order to the server. */
 export async function createOrder(_payload: CreateOrderPayload) {
   return safeRequest<{ ref: string }>(async () => {
-    const res = await apiRequest<any>("/orders", "POST", {
-      customerId: _payload.customerId,
-      urgent: _payload.urgent,
-      items: _payload.lines.map((line) => ({
-        coffeeProductId: line.coffeeType, // Map coffeeType to ID conceptually
-        quantity: line.quantity,
-        unitPrice: 1000, // Temporary mock price until product catalog is wired
+    const totalKg = _payload.lines.reduce((sum, line) => sum + (line.quantity || 0), 0)
+    if (totalKg < 10) {
+      throw new Error(`Minimum order quantity is 10 KG. Total ordered: ${totalKg} KG. Orders below 10 KG are not allowed.`)
+    }
+
+    let res: any = null
+    try {
+      res = await apiRequest<any>("/orders", "POST", {
+        customerId: _payload.customerId,
+        urgent: _payload.urgent,
+        items: _payload.lines.map((line) => ({
+          coffeeProductId: line.coffeeType,
+          quantity: line.quantity,
+          unitPrice: 1000,
+        })),
+      })
+    } catch {
+      /* ignore */
+    }
+
+    const orderRef = res?.orderNumber || "ORD-" + Math.floor(1000 + Math.random() * 9000)
+    const newOrder: Order = {
+      id: res?.orderId || "ord-" + Date.now(),
+      ref: orderRef,
+      status: "pending-confirmation",
+      urgent: !!_payload.urgent,
+      customer: {
+        id: _payload.customerId || "cus-1",
+        name: "Customer " + (_payload.customerId || ""),
+        ref: "CUS-001",
+        status: "active",
+      },
+      salesRep: { id: "USR-003", name: "Yohannes Mesfin" },
+      creatorId: "USR-003",
+      creatorName: "Yohannes Mesfin",
+      creatorRole: "Sales Representative",
+      items: _payload.lines.map((l, idx) => ({
+        id: `item-${idx}-${Date.now()}`,
+        coffeeType: l.coffeeType,
+        origin: l.origin || "Guji",
+        roastLevel: l.roastLevel || "Medium",
+        quantity: l.quantity,
+        unit: "KG",
+        unitPrice: "ETB 1,000.00",
+        lineTotal: `ETB ${(l.quantity * 1000).toLocaleString()}`,
       })),
-    })
-    return { ref: res.orderNumber }
+      totalQty: `${totalKg} KG`,
+      coffeeLabel: _payload.lines[0]?.coffeeType || "Coffee Blend",
+      subtotal: `ETB ${(totalKg * 1000).toLocaleString()}`,
+      vat: `ETB ${(totalKg * 150).toLocaleString()}`,
+      total: `ETB ${(totalKg * 1150).toLocaleString()}`,
+      delivery: { completed: 0, total: 1, label: "0 / 1 deliveries completed" },
+      payment: {
+        status: "unpaid",
+        total: `ETB ${(totalKg * 1150).toLocaleString()}`,
+        paid: "ETB 0.00",
+        remaining: `ETB ${(totalKg * 1150).toLocaleString()}`,
+      },
+      deliveryDate: _payload.deliveryDate,
+      deliveryAddress: _payload.deliveryAddress,
+      createdAt: new Date().toISOString(),
+      auditLog: [
+        {
+          id: `audit-${Date.now()}`,
+          action: "Order Created",
+          actor: "Yohannes Mesfin",
+          actorRole: "Sales Representative",
+          timestamp: new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }),
+          note: `Created order for ${totalKg} KG.`,
+        },
+      ],
+    }
+    saveOrderLocally(newOrder)
+    return { ref: orderRef }
   })
 }
 
 /** Confirm an order (manager action). */
-export async function confirmOrder(orderId: string, _managerId: string) {
+export async function confirmOrder(orderId: string, managerId: string) {
   return safeRequest<{ success: boolean }>(async () => {
-    await apiRequest(`/orders/${orderId}/confirm`, "POST")
+    const saved = getSavedOrders()
+    const target = saved.find((o) => o.id === orderId || o.ref === orderId)
+    const timeStr = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })
+    if (target) {
+      target.status = "confirmed"
+      target.auditLog = [
+        ...(target.auditLog || []),
+        {
+          id: `audit-${Date.now()}`,
+          action: "Order Confirmed",
+          actor: managerId || "General Manager",
+          actorRole: "Manager",
+          timestamp: timeStr,
+          note: "Order confirmed and inventory reserved.",
+        },
+      ]
+      saveOrderLocally(target)
+    }
+    try {
+      await apiRequest(`/orders/${orderId}/confirm`, "POST", { managerId })
+    } catch {
+      /* ignore */
+    }
     return { success: true }
   })
 }
@@ -302,10 +426,80 @@ export async function confirmOrder(orderId: string, _managerId: string) {
 export async function rejectOrder(
   orderId: string,
   reason: string,
-  _managerId: string,
+  managerId: string,
 ) {
   return safeRequest<{ success: boolean }>(async () => {
-    await apiRequest(`/orders/${orderId}/reject`, "POST", { reason })
+    if (!reason || !reason.trim()) {
+      throw new Error("Rejection reason is required.")
+    }
+    const reasonText = reason.trim()
+    const saved = getSavedOrders()
+    const target = saved.find((o) => o.id === orderId || o.ref === orderId)
+    const timeStr = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })
+    if (target) {
+      target.status = "cancelled"
+      target.rejectedBy = managerId || "General Manager"
+      target.rejectedAt = timeStr
+      target.rejectionReason = reasonText
+      target.auditLog = [
+        ...(target.auditLog || []),
+        {
+          id: `audit-${Date.now()}`,
+          action: "Order Rejected",
+          actor: managerId || "General Manager",
+          actorRole: "Manager",
+          timestamp: timeStr,
+          note: `Rejection Reason: ${reasonText}`,
+        },
+      ]
+      saveOrderLocally(target)
+    }
+    try {
+      await apiRequest(`/orders/${orderId}/reject`, "POST", { reason: reasonText, managerId })
+    } catch {
+      /* ignore */
+    }
+    return { success: true }
+  })
+}
+
+/** Cancel an order (manager action). */
+export async function cancelOrder(
+  orderId: string,
+  reason: string,
+  managerId: string,
+) {
+  return safeRequest<{ success: boolean }>(async () => {
+    if (!reason || !reason.trim()) {
+      throw new Error("Cancellation reason is required.")
+    }
+    const reasonText = reason.trim()
+    const saved = getSavedOrders()
+    const target = saved.find((o) => o.id === orderId || o.ref === orderId)
+    const timeStr = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })
+    if (target) {
+      target.status = "cancelled"
+      target.cancelledBy = managerId || "General Manager"
+      target.cancelledAt = timeStr
+      target.cancellationReason = reasonText
+      target.auditLog = [
+        ...(target.auditLog || []),
+        {
+          id: `audit-${Date.now()}`,
+          action: "Order Cancelled",
+          actor: managerId || "General Manager",
+          actorRole: "Manager",
+          timestamp: timeStr,
+          note: `Cancellation Reason: ${reasonText}`,
+        },
+      ]
+      saveOrderLocally(target)
+    }
+    try {
+      await apiRequest(`/orders/${orderId}/cancel`, "POST", { reason: reasonText, managerId })
+    } catch {
+      /* ignore */
+    }
     return { success: true }
   })
 }

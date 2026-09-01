@@ -227,6 +227,76 @@ export async function handleSupabaseApiRequest(
       return mockPayroll
     }
   }
+  // ── CUSTOMER APPROVAL / REJECTION ──
+  if (path.startsWith("/customers/") && method === "POST") {
+    if (path.endsWith("/approve")) {
+      const custId = path.split("/")[2]
+      try {
+        await supabaseAdmin.from("customers").update({
+          status: "approved",
+          approved_by: body.managerId || "General Manager",
+          approved_at: new Date().toISOString(),
+        }).eq("id", custId)
+      } catch {
+        /* ignore fallback */
+      }
+      return { success: true }
+    }
+    if (path.endsWith("/reject")) {
+      if (!body.reason || !body.reason.trim()) {
+        throw new Error("Rejection reason is required.")
+      }
+      const custId = path.split("/")[2]
+      try {
+        await supabaseAdmin.from("customers").update({
+          status: "rejected",
+          rejected_by: body.managerId || "General Manager",
+          rejected_at: new Date().toISOString(),
+          rejection_reason: body.reason.trim(),
+        }).eq("id", custId)
+      } catch {
+        /* ignore fallback */
+      }
+      return { success: true }
+    }
+  }
+  // ── ORDER CANCELLATION / REJECTION ──
+  if (path.startsWith("/orders/") && method === "POST") {
+    if (path.endsWith("/cancel")) {
+      if (!body.reason || !body.reason.trim()) {
+        throw new Error("Cancellation reason is required.")
+      }
+      const orderId = path.split("/")[2]
+      try {
+        await supabaseAdmin.from("orders").update({
+          status: "cancelled",
+          cancelled_by: body.managerId || "General Manager",
+          cancelled_at: new Date().toISOString(),
+          cancellation_reason: body.reason.trim(),
+        }).eq("id", orderId)
+      } catch {
+        /* ignore */
+      }
+      return { success: true }
+    }
+    if (path.endsWith("/reject")) {
+      if (!body.reason || !body.reason.trim()) {
+        throw new Error("Rejection reason is required.")
+      }
+      const orderId = path.split("/")[2]
+      try {
+        await supabaseAdmin.from("orders").update({
+          status: "cancelled",
+          rejected_by: body.managerId || "General Manager",
+          rejected_at: new Date().toISOString(),
+          rejection_reason: body.reason.trim(),
+        }).eq("id", orderId)
+      } catch {
+        /* ignore */
+      }
+      return { success: true }
+    }
+  }
 
   // ── TRANSACTIONS — save to payments table ──
   if (path === "/finance/transactions" && method === "POST") {
@@ -630,16 +700,28 @@ async function ensureDefaultOrderAndItem() {
       dbBody = {
         name: body.name,
         type: body.type || "cafe",
-        contact_person: body.contactName,
-        phone: body.contactPhone,
-        email: body.contactEmail,
+        contact_person: body.contactName || body.contactPerson,
+        phone: body.contactPhone || body.phone,
+        email: body.contactEmail || body.email,
         notes: body.notes,
         business_number: `CUS-${Math.floor(Math.random() * 10000)}`,
         active: true,
-        status: "active",
+        status: body.status || "pending",
         sales_rep_id: body.salesRepId || "USR-003",
+        sales_rep_name: body.salesRepName || "Yohannes Mesfin",
+        sales_rep_employee_id: body.salesRepEmployeeId || "EMP-104",
+        submitted_at: new Date().toISOString(),
       }
     } else if (table === "orders") {
+      // BACKEND MANDATORY VALIDATION: Minimum order quantity must be >= 10 KG
+      const totalQuantity = (body.items || []).reduce(
+        (sum: number, item: any) => sum + (parseFloat(item.quantity || 0) || 0),
+        0
+      )
+      if (totalQuantity < 10) {
+        throw new Error("Minimum order quantity is 10 KG.")
+      }
+
       const preVatAmount =
         body.items?.reduce(
           (sum: number, item: any) => sum + (item.quantity || 0) * (item.unitPrice || 0),
@@ -654,7 +736,7 @@ async function ensureDefaultOrderAndItem() {
         const { data: newCust } = await supabaseAdmin.from("customers").insert([{
           name: custName,
           business_number: `CUS-${Math.floor(Math.random() * 10000)}`,
-          status: "active"
+          status: "pending"
         }]).select()
         if (newCust?.[0]?.id) customerId = newCust[0].id
       }
@@ -663,7 +745,10 @@ async function ensureDefaultOrderAndItem() {
         status: "pending-confirmation",
         customer_id: customerId,
         branch_id: "BRN-001",
-        sales_rep_id: "USR-003",
+        sales_rep_id: body.creatorId || "USR-003",
+        created_by_user_id: body.creatorId || "USR-003",
+        created_by_name: body.creatorName || "Yohannes Mesfin",
+        created_by_role: body.creatorRole || "Sales Representative",
         is_urgent: body.urgent || false,
         pre_vat_amount: preVatAmount,
         vat_rate: vatRate,
@@ -828,17 +913,19 @@ async function getManagerDashboard() {
       age: "Needs Action",
     })
   }
-  const recentCustomers = customersArr.slice(0, 3)
-  for (const c of recentCustomers) {
+  const pendingCustomers = customersArr.filter(
+    (c: any) => !c.status || c.status === "pending" || c.status === "pending_approval" || c.status === "pending-approval"
+  )
+  for (const c of pendingCustomers) {
     attentionCards.push({
       id: `cus-${c.id}`,
       severity: "info",
-      category: "New Customer",
-      title: `Customer ${c.name} registered`,
-      description: `Ref: ${c.business_number || "CUS"} | Type: ${c.type || "cafe"}`,
+      category: "Pending Customer Review",
+      title: `Customer Registration Request: ${c.name}`,
+      description: `Ref: ${c.business_number || "CUS"} | Type: ${c.type || "cafe"} | Sales Rep: ${c.sales_rep_name || "Yohannes Mesfin"}`,
       primaryAction: "View Customer",
       module: "customers",
-      age: "Recent",
+      age: "Pending Review",
     })
   }
 

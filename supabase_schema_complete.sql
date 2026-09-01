@@ -20,11 +20,63 @@ CREATE TABLE IF NOT EXISTS "customer_branches" ("id" UUID PRIMARY KEY DEFAULT uu
 
 CREATE TABLE IF NOT EXISTS "customer_sales_rep_history" ("id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(), "customer_id" VARCHAR(255) NOT NULL, "sales_rep_id" VARCHAR(255) NOT NULL, "assigned_at" TIMESTAMP NOT NULL DEFAULT NOW(), "unassigned_at" TIMESTAMP);
 
-CREATE TABLE IF NOT EXISTS "customers" ("id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(), "business_number" VARCHAR(50) NOT NULL, "name" VARCHAR(255) NOT NULL, "active" BOOLEAN NOT NULL DEFAULT TRUE, "sales_rep_id" VARCHAR(255) NOT NULL);
+CREATE TABLE IF NOT EXISTS "customers" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "business_number" VARCHAR(50) NOT NULL,
+  "name" VARCHAR(255) NOT NULL,
+  "type" VARCHAR(50) DEFAULT 'cafe',
+  "status" VARCHAR(50) NOT NULL DEFAULT 'pending',
+  "sales_rep_id" VARCHAR(255) NOT NULL,
+  "sales_rep_name" VARCHAR(255),
+  "sales_rep_employee_id" VARCHAR(100),
+  "submitted_by" VARCHAR(255),
+  "submitted_at" TIMESTAMP DEFAULT NOW(),
+  "approved_by" VARCHAR(255),
+  "approved_at" TIMESTAMP,
+  "rejected_by" VARCHAR(255),
+  "rejected_at" TIMESTAMP,
+  "rejection_reason" TEXT,
+  "active" BOOLEAN NOT NULL DEFAULT TRUE,
+  "created_at" TIMESTAMP NOT NULL DEFAULT NOW()
+);
 
-CREATE TABLE IF NOT EXISTS "order_items" ("id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(), "order_id" VARCHAR(255) NOT NULL, "coffee_product_id" VARCHAR(255) NOT NULL, "quantity" decimal(10,3) NOT NULL, "unit_price" decimal(14,2) NOT NULL, "status" VARCHAR(100) NOT NULL DEFAULT ('pending-confirmation'));
+CREATE TABLE IF NOT EXISTS "order_items" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "order_id" VARCHAR(255) NOT NULL,
+  "coffee_product_id" VARCHAR(255) NOT NULL,
+  "quantity" decimal(10,3) NOT NULL CHECK (quantity >= 10),
+  "unit_price" decimal(14,2) NOT NULL,
+  "status" VARCHAR(100) NOT NULL DEFAULT ('pending-confirmation')
+);
 
-CREATE TABLE IF NOT EXISTS "orders" ("id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(), "orderNumber" VARCHAR(50) NOT NULL, "customer_id" VARCHAR(255) NOT NULL, "branch_id" VARCHAR(255) NOT NULL, "sales_rep_id" VARCHAR(255) NOT NULL, "status" VARCHAR(100) NOT NULL DEFAULT ('draft'), "feasibility_override_reason" TEXT, "is_urgent" BOOLEAN NOT NULL DEFAULT FALSE, "urgent_deadline_at" TIMESTAMP, "payment_deadline_at" TIMESTAMP, "pre_vat_amount" decimal(14,2) NOT NULL DEFAULT (0), "vat_rate" decimal(5,2) NOT NULL DEFAULT (0), "vat_amount" decimal(14,2) NOT NULL DEFAULT (0), "total_amount" decimal(14,2) NOT NULL DEFAULT (0), "created_at" TIMESTAMP NOT NULL DEFAULT NOW(), "updated_at" TIMESTAMP NOT NULL DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS "orders" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "orderNumber" VARCHAR(50) NOT NULL,
+  "customer_id" VARCHAR(255) NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+  "branch_id" VARCHAR(255) NOT NULL,
+  "sales_rep_id" VARCHAR(255) NOT NULL,
+  "created_by_user_id" VARCHAR(255) NOT NULL,
+  "created_by_name" VARCHAR(255),
+  "created_by_role" VARCHAR(100) DEFAULT 'Sales Representative',
+  "quantity_kg" decimal(10,3) NOT NULL CHECK (quantity_kg >= 10),
+  "status" VARCHAR(100) NOT NULL DEFAULT ('pending-confirmation'),
+  "feasibility_override_reason" TEXT,
+  "cancellation_reason" TEXT,
+  "rejection_reason" TEXT,
+  "cancelled_by" VARCHAR(255),
+  "cancelled_at" TIMESTAMP,
+  "rejected_by" VARCHAR(255),
+  "rejected_at" TIMESTAMP,
+  "is_urgent" BOOLEAN NOT NULL DEFAULT FALSE,
+  "urgent_deadline_at" TIMESTAMP,
+  "payment_deadline_at" TIMESTAMP,
+  "pre_vat_amount" decimal(14,2) NOT NULL DEFAULT (0),
+  "vat_rate" decimal(5,2) NOT NULL DEFAULT (0),
+  "vat_amount" decimal(14,2) NOT NULL DEFAULT (0),
+  "total_amount" decimal(14,2) NOT NULL DEFAULT (0),
+  "created_at" TIMESTAMP NOT NULL DEFAULT NOW(),
+  "updated_at" TIMESTAMP NOT NULL DEFAULT NOW()
+);
 
 CREATE TABLE IF NOT EXISTS "delivery_records" ("id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(), "order_id" VARCHAR(255) NOT NULL, "customer_id" VARCHAR(255) NOT NULL, "status" VARCHAR(50) NOT NULL DEFAULT ('READY_FOR_ASSIGNMENT'), "driver_user_id" VARCHAR(255), "proof_document_path" VARCHAR(255), "verified_by_manager_id" VARCHAR(255), "created_at" TIMESTAMP NOT NULL DEFAULT NOW(), "updated_at" TIMESTAMP NOT NULL DEFAULT NOW());
 
@@ -40,7 +92,21 @@ CREATE TABLE IF NOT EXISTS "receiving_records" ("id" UUID PRIMARY KEY DEFAULT uu
 
 CREATE TABLE IF NOT EXISTS "lots" ("id" VARCHAR(50) PRIMARY KEY NOT NULL, "coffee_product_id" VARCHAR(255) NOT NULL, "receiving_record_id" VARCHAR(255) NOT NULL, "initial_quantity" decimal(10,3) NOT NULL, "unit_cost_etb" decimal(14,2) NOT NULL, "total_cost_etb" decimal(14,2) NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT NOW());
 
-CREATE TABLE IF NOT EXISTS "notifications" ("id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(), "type" VARCHAR(50) NOT NULL, "severity" VARCHAR(20) NOT NULL, "recipient_user_id" VARCHAR(255) NOT NULL, "related_entity_type" VARCHAR(100), "related_entity_id" VARCHAR(100), "message" TEXT NOT NULL, "is_read" BOOLEAN NOT NULL DEFAULT FALSE, "created_at" TIMESTAMP NOT NULL DEFAULT (CURRENT_TIMESTAMP));
+CREATE TABLE IF NOT EXISTS "notifications" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "notification_id" VARCHAR(255),
+  "recipient_user_id" VARCHAR(255) NOT NULL,
+  "title" VARCHAR(255) NOT NULL,
+  "message" TEXT NOT NULL,
+  "reason" TEXT,
+  "type" VARCHAR(50) NOT NULL DEFAULT 'info',
+  "severity" VARCHAR(20) NOT NULL DEFAULT 'info',
+  "related_entity_type" VARCHAR(100),
+  "related_entity_id" VARCHAR(100),
+  "is_read" BOOLEAN NOT NULL DEFAULT FALSE,
+  "status" VARCHAR(20) NOT NULL DEFAULT 'unread',
+  "created_at" TIMESTAMP NOT NULL DEFAULT NOW()
+);
 
 CREATE TABLE IF NOT EXISTS "packaging_materials" ("id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(), "name" VARCHAR(100) NOT NULL, "isActive" BOOLEAN NOT NULL DEFAULT TRUE);
 

@@ -4,6 +4,7 @@ import { useBreakpoint } from "../hooks/useBreakpoint"
 import { useAuth } from "../contexts/AuthContext"
 import { canRead } from "../lib/rbac"
 import { CustomerFormModal } from "../components/CustomerFormModal"
+import { approveCustomer, rejectCustomer } from "../services/customers"
 import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 
 /* ─────────────────────────────────────────────────────────────
@@ -493,8 +494,80 @@ const SEVERITY_CFG = {
   },
 }
 
-const AttentionCardUI: FC<{ card: AttentionCard; onNavigate?: (id: string, params?: any) => void }> = ({ card, onNavigate }) => {
+const AttentionCardUI: FC<{
+  card: AttentionCard
+  onNavigate?: (id: string, params?: any) => void
+  onResolveCard?: (cardId: string) => void
+}> = ({ card, onNavigate, onResolveCard }) => {
   const cfg = SEVERITY_CFG[card.severity] || SEVERITY_CFG.info
+  const [rejectModalOpen, setRejectModalOpen] = useState(false)
+  const [rejectReason, setRejectReason] = useState("")
+  const [rejectErr, setRejectErr] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const handleApproveCustomer = async () => {
+    setLoading(true)
+    const custId = card.id.replace("cus-", "")
+    await approveCustomer(custId, "General Manager")
+
+    // Send system notification
+    try {
+      const raw = localStorage.getItem("erp_notifications_list")
+      const list = raw ? JSON.parse(raw) : []
+      const notif = {
+        id: Date.now(),
+        category: "info",
+        title: "Customer Registration Approved",
+        what: `Customer request "${card.title}" has been approved by management and is now active.`,
+        why: "Approved by General Manager via Manager Dashboard.",
+        module: "customers",
+        moduleId: custId,
+        time: "Just now",
+        timeRaw: Date.now(),
+        read: false,
+      }
+      localStorage.setItem("erp_notifications_list", JSON.stringify([notif, ...list]))
+    } catch {}
+
+    setLoading(false)
+    onResolveCard?.(card.id)
+  }
+
+  const handleRejectCustomerSubmit = async () => {
+    if (!rejectReason.trim()) {
+      setRejectErr("Rejection reason is required.")
+      return
+    }
+    setRejectErr(null)
+    setLoading(true)
+    const custId = card.id.replace("cus-", "")
+    const reasonText = rejectReason.trim()
+    await rejectCustomer(custId, reasonText, "General Manager")
+
+    // Send system notification
+    try {
+      const raw = localStorage.getItem("erp_notifications_list")
+      const list = raw ? JSON.parse(raw) : []
+      const notif = {
+        id: Date.now(),
+        category: "warning",
+        title: "Customer Registration Rejected",
+        what: `Customer registration request "${card.title}" has been rejected.`,
+        why: `Reason: ${reasonText}`,
+        module: "customers",
+        moduleId: custId,
+        time: "Just now",
+        timeRaw: Date.now(),
+        read: false,
+      }
+      localStorage.setItem("erp_notifications_list", JSON.stringify([notif, ...list]))
+    } catch {}
+
+    setLoading(false)
+    setRejectModalOpen(false)
+    onResolveCard?.(card.id)
+  }
+
   return (
     <div
       style={{
@@ -630,7 +703,7 @@ const AttentionCardUI: FC<{ card: AttentionCard; onNavigate?: (id: string, param
       )}
 
       {/* Actions */}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <button
           style={{
             padding: "7px 16px",
@@ -662,6 +735,44 @@ const AttentionCardUI: FC<{ card: AttentionCard; onNavigate?: (id: string, param
         >
           {card.primaryAction}
         </button>
+
+        {card.module === "customers" && (
+          <>
+            <button
+              disabled={loading}
+              onClick={handleApproveCustomer}
+              style={{
+                padding: "7px 14px",
+                borderRadius: 7,
+                border: "none",
+                background: "#059669",
+                color: "#FFFFFF",
+                fontSize: 12.5,
+                fontWeight: 600,
+                cursor: loading ? "wait" : "pointer",
+              }}
+            >
+              Approve
+            </button>
+            <button
+              disabled={loading}
+              onClick={() => setRejectModalOpen(true)}
+              style={{
+                padding: "7px 14px",
+                borderRadius: 7,
+                border: "1px solid #FCA5A5",
+                background: "#FEF2F2",
+                color: "#DC2626",
+                fontSize: 12.5,
+                fontWeight: 600,
+                cursor: loading ? "wait" : "pointer",
+              }}
+            >
+              Reject
+            </button>
+          </>
+        )}
+
         {card.secondaryAction && (
           <button
             onClick={() => onNavigate?.('inventory')}
@@ -681,6 +792,102 @@ const AttentionCardUI: FC<{ card: AttentionCard; onNavigate?: (id: string, param
           </button>
         )}
       </div>
+
+      {/* Rejection Reason Required Modal */}
+      {rejectModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "var(--surface-01)",
+              border: "1px solid var(--border-neutral)",
+              borderRadius: 12,
+              padding: 24,
+              maxWidth: 440,
+              width: "100%",
+              boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)",
+            }}
+          >
+            <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 8px", color: "var(--text-primary)" }}>
+              Reject Customer Registration
+            </h3>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "0 0 14px" }}>
+              Please enter the required reason for rejecting <strong>{card.title}</strong>. The responsible sales representative will be notified with this reason.
+            </p>
+            {rejectErr && (
+              <div style={{ color: "#DC2626", fontSize: 12.5, marginBottom: 10, fontWeight: 600 }}>
+                {rejectErr}
+              </div>
+            )}
+            <textarea
+              rows={3}
+              value={rejectReason}
+              onChange={(e) => {
+                setRejectReason(e.target.value)
+                if (e.target.value.trim()) setRejectErr(null)
+              }}
+              placeholder="Enter rejection reason (required)..."
+              style={{
+                width: "100%",
+                borderRadius: 8,
+                border: "1px solid var(--border-neutral)",
+                padding: "10px 12px",
+                fontSize: 13,
+                fontFamily: "Inter, sans-serif",
+                background: "var(--surface-02)",
+                color: "var(--text-primary)",
+                marginBottom: 16,
+              }}
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <button
+                onClick={() => {
+                  setRejectModalOpen(false)
+                  setRejectErr(null)
+                }}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 7,
+                  border: "1px solid var(--border-neutral)",
+                  background: "transparent",
+                  color: "var(--text-primary)",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                disabled={loading}
+                onClick={handleRejectCustomerSubmit}
+                style={{
+                  padding: "8px 18px",
+                  borderRadius: 7,
+                  border: "none",
+                  background: "#DC2626",
+                  color: "#FFFFFF",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: loading ? "wait" : "pointer",
+                }}
+              >
+                {loading ? "Rejecting..." : "Confirm Rejection"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1616,7 +1823,14 @@ export default function ManagerDashboard({
                 }}
               >
                 {attentionItems.map((card) => (
-                  <AttentionCardUI key={card.id} card={card} onNavigate={onNavigate} />
+                  <AttentionCardUI
+                    key={card.id}
+                    card={card}
+                    onNavigate={onNavigate}
+                    onResolveCard={(resolvedId) =>
+                      setAttentionItems((prev) => prev.filter((item) => item.id !== resolvedId))
+                    }
+                  />
                 ))}
               </div>
             )}

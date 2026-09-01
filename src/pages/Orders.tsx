@@ -2670,24 +2670,70 @@ const OrderDetailView: FC<{
       setRejectErr("Rejection reason is required.")
       return
     }
+    setRejectErr("")
     setActionLoading(true)
-    await new Promise((r) => setTimeout(r, 1200))
+    const reasonText = rejectReason.trim()
+    await rejectOrder(order.id, reasonText, "General Manager")
+
+    // Send notification to original order creator
+    try {
+      const raw = localStorage.getItem("erp_notifications_list")
+      const list = raw ? JSON.parse(raw) : []
+      const creatorName = order.salesRep?.name || "Sales Representative"
+      const notif = {
+        id: Date.now(),
+        category: "warning",
+        title: `Order Rejected: ${order.ref}`,
+        what: `Order ${order.ref} for ${order.customer.name} has been rejected by management.`,
+        why: `Reason: ${reasonText}`,
+        module: "orders",
+        moduleId: order.id,
+        time: "Just now",
+        timeRaw: Date.now(),
+        read: false,
+      }
+      localStorage.setItem("erp_notifications_list", JSON.stringify([notif, ...list]))
+    } catch {}
+
     setActionLoading(false)
     setRejectOpen(false)
     setLocalStatus("cancelled")
-    toast.error("Order rejected", { description: order.ref })
+    toast.error("Order rejected", { description: `${order.ref} — Reason: ${reasonText}` })
   }
+
   const doCancel = async () => {
     if (!cancelReason.trim()) {
-      setCancelErr("Please provide a reason for cancelling this order.")
+      setCancelErr("Please provide a mandatory reason for cancelling this order.")
       return
     }
+    setCancelErr("")
     setActionLoading(true)
-    await new Promise((r) => setTimeout(r, 1200))
+    const reasonText = cancelReason.trim()
+    await cancelOrder(order.id, reasonText, "General Manager")
+
+    // Send notification to original order creator
+    try {
+      const raw = localStorage.getItem("erp_notifications_list")
+      const list = raw ? JSON.parse(raw) : []
+      const notif = {
+        id: Date.now(),
+        category: "warning",
+        title: `Order Cancelled: ${order.ref}`,
+        what: `Order #${order.ref || order.id} for ${order.customer.name} has been cancelled by the manager.`,
+        why: `Reason: ${reasonText}`,
+        module: "orders",
+        moduleId: order.id,
+        time: "Just now",
+        timeRaw: Date.now(),
+        read: false,
+      }
+      localStorage.setItem("erp_notifications_list", JSON.stringify([notif, ...list]))
+    } catch {}
+
     setActionLoading(false)
     setCancelOpen(false)
     setLocalStatus("cancelled")
-    toast.error("Order cancelled", { description: order.ref })
+    toast.error("Order cancelled", { description: `${order.ref} — Reason: ${reasonText}` })
   }
   const doOverride = async () => {
     if (!overrideReason.trim()) {
@@ -3000,6 +3046,59 @@ const OrderDetailView: FC<{
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* Order Creator & Audit Trail Card */}
+          <Card style={{ padding: 20, borderLeft: "4px solid #2B4D3A", background: "var(--surface-01)", marginBottom: 14 }}>
+            <div
+              style={{
+                fontSize: 11.5,
+                fontWeight: 700,
+                color: "var(--text-muted)",
+                textTransform: "uppercase",
+                letterSpacing: "0.07em",
+                marginBottom: 14,
+                paddingBottom: 8,
+                borderBottom: "1px solid var(--border-neutral)",
+              }}
+            >
+              Order Creator & Audit Trail
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 14 }}>
+              <div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Original Order Creator</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--text-primary)" }}>
+                  {order.creatorName || order.salesRep?.name || "Yohannes Mesfin"}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Creator Role & ID</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", fontFamily: "DM Mono" }}>
+                  {order.creatorRole || "Sales Representative"} ({order.creatorId || "USR-003"})
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Creation Timestamp</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", fontFamily: "DM Mono" }}>
+                  {order.createdAt ? new Date(order.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "Recently"}
+                </div>
+              </div>
+            </div>
+
+            {(localStatus === "cancelled" || order.status === "cancelled" || order.status === "rejected") && (
+              <div style={{ marginTop: 14, padding: "12px 14px", borderRadius: 8, background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B" }}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
+                  Order {order.rejectionReason ? "Rejection" : "Cancellation"} Decision Record
+                </div>
+                <div style={{ fontSize: 12.5, display: "flex", gap: 16, flexWrap: "wrap" }}>
+                  <div><strong>Action Performed By:</strong> {order.cancelledBy || order.rejectedBy || "General Manager"}</div>
+                  <div><strong>Action Timestamp:</strong> {order.cancelledAt || order.rejectedAt || "Recently"}</div>
+                  <div style={{ width: "100%", marginTop: 4 }}>
+                    <strong>Mandatory Reason:</strong> {order.cancellationReason || order.rejectionReason || "Not specified"}
+                  </div>
+                </div>
+              </div>
+            )}
+          </Card>
+
           {/* Order summary */}
           <Card style={{ padding: 20 }}>
             <div
@@ -3901,10 +4000,22 @@ const NewOrderView: FC<{ onBack: () => void }> = ({ onBack }) => {
     const e: Record<string, string> = {}
     if (!form.customerId) e.customer = "Please select a customer."
     if (!form.deliveryDate) e.delivDate = "Delivery date is required."
+
+    let totalKg = 0
     form.lines.forEach((l) => {
-      if (!l.quantity || parseFloat(l.quantity) <= 0)
+      const q = parseFloat(l.quantity) || 0
+      if (!l.quantity || q <= 0) {
         e[`ln-${l.id}`] = "Quantity is required."
+      } else {
+        totalKg += q
+      }
     })
+
+    // CRITICAL ORDER MINIMUM QUANTITY VALIDATION (10 KG MINIMUM)
+    if (totalKg < 10) {
+      e.minQty = `Minimum order quantity is 10 KG. You entered ${totalKg} KG. Orders below 10 KG are strictly prohibited.`
+    }
+
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -3917,6 +4028,14 @@ const NewOrderView: FC<{ onBack: () => void }> = ({ onBack }) => {
   }
 
   const handleSubmit = async () => {
+    const totalKg = form.lines.reduce((sum, l) => sum + (parseFloat(l.quantity) || 0), 0)
+    if (totalKg < 10) {
+      toast(`Minimum order quantity is 10 KG. Total ordered: ${totalKg} KG.`, "error")
+      setErrors({ minQty: `Minimum order quantity is 10 KG. You entered ${totalKg} KG. Orders below 10 KG are strictly prohibited.` })
+      setStep("form")
+      return
+    }
+
     setStep("submitting")
     const payload = {
       customerId: form.customerId,
@@ -3939,8 +4058,10 @@ const NewOrderView: FC<{ onBack: () => void }> = ({ onBack }) => {
       setSRef(res.data.ref)
       setStep("success")
     } else {
-      toast("Failed to submit order.", "error")
-      setStep("error")
+      const errMsg = res.error || "Failed to submit order. Minimum order quantity is 10 KG."
+      toast(errMsg, "error")
+      setErrors({ minQty: errMsg })
+      setStep("form")
     }
   }
 
@@ -4571,6 +4692,27 @@ const NewOrderView: FC<{ onBack: () => void }> = ({ onBack }) => {
           Create a new customer order for roasted coffee.
         </p>
       </div>
+
+      {errors.minQty && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 20,
+            padding: "14px 16px",
+            borderRadius: 10,
+            background: "#FEF2F2",
+            border: "2px solid #FCA5A5",
+            color: "#991B1B",
+          }}
+        >
+          <div style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 4 }}>
+            🚨 Order Quantity Validation Error (10 KG Minimum Rule)
+          </div>
+          <div style={{ fontSize: 13, lineHeight: 1.5 }}>
+            {errors.minQty}
+          </div>
+        </div>
+      )}
 
       <SCard title="Customer">
         <Lbl label="Select or type customer name" required htmlFor="o-cust" />

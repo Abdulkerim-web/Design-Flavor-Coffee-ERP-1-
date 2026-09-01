@@ -5,7 +5,7 @@ import {
   type PaginationParams,
 } from "./api"
 
-export type CustomerStatus = "pending" | "active" | "rejected" | "inactive"
+export type CustomerStatus = "pending" | "approved" | "active" | "rejected" | "inactive"
 export type CustomerType = "hotel" | "restaurant" | "cafe" | "airline" | "corporate" | "other"
 
 export interface Customer {
@@ -22,13 +22,16 @@ export interface Customer {
   region?: string
   creditLimit: string
   outstandingBalance: string
-  salesRep: { id: string name: string } | null
+  salesRep: { id: string; name: string; employeeId?: string } | null
   notes?: string
+  submittedAt?: string
+  approvedAt?: string
+  approvedBy?: string
+  rejectedAt?: string
+  rejectedBy?: string
   rejectionReason?: string
   urgentFlag?: boolean
   createdAt: string
-  approvedAt?: string
-  approvedBy?: string
 }
 
 export interface CustomerListFilters {
@@ -50,57 +53,96 @@ export interface CreateCustomerPayload {
   creditLimit: string
   notes?: string
   salesRepId?: string
+  salesRepName?: string
+  salesRepEmployeeId?: string
 }
 
-// In-memory fallback for Vercel preview environments where the backend is unreachable
-let mockCustomers: Customer[] = []
-let usingMock = false
+/* Helper to load and save customer records in localStorage for full persistence */
+export function getSavedCustomers(): Customer[] {
+  try {
+    const raw = localStorage.getItem("erp_customers_records")
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+export function saveCustomerLocally(cust: Customer) {
+  try {
+    const existing = getSavedCustomers()
+    const updated = [cust, ...existing.filter((c) => c.id !== cust.id)]
+    localStorage.setItem("erp_customers_records", JSON.stringify(updated))
+  } catch {
+    /* ignore */
+  }
+}
+
+// System default sales reps map
+const DEFAULT_SALES_REPS: Record<string, { name: string; employeeId: string }> = {
+  "USR-003": { name: "Yohannes Mesfin", employeeId: "EMP-104" },
+  "USR-004": { name: "Abebe Bikila", employeeId: "EMP-108" },
+  "USR-005": { name: "Tigist Assefa", employeeId: "EMP-112" },
+}
 
 export async function listCustomers(
   filters: CustomerListFilters = {},
   pagination: PaginationParams = { page: 1, perPage: 20 },
 ) {
   return safeRequest<ListEnvelope<Customer>>(async () => {
-    // Fetch directly from our NestJS backend
     let all: any[] = []
     try {
       const res = await apiRequest<any[]>("/customers", "GET")
       if (Array.isArray(res)) {
         all = res
-        usingMock = false
-      } else {
-        usingMock = true
       }
-    } catch (e) {
-      console.warn("Backend unavailable, using mock customers list")
-      usingMock = true
+    } catch {
+      /* fallback */
     }
 
-    if (usingMock) {
-      all = mockCustomers
-    }
+    const savedLocal = getSavedCustomers()
 
-    // Map the backend entity format to the frontend interface format
-    const mapped: any[] = usingMock ? all : all.map((c) => ({
-      id: c.id,
-      ref: c.businessNumber || "CUS-UNKNOWN",
-      name: c.name,
-      type: c.type || "cafe",
-      status: c.status || "active",
-      contactPerson: c.contactPerson || "N/A",
-      contactName: c.contactPerson || "N/A",
-      phone: c.phone || "N/A",
-      contactPhone: c.phone || "N/A",
-      email: c.email || undefined,
-      contactEmail: c.email || "N/A",
-      address: c.address || "Main Branch",
-      location: "Addis Ababa",
-      city: "Addis Ababa",
-      creditLimit: "ETB 0.00",
-      outstandingBalance: "ETB 0.00",
-      salesRep: c.salesRepId ? { id: c.salesRepId, name: "Sales Rep" } : null,
-      createdAt: c.createdAt ? new Date(c.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
-    }))
+    // Map backend entities to Customer interface
+    const mappedBackend = all.map((c) => {
+      const repInfo = DEFAULT_SALES_REPS[c.salesRepId || "USR-003"] || { name: c.salesRepName || "Yohannes Mesfin", employeeId: c.salesRepEmployeeId || "EMP-104" }
+      return {
+        id: c.id,
+        ref: c.businessNumber || c.ref || "CUS-UNKNOWN",
+        name: c.name,
+        type: c.type || "cafe",
+        status: c.status || "active",
+        contactPerson: c.contactPerson || c.contactName || "N/A",
+        contactName: c.contactPerson || c.contactName || "N/A",
+        phone: c.phone || c.contactPhone || "N/A",
+        contactPhone: c.phone || c.contactPhone || "N/A",
+        email: c.email || c.contactEmail || undefined,
+        contactEmail: c.email || c.contactEmail || "N/A",
+        address: c.address || "Main Branch",
+        location: "Addis Ababa",
+        city: c.city || "Addis Ababa",
+        creditLimit: c.creditLimit || "ETB 0.00",
+        outstandingBalance: c.outstandingBalance || "ETB 0.00",
+        salesRep: c.salesRep || {
+          id: c.salesRepId || "USR-003",
+          name: c.salesRepName || repInfo.name,
+          employeeId: c.salesRepEmployeeId || repInfo.employeeId,
+        },
+        submittedAt: c.submittedAt || c.createdAt || new Date().toISOString(),
+        approvedBy: c.approvedBy,
+        approvedAt: c.approvedAt,
+        rejectedBy: c.rejectedBy,
+        rejectedAt: c.rejectedAt,
+        rejectionReason: c.rejectionReason,
+        createdAt: c.createdAt ? new Date(c.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
+      }
+    })
+
+    // Merge localStorage saved customers with backend items (localStorage takes priority for recent state)
+    const combined = [...savedLocal, ...mappedBackend]
+    const uniqueMap = new Map<string, Customer>()
+    combined.forEach((item) => {
+      if (!uniqueMap.has(item.id)) uniqueMap.set(item.id, item)
+    })
+    const mapped = Array.from(uniqueMap.values())
 
     const filtered = mapped.filter((c) => {
       const q = (filters.search ?? "").toLowerCase()
@@ -156,6 +198,12 @@ export async function getCustomer(id: string) {
 export async function createCustomer(_payload: CreateCustomerPayload) {
   return safeRequest<{ ref: string }>(async () => {
     let res: any = null
+    const repId = _payload.salesRepId || "USR-003"
+    const repInfo = DEFAULT_SALES_REPS[repId] || {
+      name: _payload.salesRepName || "Yohannes Mesfin",
+      employeeId: _payload.salesRepEmployeeId || "EMP-104",
+    }
+
     try {
       res = await apiRequest<any>("/customers", "POST", {
         businessNumber: "CUS-" + Math.floor(1000 + Math.random() * 9000),
@@ -164,7 +212,9 @@ export async function createCustomer(_payload: CreateCustomerPayload) {
         contactPerson: _payload.contactName,
         phone: _payload.contactPhone,
         email: _payload.contactEmail,
-        salesRepId: _payload.salesRepId,
+        salesRepId: repId,
+        salesRepName: repInfo.name,
+        salesRepEmployeeId: repInfo.employeeId,
         branchDetails: {
           name: "Main Branch",
           address: (_payload.address || "") + ", " + (_payload.city || ""),
@@ -174,28 +224,37 @@ export async function createCustomer(_payload: CreateCustomerPayload) {
     } catch {
       // Backend offline fallback
     }
+
     const newRef = res?.businessNumber || "CUS-" + Math.floor(1000 + Math.random() * 9000)
-    const newCust: any = {
+    const submittedTime = new Date().toLocaleString("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    })
+    const newCust: Customer = {
       id: res?.id || "c-" + Date.now(),
       ref: newRef,
       name: _payload.name,
       type: _payload.type || "cafe",
-      status: "active",
+      status: "pending",
       contactPerson: _payload.contactName,
       contactName: _payload.contactName,
       phone: _payload.contactPhone,
       contactPhone: _payload.contactPhone,
       email: _payload.contactEmail,
-      contactEmail: _payload.contactEmail,
+      contactEmail: _payload.contactEmail || "N/A",
       address: _payload.address || "Addis Ababa",
-      location: "Addis Ababa",
       city: _payload.city || "Addis Ababa",
       creditLimit: _payload.creditLimit || "ETB 0.00",
       outstandingBalance: "ETB 0.00",
-      salesRep: _payload.salesRepId ? { id: _payload.salesRepId, name: "Sales Rep" } : null,
+      salesRep: {
+        id: repId,
+        name: repInfo.name,
+        employeeId: repInfo.employeeId,
+      },
+      submittedAt: submittedTime,
       createdAt: new Date().toLocaleDateString(),
     }
-    mockCustomers.unshift(newCust)
+    saveCustomerLocally(newCust)
     return { ref: newRef }
   })
 }
@@ -213,21 +272,60 @@ export async function updateCustomer(
   })
 }
 
-export async function approveCustomer(id: string, _managerId: string) {
+export async function approveCustomer(id: string, managerId: string) {
   return safeRequest<{ success: boolean }>(async () => {
-    return apiRequest<{ success: boolean }>(`/customers/${id}/approve`, "POST")
+    const saved = getSavedCustomers()
+    const target = saved.find((c) => c.id === id)
+    const approvedTime = new Date().toLocaleString("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    })
+    if (target) {
+      target.status = "approved"
+      target.approvedBy = managerId || "General Manager"
+      target.approvedAt = approvedTime
+      saveCustomerLocally(target)
+    }
+    try {
+      await apiRequest<{ success: boolean }>(`/customers/${id}/approve`, "POST", { managerId })
+    } catch {
+      /* ignore */
+    }
+    return { success: true }
   })
 }
 
 export async function rejectCustomer(
   id: string,
   reason: string,
-  _managerId: string,
+  managerId: string,
 ) {
   return safeRequest<{ success: boolean }>(async () => {
-    return apiRequest<{ success: boolean }>(`/customers/${id}/reject`, "POST", {
-      reason,
+    if (!reason || !reason.trim()) {
+      throw new Error("Rejection reason is required.")
+    }
+    const saved = getSavedCustomers()
+    const target = saved.find((c) => c.id === id)
+    const rejectedTime = new Date().toLocaleString("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
     })
+    if (target) {
+      target.status = "rejected"
+      target.rejectedBy = managerId || "General Manager"
+      target.rejectedAt = rejectedTime
+      target.rejectionReason = reason.trim()
+      saveCustomerLocally(target)
+    }
+    try {
+      await apiRequest<{ success: boolean }>(`/customers/${id}/reject`, "POST", {
+        reason: reason.trim(),
+        managerId,
+      })
+    } catch {
+      /* ignore */
+    }
+    return { success: true }
   })
 }
 
