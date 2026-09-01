@@ -215,7 +215,7 @@ const SvgIcon: FC<{
   strokeW?: number
 }> = ({ d, size = 14, stroke = "currentColor", strokeW = 1.75 }) => {
   if (!d || !d.startsWith("M")) {
-    return <span style={{ fontSize: size }}>{d || "📋"}</span>
+    return <span style={{ fontSize: size }}>{d || ""}</span>
   }
   return (
     <svg
@@ -1521,7 +1521,7 @@ export default function ManagerDashboard({
               lineHeight: 1.2,
             }}
           >
-            Welcome back, {currentUser?.name || "General Manager"} 👋
+            Welcome back, {currentUser?.name || "General Manager"}
           </h1>
           <p
             style={{
@@ -1827,9 +1827,24 @@ export default function ManagerDashboard({
                     key={card.id}
                     card={card}
                     onNavigate={onNavigate}
-                    onResolveCard={(resolvedId) =>
+                    onResolveCard={(resolvedId) => {
+                      // Remove the card from the attention list
                       setAttentionItems((prev) => prev.filter((item) => item.id !== resolvedId))
-                    }
+                      // Smart KPI Update: dynamically adjust dashboard numbers
+                      setKpis((prev) =>
+                        prev.map((kpi) => {
+                          // If a customer card was resolved, reduce the "Total Active Customers" count
+                          if (resolvedId.startsWith("cus-") && kpi.label === "Total Active Customers") {
+                            const currentNum = parseInt(kpi.value) || 0
+                            return {
+                              ...kpi,
+                              value: `${Math.max(0, currentNum - 1)} clients`,
+                            }
+                          }
+                          return kpi
+                        })
+                      )
+                    }}
                   />
                 ))}
               </div>

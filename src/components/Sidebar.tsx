@@ -353,7 +353,7 @@ export default function Sidebar({
                     textOverflow: "ellipsis",
                   }}
                 >
-                  Flavor Coffee Roasters
+                  Flavor Coffee PLC
                 </div>
                 <div
                   style={{

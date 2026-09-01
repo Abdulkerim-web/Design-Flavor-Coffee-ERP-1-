@@ -69,15 +69,15 @@ const MODULES: Record<ModuleId, React.FC> = {
 }
 
 const QUICK_CREATE_OPTIONS = [
-  { id: "order", label: "New Customer Order", icon: "📋", kbd: "N O" },
+  { id: "order", label: "New Customer Order", icon: "", kbd: "N O" },
   {
     id: "receive",
     label: "Record Green Bean Receiving",
-    icon: "📦",
+    icon: "",
     kbd: "N R",
   },
   { id: "qc", label: "Create QC Inspection Entry", icon: "🧪", kbd: "N Q" },
-  { id: "batch", label: "Schedule Roasting Batch", icon: "🔥", kbd: "N B" },
+  { id: "batch", label: "Schedule Roasting Batch", icon: "", kbd: "N B" },
 ]
 
 type UnauthPage = "welcome" | "login" | "team"

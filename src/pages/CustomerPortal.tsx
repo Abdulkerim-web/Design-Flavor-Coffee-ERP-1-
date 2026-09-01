@@ -129,7 +129,7 @@ const ROASTS = [
   {
     id: "medium" as RoastId,
     label: "Medium",
-    emoji: "☀️",
+    emoji: "",
     sub: "Bright & nuanced",
     temp: "196°C",
   },
@@ -979,7 +979,7 @@ export default function CustomerPortal() {
                 background: C.cream,
               }}
             >
-              <div style={{ fontSize: 40, marginBottom: 16 }}>☕</div>
+              <div style={{ fontSize: 40, marginBottom: 16 }}></div>
               <div
                 style={{
                   fontFamily: "Fraunces, serif",

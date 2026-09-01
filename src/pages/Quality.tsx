@@ -1711,21 +1711,21 @@ export default function Quality() {
             value: `${approvedMonth}`,
             sub: "Lots cleared for inventory",
             color: "#16A34A",
-            icon: "✅",
+            icon: "",
           },
           {
             label: "Rejected Lots",
             value: `${rejectedCount}`,
             sub: "Supplier return pending",
             color: "#DC2626",
-            icon: "❌",
+            icon: "",
           },
           {
             label: "Avg Cup Score",
             value: `${(completedLog.filter((l) => l.verdict === "approved").reduce((s, l) => s + l.cupScore, 0) / Math.max(1, completedLog.filter((l) => l.verdict === "approved").length)).toFixed(1)}`,
             sub: "Approved lots avg",
             color: "#2B4D3A",
-            icon: "☕",
+            icon: "",
           },
         ].map((c) => (
           <div key={c.label} className="stat-card">

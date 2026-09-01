@@ -104,7 +104,7 @@ const BeanSplitPanel = () => (
         border: "1px solid rgba(251, 191, 36, 0.3)",
       }}
     >
-      🔥 Dark · Artisanal Roast
+       Dark · Artisanal Roast
     </div>
     {/* Center badge */}
     <div
@@ -267,7 +267,7 @@ export default function Welcome({ onSignIn, onTeam }: WelcomeProps) {
               border: "1px solid rgba(255,255,255,0.2)",
             }}
           >
-            <span style={{ fontSize: 20 }}>☕</span>
+            <span style={{ fontSize: 20 }}></span>
           </div>
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: "#FFFFFF", fontFamily: "Fraunces, serif", letterSpacing: "-0.01em" }}>
@@ -471,10 +471,10 @@ export default function Welcome({ onSignIn, onTeam }: WelcomeProps) {
             }}
           >
             {[
-              { icon: "🔥", title: "Roasting & QC", desc: "Batch profiling & yield calculations" },
+              { icon: "", title: "Roasting & QC", desc: "Batch profiling & yield calculations" },
               { icon: "🚚", title: "Delivery Logistics", desc: "Driver assignment & dispatch tracking" },
               { icon: "💵", title: "Financial Core", desc: "Real-time payments & expense approvals" },
-              { icon: "📊", title: "Live Intelligence", desc: "Stock feasibility & automated reporting" },
+              { icon: "", title: "Live Intelligence", desc: "Stock feasibility & automated reporting" },
             ].map((f) => (
               <div key={f.title} className="feature-card">
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>

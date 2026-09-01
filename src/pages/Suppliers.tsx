@@ -853,14 +853,14 @@ export default function Suppliers() {
                     label: "Total Volume Purchased",
                     value: `${selected.totalKg.toLocaleString()} KG`,
                     sub: `${selected.deliveries} deliveries`,
-                    icon: "📦",
+                    icon: "",
                     c: "#2B4D3A",
                   },
                   {
                     label: "Total Financial Spend",
                     value: `ETB ${(selected.totalSpend / 1000000).toFixed(2)}M`,
                     sub: "Lifetime payments",
-                    icon: "💰",
+                    icon: "",
                     c: "#1F2937",
                   },
                   {
@@ -877,7 +877,7 @@ export default function Suppliers() {
                     label: "Lot Approval Rate",
                     value: `${selected.approvalRate}%`,
                     sub: `${selected.rejectionRate}% rejection`,
-                    icon: "✅",
+                    icon: "",
                     c: selected.approvalRate >= 95 ? "#16A34A" : "#F59E0B",
                   },
                 ].map((c) => (

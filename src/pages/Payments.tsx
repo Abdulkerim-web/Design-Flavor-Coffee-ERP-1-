@@ -1827,7 +1827,7 @@ function PaymentListView({
       {/* Empty state */}
       {!loading && payments.length === 0 && (
         <div style={{ textAlign: "center", padding: "60px 20px" }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🧾</div>
+          <div style={{ fontSize: 40, marginBottom: 12 }}></div>
           <div
             style={{
               fontSize: 15,

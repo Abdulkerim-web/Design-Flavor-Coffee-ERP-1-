@@ -504,7 +504,7 @@ const BrandPanel = () => (
               lineHeight: "18px",
             }}
           >
-            Flavor Coffee Roasters
+            Flavor Coffee PLC
           </div>
           <div
             style={{
@@ -2018,7 +2018,7 @@ const MobileBrandHeader = () => (
           letterSpacing: "-0.01em",
         }}
       >
-        Flavor Coffee Roasters
+        Flavor Coffee PLC
       </div>
       <div
         style={{
@@ -2049,7 +2049,7 @@ export default function Login() {
 
   useEffect(() => {
     const t1 = setTimeout(() => setSplashText("Syncing Real-Time Supabase Engine…"), 1000)
-    const t2 = setTimeout(() => setSplashText("Loading Design Flavor Coffee ERP…"), 2000)
+    const t2 = setTimeout(() => setSplashText("Loading Flavor Coffee PLC ERP…"), 2000)
     const t3 = setTimeout(() => {
       setShowSplash(false)
       setVisible(true)
@@ -2109,7 +2109,7 @@ export default function Login() {
         </div>
 
         <h2 style={{ fontFamily: "Fraunces, serif", fontSize: 26, fontWeight: 700, margin: "0 0 8px", letterSpacing: "-0.02em" }}>
-          Design Flavor Coffee ERP
+          Flavor Coffee PLC ERP
         </h2>
         <div style={{ fontSize: 13, color: "#A7F3D0", fontFamily: "DM Mono, monospace", marginBottom: 28, height: 20 }}>
           {splashText}
@@ -2252,7 +2252,7 @@ export default function Login() {
                 letterSpacing: "0.04em",
               }}
             >
-              FCR-ERP v2.6 · © 2026 Flavor Coffee Roasters PLC
+              FCR-ERP v2.6 · © 2026 Flavor Coffee PLC
             </div>
           </div>
         </div>
@@ -2339,7 +2339,7 @@ export default function Login() {
                   letterSpacing: "0.04em",
                 }}
               >
-                FCR-ERP v2.6 · © 2026 Flavor Coffee Roasters PLC
+                FCR-ERP v2.6 · © 2026 Flavor Coffee PLC
               </div>
             </div>
           </div>

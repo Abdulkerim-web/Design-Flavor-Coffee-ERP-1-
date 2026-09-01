@@ -784,7 +784,7 @@ function UnsavedBar({
 function GeneralPane() {
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [name, setName] = useState("Flavor Coffee Roasters PLC")
+  const [name, setName] = useState("Flavor Coffee PLC")
   const [tin, setTin] = useState("0023-401-882")
   const [email, setEmail] = useState("info@flavorcoffee.et")
   const [phone, setPhone] = useState("+251 11 551 8800")

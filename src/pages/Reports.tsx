@@ -2584,8 +2584,8 @@ export default function Reports() {
                 >
                   {([
                     ["pdf", "PDF", "📄"],
-                    ["xlsx", "Excel", "📊"],
-                    ["csv", "CSV", "📋"],
+                    ["xlsx", "Excel", ""],
+                    ["csv", "CSV", ""],
                   ] as [ExportFmt, string, string][]).map(([k, l, e]) => (
                     <button
                       key={k}
