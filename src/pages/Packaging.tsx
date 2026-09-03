@@ -1079,8 +1079,8 @@ function ListView({
   }, [search, statusFilter])
 
   const [showPackModal, setShowPackModal] = useState(false)
-  const [packJobRef, setPackJobRef] = useState("PJ-102")
-  const [packSize, setPackSize] = useState("250g Valve Bag")
+  const [packJobRef, setPackJobRef] = useState("")
+  const [packSize, setPackSize] = useState("")
   const [packBags, setPackBags] = useState("100")
 
   useEffect(() => {
