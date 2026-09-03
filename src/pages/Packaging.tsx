@@ -1070,11 +1070,7 @@ function ListView({
         status: statusFilter || undefined,
       })
       const fetched = result.data ?? []
-      const savedLocal = getSavedPackingJobs()
-      const combined = [...savedLocal, ...fetched]
-      const uniqueMap = new Map<string, PackingJob>()
-      combined.forEach((item) => uniqueMap.set(item.id, item))
-      setJobs(Array.from(uniqueMap.values()))
+      setJobs(fetched)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load packing jobs.")
     } finally {

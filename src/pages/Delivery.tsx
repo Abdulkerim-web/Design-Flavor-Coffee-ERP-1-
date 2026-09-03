@@ -3228,11 +3228,7 @@ function saveDeliveryLocally(rec: DeliveryRecord) {
         : undefined,
     )
     const fetched = (r.state === "ok" && r.data) ? r.data : []
-    const savedLocal = getSavedDeliveries()
-    const combined = [...savedLocal, ...fetched]
-    const uniqueMap = new Map<string, DeliveryRecord>()
-    combined.forEach((item) => uniqueMap.set(item.id, item))
-    setDeliveries(Array.from(uniqueMap.values()))
+    setDeliveries(fetched)
     setListLoading(false)
   }, [search, statusFilter])
 

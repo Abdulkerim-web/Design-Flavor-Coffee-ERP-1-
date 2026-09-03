@@ -97,6 +97,24 @@ function AppInner() {
   const [logoutOpen, setLogoutOpen] = useState(false)
   const { isMobile } = useBreakpoint()
 
+  // Wipe legacy browser-cached demo data on startup to ensure a 100% clean zero data state
+  useEffect(() => {
+    try {
+      const keys = [
+        "erp_orders_records",
+        "erp_customers_records",
+        "erp_delivery_records",
+        "erp_roasting_jobs",
+        "erp_packing_jobs",
+        "erp_payment_records",
+        "erp_notifications_list",
+        "erp_custom_reports",
+        "erp_expenses_records",
+      ]
+      keys.forEach((k) => localStorage.removeItem(k))
+    } catch {}
+  }, [])
+
   // ⌘K / Ctrl+K global shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

@@ -1442,18 +1442,10 @@ function PaymentListView({
       ])
       if (sumRes.data) setSummary(sumRes.data)
       const fetched = listRes.data || []
-      const savedLocal = getSavedPayments()
-      const combined = [...savedLocal, ...fetched]
-      const uniqueMap = new Map<string, PaymentRecord>()
-      combined.forEach((item) => uniqueMap.set(item.id, item))
-      setPayments(Array.from(uniqueMap.values()))
+      setPayments(fetched)
     } catch {
-      const savedLocal = getSavedPayments()
-      if (savedLocal.length > 0) {
-        setPayments(savedLocal)
-      } else {
-        setError("Failed to load payments. Please try again.")
-      }
+      setPayments([])
+      setError("Failed to load payments. Please try again.")
     } finally {
       setLoading(false)
     }

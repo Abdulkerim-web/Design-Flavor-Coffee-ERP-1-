@@ -137,13 +137,8 @@ export async function listCustomers(
       }
     })
 
-    // Merge localStorage saved customers with backend items (localStorage takes priority for recent state)
-    const combined = [...savedLocal, ...mappedBackend]
-    const uniqueMap = new Map<string, Customer>()
-    combined.forEach((item) => {
-      if (!uniqueMap.has(item.id)) uniqueMap.set(item.id, item)
-    })
-    const mapped = Array.from(uniqueMap.values())
+    // Use backend data directly from Supabase
+    const mapped = mappedBackend
 
     const filtered = mapped.filter((c) => {
       const q = (filters.search ?? "").toLowerCase()

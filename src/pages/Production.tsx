@@ -2078,20 +2078,12 @@ function ListView({ onSelect }: { onSelect: (id: string) => void }) {
         timeline: [],
       }))
 
-      const savedLocal = getSavedRoastingJobs()
-      setJobs((prev) => {
-        const tempItems = prev.filter((p) => p.id.startsWith("temp-") || p.id.startsWith("rst-"))
-        const combined = [...tempItems, ...savedLocal, ...mapped]
-        const uniqueMap = new Map<string, RoastingJob>()
-        combined.forEach((item) => uniqueMap.set(item.id, item))
-        const finalJobs = Array.from(uniqueMap.values())
-        setStats({
-          waiting: finalJobs.filter((j) => j.status === "waiting").length,
-          active: finalJobs.filter((j) => j.status === "active").length,
-          completedToday: finalJobs.filter((j) => j.status === "completed").length,
-          needsReview: finalJobs.filter((j) => j.status === "needs-review" || j.status === "discrepancy").length,
-        })
-        return finalJobs
+      setJobs(mapped)
+      setStats({
+        waiting: mapped.filter((j) => j.status === "waiting").length,
+        active: mapped.filter((j) => j.status === "active").length,
+        completedToday: mapped.filter((j) => j.status === "completed").length,
+        needsReview: mapped.filter((j) => j.status === "needs-review" || j.status === "discrepancy").length,
       })
     } catch {
       setError("Unable to load roasting jobs.")
