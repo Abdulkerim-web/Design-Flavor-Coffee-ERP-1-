@@ -1876,10 +1876,9 @@ export default function Suppliers() {
                 </div>
               </div>
             </div>
+          )}
         </div>
       </div>
     )}
       </main>
     </div>
-  )
-}
