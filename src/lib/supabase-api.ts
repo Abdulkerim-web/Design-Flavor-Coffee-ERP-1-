@@ -649,7 +649,7 @@ export async function handleSupabaseApiRequest(
     }
   if (path === "/inventory/attention" && method === "GET") return []
   if (path === "/finance/banking/summary" && method === "GET")
-    return { totalBalance: "ETB 150000", unassignedDeposits: "ETB 0", pendingReconciliations: 0, alerts: [] }
+    return { totalBalance: "ETB 0", unassignedDeposits: "ETB 0", pendingReconciliations: 0, alerts: [] }
   if (path === "/finance/expenses/summary" && method === "GET") {
     const { data: expList } = await supabaseAdmin.from("expenses").select("*")
     const list = expList || []
@@ -916,7 +916,7 @@ async function ensureDefaultOrderAndItem() {
           if (meta.coffee) b.coffee = meta.coffee
           if (meta.notes) b.notes = meta.notes
         }
-        if (!b.coffee) b.coffee = "Guji Grade 1 Natural"
+        if (!b.coffee) b.coffee = ""
       })
       return mapped
     }
