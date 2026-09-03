@@ -1876,8 +1876,9 @@ export default function Suppliers() {
                 </div>
               </div>
             </div>
-          )}</div> {/* end selected null guard */}
         </div>
+      </div>
+    )}
       </main>
     </div>
   )
