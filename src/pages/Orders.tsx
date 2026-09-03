@@ -3057,7 +3057,7 @@ const OrderDetailView: FC<{
               <div>
                 <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Creator Role & ID</div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", fontFamily: "DM Mono" }}>
-                  {order.creatorRole || "Sales Representative"} ({order.creatorId || "")})
+                  {order.creatorRole || "Sales Representative"} ({order.creatorId || ""})
                 </div>
               </div>
               <div>

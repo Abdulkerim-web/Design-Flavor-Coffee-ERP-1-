@@ -628,7 +628,7 @@ export default function Suppliers() {
               {loadState === "loading" ? "Loading suppliers\u2026" : "Select a supplier to view details"}
             </div>
           </div>
-        ) : (<>
+        ) : (<div style={{ display: "contents" }}>
         {/* Profile Header */}
         <div
           style={{
@@ -1876,7 +1876,7 @@ export default function Suppliers() {
                 </div>
               </div>
             </div>
-          )}</> {/* end selected null guard */}
+          )}</div> {/* end selected null guard */}
         </div>
       </main>
     </div>
