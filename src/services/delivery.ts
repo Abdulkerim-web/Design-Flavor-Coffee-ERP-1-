@@ -116,20 +116,10 @@ export interface PaymentSummaryStats {
   outstandingAmount: string
 }
 
-const BANK_ACCOUNTS: BankAccount[] = [
-  {
-    id: "ba-1",
-    bankName: "Commercial Bank of Ethiopia",
-    accountName: "Addis Coffee Trading PLC",
-    accountNumber: "****4821",
-  },
-  {
-    id: "ba-2",
-    bankName: "Awash Bank",
-    accountName: "Addis Coffee Trading PLC",
-    accountNumber: "****9034",
-  },
-]
+// Bank accounts are managed from the Banking module and stored in Supabase.
+// This returns an empty list by default; real accounts come from /finance/accounts API.
+const BANK_ACCOUNTS: BankAccount[] = []
+
 
 export async function getDeliverySummary() {
   return safeRequest(async () =>
