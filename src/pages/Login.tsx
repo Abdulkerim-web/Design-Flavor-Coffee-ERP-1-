@@ -20,12 +20,13 @@ type FieldError = {
    Demo accounts
 ───────────────────────────────────────────────────────── */
 const DEMO_ACCOUNTS = [
-  { email: "abebe.g@flavorcoffee.et", label: "General Manager" },
-  { email: "meron.b@flavorcoffee.et", label: "Sales Rep" },
-  { email: "dawit.h@flavorcoffee.et", label: "Head Roaster" },
-  { email: "tigist.a@flavorcoffee.et", label: "Accountant" },
-  { email: "yohannes.m@flavorcoffee.et", label: "Delivery Staff" },
-  { email: "biruk.a@flavorcoffee.et", label: "Disabled Account" },
+  { email: "manager@company.et", label: "General Manager" },
+  { email: "vicemanager@company.et", label: "Vice Manager" },
+  { email: "salesrep@company.et", label: "Sales Rep" },
+  { email: "inventory@company.et", label: "Storekeeper" },
+  { email: "roaster@company.et", label: "Head Roaster" },
+  { email: "accountant@company.et", label: "Accountant" },
+  { email: "delivery@company.et", label: "Delivery Staff" },
 ]
 const ROLE_MAP = Object.fromEntries(INITIAL_USERS.map((u) => [u.email, u.role]))
 

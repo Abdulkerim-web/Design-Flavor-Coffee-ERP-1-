@@ -889,7 +889,7 @@ async function ensureDefaultOrderAndItem() {
     .select("id, customer_id")
     .order("created_at", { ascending: false })
     .limit(1)
-    .single()
+    .maybeSingle()
 
   if (existingOrder?.id) {
     const { data: existingItem } = await supabaseAdmin
@@ -897,56 +897,14 @@ async function ensureDefaultOrderAndItem() {
       .select("id")
       .eq("order_id", existingOrder.id)
       .limit(1)
-      .single()
+      .maybeSingle()
     return {
       orderId: existingOrder.id,
-      orderItemId: existingItem?.id || "00000000-0000-0000-0000-000000000000",
-      customerId: existingOrder.customer_id || "00000000-0000-0000-0000-000000000000",
+      orderItemId: existingItem?.id || null,
+      customerId: existingOrder.customer_id || null,
     }
   }
-
-  // Create default customer & order if none exists in DB
-  let customerId = "00000000-0000-0000-0000-000000000000"
-  const { data: cust } = await supabaseAdmin.from("customers").select("id").limit(1).single()
-  if (cust?.id) {
-    customerId = cust.id
-  } else {
-    const { data: newCust } = await supabaseAdmin
-      .from("customers")
-      .insert([{ name: "Default Customer", business_number: `CUS-${Math.floor(Math.random() * 9000 + 1000)}`, status: "active" }])
-      .select()
-    if (newCust?.[0]?.id) customerId = newCust[0].id
-  }
-
-  const { data: newOrder } = await supabaseAdmin
-    .from("orders")
-    .insert([{
-      orderNumber: `ORD-${Math.floor(Math.random() * 9000 + 1000)}`,
-      customer_id: customerId,
-      status: "pending-confirmation",
-      branch_id: "BRN-001",
-      sales_rep_id: null,
-      pre_vat_amount: 1000,
-      vat_rate: 15.0,
-      vat_amount: 150,
-      total_amount: 1150,
-    }])
-    .select()
-
-  const orderId = newOrder?.[0]?.id || "00000000-0000-0000-0000-000000000000"
-  const { data: newItem } = await supabaseAdmin
-    .from("order_items")
-    .insert([{
-      order_id: orderId,
-      coffee_product_id: "Guji Grade 1 Natural",
-      quantity: 60,
-      unit_price: 100,
-      status: "pending-confirmation",
-    }])
-    .select()
-
-  const orderItemId = newItem?.[0]?.id || "00000000-0000-0000-0000-000000000000"
-  return { orderId, orderItemId, customerId }
+  return { orderId: null, orderItemId: null, customerId: null }
 }
 
     const mapped = camelizeKeys(data) || []
