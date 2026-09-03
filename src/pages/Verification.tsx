@@ -1,5 +1,5 @@
 /* Responsive: mobile ≤640 | tablet 641–1024 | laptop 1025–1440 | desktop >1440 */
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useBreakpoint } from "../hooks/useBreakpoint"
 import {
   LineChart,
@@ -14,229 +14,11 @@ import {
   AreaChart,
 } from "recharts"
 
-/* ── Historical yield data — last 20 batches ─────────── */
-const HISTORY = [
-  {
-    batch: "BAT-072",
-    yield: 84.2,
-    input: 30,
-    output: 25.26,
-    date: "2026-07-01",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-073",
-    yield: 86.1,
-    input: 30,
-    output: 25.83,
-    date: "2026-07-02",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-074",
-    yield: 83.5,
-    input: 30,
-    output: 25.05,
-    date: "2026-07-03",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-075",
-    yield: 85.7,
-    input: 30,
-    output: 25.71,
-    date: "2026-07-05",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-076",
-    yield: 87.0,
-    input: 30,
-    output: 26.1,
-    date: "2026-07-06",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-077",
-    yield: 82.9,
-    input: 30,
-    output: 24.87,
-    date: "2026-07-08",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-078",
-    yield: 86.4,
-    input: 30,
-    output: 25.92,
-    date: "2026-07-09",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-079",
-    yield: 85.0,
-    input: 30,
-    output: 25.5,
-    date: "2026-07-11",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-080",
-    yield: 88.2,
-    input: 30,
-    output: 26.46,
-    date: "2026-07-12",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-081",
-    yield: 84.8,
-    input: 30,
-    output: 25.44,
-    date: "2026-07-14",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-082",
-    yield: 85.3,
-    input: 30,
-    output: 25.59,
-    date: "2026-07-15",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-083",
-    yield: 81.6,
-    input: 30,
-    output: 24.48,
-    date: "2026-07-17",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-084",
-    yield: 86.7,
-    input: 30,
-    output: 26.01,
-    date: "2026-07-18",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-085",
-    yield: 85.9,
-    input: 30,
-    output: 25.77,
-    date: "2026-07-20",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-086",
-    yield: 87.4,
-    input: 30,
-    output: 26.22,
-    date: "2026-07-21",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-087",
-    yield: 83.1,
-    input: 30,
-    output: 24.93,
-    date: "2026-07-23",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-088",
-    yield: 85.5,
-    input: 30,
-    output: 25.65,
-    date: "2026-07-24",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-089",
-    yield: 84.6,
-    input: 30,
-    output: 25.38,
-    date: "2026-07-26",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-090",
-    yield: 86.0,
-    input: 30,
-    output: 25.8,
-    date: "2026-07-28",
-    profile: "Guji Medium",
-  },
-  {
-    batch: "BAT-091",
-    yield: 85.0,
-    input: 30,
-    output: 25.5,
-    date: "2026-07-30",
-    profile: "Guji Medium",
-  },
-]
 
-/* ── Demo batch ─────────────────────────────────────── */
-interface VerificationBatch {
-  id: string
-  roaster: string
-  storekeeper: string
-  greenKg: number
-  roasterOutput: number
-  roasterTime: string
-  lot: string
-  profile: string
-  targetYield: number
-}
+/* ── Historical yield & pending batch data — loaded from API ─────────── */
+// These arrays are populated dynamically from Supabase; no hardcoded demo data
 
-const DEMO_BATCHES: VerificationBatch[] = [
-  {
-    id: "BAT-2026-091A",
-    roaster: "Markos Tadesse",
-    storekeeper: "Bekele Vance",
-    greenKg: 30,
-    roasterOutput: 25.5,
-    roasterTime: "10:15 AM",
-    lot: "GRN-GUJ-2026-001",
-    profile: "Guji Medium Roast",
-    targetYield: 85.0,
-  },
-  {
-    id: "BAT-2026-091B",
-    roaster: "Dawit Haile",
-    storekeeper: "Bekele Vance",
-    greenKg: 30,
-    roasterOutput: 25.8,
-    roasterTime: "11:05 AM",
-    lot: "GRN-GUJ-2026-001",
-    profile: "Guji Medium Roast",
-    targetYield: 85.0,
-  },
-  {
-    id: "BAT-2026-092A",
-    roaster: "Meseret Girma",
-    storekeeper: "Sara Hailu",
-    greenKg: 30,
-    roasterOutput: 24.1,
-    roasterTime: "12:30 PM",
-    lot: "GRN-YRG-2026-014",
-    profile: "Yirgacheffe Light",
-    targetYield: 86.0,
-  },
-  {
-    id: "BAT-2026-093A",
-    roaster: "Dawit Haile",
-    storekeeper: "Bekele Vance",
-    greenKg: 30,
-    roasterOutput: 23.8,
-    roasterTime: "08:45 AM",
-    lot: "GRN-LMU-2026-003",
-    profile: "Limu Dark Roast",
-    targetYield: 84.0,
-  },
-]
+const DEMO_BATCHES: VerificationBatch[] = [] // populated from API via state
 
 type VerificationStatus = "pending" | "verified" | "discrepancy" | "override"
 
@@ -427,7 +209,52 @@ export default function Verification() {
         ? "24px 28px"
         : "28px 32px"
   const maxWidthStyle = isDesktop ? { maxWidth: 1600, margin: "0 auto" } : {}
-  const [selectedId, setSelectedId] = useState(DEMO_BATCHES[0].id)
+
+  // Dynamic data state — loaded from Supabase
+  const [batches, setBatches] = useState<VerificationBatch[]>([])
+  const [history, setHistory] = useState<any[]>([])
+  const [dataLoading, setDataLoading] = useState(true)
+
+  useEffect(() => {
+    Promise.all([
+      import("../services/api").then(({ apiRequest }) =>
+        apiRequest<any[]>("/roasting/pending-verification", "GET").catch(() => [])
+      ),
+      import("../services/api").then(({ apiRequest }) =>
+        apiRequest<any[]>("/roasting/yield-history", "GET").catch(() => [])
+      ),
+    ]).then(([batchData, histData]) => {
+      if (Array.isArray(batchData) && batchData.length > 0) {
+        setBatches(batchData.map((b: any) => ({
+          id: b.id || b.batch_number || `BAT-${Date.now()}`,
+          roaster: b.roaster_name || b.created_by_name || "",
+          storekeeper: b.storekeeper_name || "",
+          greenKg: parseFloat(b.green_input_kg || b.greenKg || 0),
+          roasterOutput: parseFloat(b.roasted_output_kg || b.roasterOutput || 0),
+          roasterTime: b.roasted_at ? new Date(b.roasted_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "",
+          lot: b.lot_number || b.green_lot_id || "",
+          profile: b.roast_profile || b.coffee_type || "",
+          targetYield: parseFloat(b.target_yield || 85),
+        })))
+      }
+      if (Array.isArray(histData) && histData.length > 0) {
+        setHistory(histData.map((h: any) => ({
+          batch: h.batch_number || h.id || "",
+          yield: parseFloat(h.yield_pct || h.actual_yield || 0),
+          input: parseFloat(h.green_input_kg || 0),
+          output: parseFloat(h.roasted_output_kg || 0),
+          date: h.date || (h.created_at ? h.created_at.slice(0, 10) : ""),
+          profile: h.roast_profile || h.coffee_type || "",
+        })))
+      }
+      setDataLoading(false)
+    })
+  }, [])
+
+  const [selectedId, setSelectedId] = useState("")
+  const effectiveBatches = batches.length > 0 ? batches : DEMO_BATCHES
+  const activeId = selectedId || effectiveBatches[0]?.id || ""
+
   const [skWeights, setSkWeights] = useState<Record<string, number | "">>({})
   const [statuses, setStatuses] = useState<Record<string, VerificationStatus>>(
     {},
@@ -439,29 +266,29 @@ export default function Verification() {
     "all",
   )
 
-  const batch = DEMO_BATCHES.find((b) => b.id === selectedId)!
-  const skEntry = skWeights[batch.id]
+  const batch = effectiveBatches.find((b) => b.id === activeId)
+  const skEntry = batch ? skWeights[batch.id] : undefined
   const skNum = Number(skEntry)
   const delta =
-    skEntry !== "" && skEntry !== undefined
+    batch && skEntry !== "" && skEntry !== undefined
       ? Math.abs(batch.roasterOutput - skNum)
       : null
   const hasDiscrepancy = delta !== null && delta > TOLERANCE_KG
-  const batchStatus = statuses[batch.id] ?? "pending"
+  const batchStatus = batch ? (statuses[batch.id] ?? "pending") : "pending"
 
-  const effectiveOutput =
+  const effectiveOutput = !batch ? 0 :
     batchStatus === "override"
       ? Number(overrideWt[batch.id] || batch.roasterOutput)
       : batchStatus === "verified"
         ? skNum
         : batch.roasterOutput
 
-  const yieldPct = +((effectiveOutput / batch.greenKg) * 100).toFixed(1)
-  const weightLoss = +(batch.greenKg - effectiveOutput).toFixed(2)
+  const yieldPct = batch ? +((effectiveOutput / batch.greenKg) * 100).toFixed(1) : 0
+  const weightLoss = batch ? +(batch.greenKg - effectiveOutput).toFixed(2) : 0
   const inSpec = yieldPct >= 80 && yieldPct <= 90
 
   const handleSkSubmit = () => {
-    if (!skEntry || skNum <= 0) return
+    if (!batch || !skEntry || skNum <= 0) return
     setStatuses((prev) => ({
       ...prev,
       [batch.id]: hasDiscrepancy ? "discrepancy" : "verified",
@@ -469,15 +296,16 @@ export default function Verification() {
   }
 
   const handleOverride = () => {
-    if (!overrideWt[batch.id] || !overrideRsn[batch.id]?.trim()) return
+    if (!batch || !overrideWt[batch.id] || !overrideRsn[batch.id]?.trim()) return
     setSubmitting(true)
     setTimeout(() => {
-      setStatuses((prev) => ({ ...prev, [batch.id]: "override" }))
+      setStatuses((prev) => ({ ...prev, [batch!.id]: "override" }))
       setSubmitting(false)
     }, 800)
   }
 
   const handleReweigh = () => {
+    if (!batch) return
     setSkWeights((prev) => {
       const n = { ...prev }
       delete n[batch.id]
@@ -491,17 +319,27 @@ export default function Verification() {
   }
 
   /* history filtered */
+  const HISTORY = history
   const histData = HISTORY.filter((h) => {
     if (histFilter === "in-spec") return h.yield >= 80 && h.yield <= 90
     if (histFilter === "out-spec") return h.yield < 80 || h.yield > 90
     return true
   })
-  const avgYield = +(
-    HISTORY.reduce((s, h) => s + h.yield, 0) / HISTORY.length
-  ).toFixed(1)
+  const avgYield = HISTORY.length > 0
+    ? +( HISTORY.reduce((s, h) => s + h.yield, 0) / HISTORY.length ).toFixed(1)
+    : 0
   const inSpecCount = HISTORY.filter(
     (h) => h.yield >= 80 && h.yield <= 90,
   ).length
+
+  // Show loading/empty state if no batches available yet
+  if (dataLoading) {
+    return (
+      <div style={{ padding: "48px 32px", textAlign: "center", color: "var(--text-secondary)" }}>
+        <div style={{ fontSize: 14 }}>Loading verification batches…</div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -548,7 +386,7 @@ export default function Verification() {
             {[
               {
                 label: "Pending",
-                count: DEMO_BATCHES.filter(
+                count: effectiveBatches.filter(
                   (b) => !statuses[b.id] || statuses[b.id] === "pending",
                 ).length,
                 color: "#F59E0B",
@@ -629,9 +467,9 @@ export default function Verification() {
             Awaiting Verification
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {DEMO_BATCHES.map((b) => {
+            {effectiveBatches.map((b) => {
               const st = statuses[b.id] ?? "pending"
-              const isActive = b.id === selectedId
+              const isActive = b.id === activeId
               const yPct = +((b.roasterOutput / b.greenKg) * 100).toFixed(1)
               return (
                 <button

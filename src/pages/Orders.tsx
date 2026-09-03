@@ -27,7 +27,7 @@ import {
   type FeasibilityKey,
   type PaymentStatusKey,
 } from "../lib/orderStatus"
-import { listOrders, createOrder } from "../services/orders"
+import { listOrders, createOrder, confirmOrder, rejectOrder, cancelOrder } from "../services/orders"
 import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 
 /* ─────────────────────────────────────────────────────────────
@@ -204,11 +204,11 @@ const mkTl = (status: OrderStatusKey): TimelineEvent[] => {
     state: "future",
   })
 
-  const base = [d(1, "Order created", "Hiwot Tadesse", "Aug 9, 2026 09:00 AM")]
+  const base = [d(1, "Order created", "Sales Representative", "")]
   if (status === "pending-confirmation")
     return [
       ...base,
-      c(2, "Awaiting manager confirmation", "Aug 9, 2026"),
+      c(2, "Awaiting manager confirmation", ""),
       f(3, "Confirmed"),
       f(4, "Roasting"),
       f(5, "Packing"),
@@ -218,17 +218,10 @@ const mkTl = (status: OrderStatusKey): TimelineEvent[] => {
   if (status === "roasting")
     return [
       ...base,
-      d(2, "Order confirmed", "Yohannes Bekele", "Aug 8, 2026 10:15 AM"),
-      d(3, "Green coffee reserved", "System", "Aug 8, 2026 10:16 AM", {
-        quantity: "97.1 KG",
-      }),
-      d(
-        4,
-        "Roasting started — Batch RB-2887",
-        "Dawit Haile",
-        "Aug 9, 2026 08:30 AM",
-      ),
-      c(5, "Roasting in progress", "Aug 9, 2026"),
+      d(2, "Order confirmed", "General Manager", ""),
+      d(3, "Green coffee reserved", "System", ""),
+      d(4, "Roasting started", "Roasting Operator", ""),
+      c(5, "Roasting in progress", ""),
       f(6, "Packing"),
       f(7, "Delivery"),
       f(8, "Payment"),
@@ -236,23 +229,10 @@ const mkTl = (status: OrderStatusKey): TimelineEvent[] => {
   if (status === "roasted-needs-review")
     return [
       ...base,
-      d(2, "Order confirmed", "Yohannes Bekele", "Aug 8, 2026"),
-      d(3, "Green coffee reserved", "System", "Aug 8, 2026", {
-        quantity: "72.7 KG",
-      }),
-      d(
-        4,
-        "Roasting completed — Batch RB-2887",
-        "Dawit Haile",
-        "Aug 9, 2026 02:00 PM",
-      ),
-      w(
-        5,
-        "Discrepancy flagged by storekeeper",
-        "Solomon Tesfaye",
-        "Aug 9, 2026 02:45 PM",
-        "Expected 48.0 KG, received 44.3 KG. Manager review required.",
-      ),
+      d(2, "Order confirmed", "General Manager", ""),
+      d(3, "Green coffee reserved", "System", ""),
+      d(4, "Roasting completed", "Roasting Operator", ""),
+      w(5, "Discrepancy flagged by storekeeper", "Storekeeper", "", "Manager review required."),
       f(6, "Packing"),
       f(7, "Delivery"),
       f(8, "Payment"),
@@ -260,52 +240,41 @@ const mkTl = (status: OrderStatusKey): TimelineEvent[] => {
   if (status === "ready-for-delivery")
     return [
       ...base,
-      d(2, "Order confirmed", "Yohannes Bekele", "Aug 7, 2026"),
-      d(3, "Green coffee reserved", "System", "Aug 7, 2026", {
-        quantity: "48.5 KG",
-      }),
-      d(4, "Roasting completed", "Dawit Haile", "Aug 8, 2026 01:00 PM"),
-      d(5, "Storekeeper accepted", "Solomon Tesfaye", "Aug 8, 2026 02:00 PM", {
-        quantity: "40 KG",
-      }),
-      d(6, "Packing completed", "Selamawit Bekele", "Aug 9, 2026 10:00 AM"),
-      c(7, "Ready for delivery — awaiting driver assignment", "Aug 9, 2026"),
+      d(2, "Order confirmed", "General Manager", ""),
+      d(3, "Green coffee reserved", "System", ""),
+      d(4, "Roasting completed", "Roasting Operator", ""),
+      d(5, "Storekeeper accepted", "Storekeeper", ""),
+      d(6, "Packing completed", "Packaging Operator", ""),
+      c(7, "Ready for delivery — awaiting driver assignment", ""),
       f(8, "Delivery"),
       f(9, "Payment"),
     ]
   if (status === "payment-pending")
     return [
       ...base,
-      d(2, "Order confirmed", "Yohannes Bekele", "Aug 2, 2026"),
-      d(3, "Green coffee reserved", "System", "Aug 2, 2026"),
-      d(4, "Roasting completed", "Dawit Haile", "Aug 3, 2026"),
-      d(5, "Storekeeper accepted", "Solomon Tesfaye", "Aug 3, 2026"),
-      d(6, "Packing completed", "Selamawit Bekele", "Aug 4, 2026"),
-      d(
-        7,
-        "Delivered — verified by customer",
-        "Yohannes Mesfin",
-        "Aug 5, 2026 03:00 PM",
-      ),
-      c(8, "Awaiting payment", "Aug 5, 2026"),
+      d(2, "Order confirmed", "General Manager", ""),
+      d(3, "Green coffee reserved", "System", ""),
+      d(4, "Roasting completed", "Roasting Operator", ""),
+      d(5, "Storekeeper accepted", "Storekeeper", ""),
+      d(6, "Packing completed", "Packaging Operator", ""),
+      d(7, "Delivered — verified by customer", "Driver", ""),
+      c(8, "Awaiting payment", ""),
       f(9, "Payment received"),
       f(10, "Completed"),
     ]
   if (status === "completed")
     return [
       ...base,
-      d(2, "Order confirmed", "Yohannes Bekele", "Jul 20, 2026"),
-      d(3, "Green coffee reserved", "System", "Jul 20, 2026"),
-      d(4, "Roasting completed", "Dawit Haile", "Jul 21, 2026"),
-      d(5, "Storekeeper accepted", "Solomon Tesfaye", "Jul 21, 2026"),
-      d(6, "Packing completed", "Selamawit Bekele", "Jul 22, 2026"),
-      d(7, "Fully delivered", "Yohannes Mesfin", "Jul 23, 2026"),
-      d(8, "Full payment received", "Tigist Alemu", "Jul 28, 2026 11:00 AM", {
-        quantity: "ETB 94,185.00",
-      }),
-      d(9, "Order completed", "System", "Jul 28, 2026 11:01 AM"),
+      d(2, "Order confirmed", "General Manager", ""),
+      d(3, "Green coffee reserved", "System", ""),
+      d(4, "Roasting completed", "Roasting Operator", ""),
+      d(5, "Storekeeper accepted", "Storekeeper", ""),
+      d(6, "Packing completed", "Packaging Operator", ""),
+      d(7, "Fully delivered", "Driver", ""),
+      d(8, "Full payment received", "Cashier", ""),
+      d(9, "Order completed", "System", ""),
     ]
-  return [...base, c(2, "In progress", "Aug 9, 2026")]
+  return [...base, c(2, "In progress", "")]
 }
 
 const SAMPLE_ORDERS: Order[] = []
@@ -2621,6 +2590,7 @@ const OrderDetailView: FC<{
   canCancel: boolean
 }> = ({ order, onBack, canConfirm, canReject, canCancel }) => {
   const { isMobile } = useBreakpoint()
+  const { currentUser } = useAuth()
   const toast = useToast()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
@@ -2657,13 +2627,27 @@ const OrderDetailView: FC<{
 
   const doConfirm = async () => {
     setActionLoading(true)
-    await new Promise((r) => setTimeout(r, 1200))
-    setActionLoading(false)
-    setConfirmOpen(false)
-    setLocalStatus("confirmed")
-    toast.success("Order confirmed", {
-      description: `${order.ref} confirmed and stock reserved.`,
-    })
+    try {
+      const managerId = currentUser?.id || currentUser?.name || "General Manager"
+      const result = await confirmOrder(order.id, managerId)
+      if (result.ok) {
+        setConfirmOpen(false)
+        setLocalStatus("confirmed")
+        toast.success("Order confirmed", {
+          description: `${order.ref} confirmed and stock reserved.`,
+        })
+      } else {
+        toast.error("Failed to confirm order", {
+          description: result.error || "Please try again.",
+        })
+      }
+    } catch (err: any) {
+      toast.error("Error confirming order", {
+        description: err?.message || "An unexpected error occurred.",
+      })
+    } finally {
+      setActionLoading(false)
+    }
   }
   const doReject = async () => {
     if (!rejectReason.trim()) {
@@ -2672,8 +2656,9 @@ const OrderDetailView: FC<{
     }
     setRejectErr("")
     setActionLoading(true)
+    const managerId = currentUser?.id || currentUser?.name || "General Manager"
     const reasonText = rejectReason.trim()
-    await rejectOrder(order.id, reasonText, "General Manager")
+    await rejectOrder(order.id, reasonText, managerId)
 
     // Send notification to original order creator
     try {
@@ -3066,13 +3051,13 @@ const OrderDetailView: FC<{
               <div>
                 <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Original Order Creator</div>
                 <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--text-primary)" }}>
-                  {order.creatorName || order.salesRep?.name || "Yohannes Mesfin"}
+                  {order.creatorName || order.salesRep?.name || ""}
                 </div>
               </div>
               <div>
                 <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Creator Role & ID</div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", fontFamily: "DM Mono" }}>
-                  {order.creatorRole || "Sales Representative"} ({order.creatorId || "USR-003"})
+                  {order.creatorRole || "Sales Representative"} ({order.creatorId || "")})
                 </div>
               </div>
               <div>
@@ -5122,6 +5107,37 @@ const NewOrderView: FC<{ onBack: () => void }> = ({ onBack }) => {
               </div>
             </div>
           ))}
+          {/* Live KG total counter — minimum 10 KG enforcement */}
+          {(() => {
+            const totalKg = form.lines.reduce((s, l) => s + (parseFloat(l.quantity) || 0), 0)
+            const meetsMin = totalKg >= 10
+            return (
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "10px 14px",
+                borderRadius: 8,
+                background: meetsMin ? "#F0FDF4" : "#FEF2F2",
+                border: `1.5px solid ${meetsMin ? "#86EFAC" : "#FCA5A5"}`,
+                color: meetsMin ? "#15803D" : "#991B1B",
+                fontSize: 13,
+                fontWeight: 600,
+              }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  {meetsMin
+                    ? <><path d="M20 6L9 17l-5-5" /></>
+                    : <><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></>
+                  }
+                </svg>
+                <span>
+                  Total: <strong>{totalKg.toFixed(2)} KG</strong>
+                  {!meetsMin && ` — Need ${(10 - totalKg).toFixed(2)} KG more to meet the 10 KG minimum`}
+                  {meetsMin && " — Minimum quantity met ✓"}
+                </span>
+              </div>
+            )
+          })()}
           <button
             type="button"
             onClick={addLine}

@@ -18,12 +18,13 @@ import { canRead } from "../lib/rbac"
 import { can } from "../lib/can"
 import { CustomerFormModal } from "../components/CustomerFormModal"
 import { listCustomers } from "../services/customers"
+import { apiRequest } from "../services/api"
 import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 
 /* ─────────────────────────────────────────────────────────────
    TYPES
 ───────────────────────────────────────────────────────────── */
-type CustomerStatus = "pending" | "active" | "rejected" | "inactive"
+type CustomerStatus = "pending" | "approved" | "active" | "rejected" | "inactive"
 type CustomerType = "hotel" | "restaurant" | "cafe" | "airline" | "corporate" | "other"
 type View = "list" | "detail" | "new" | "edit"
 type LoadState = "loading" | "ok" | "error"
@@ -85,19 +86,11 @@ interface FormErrors {
   [k: string]: string
 }
 
-/* ─────────────────────────────────────────────────────────────
-   SAMPLE DATA — illustrative only; production data from PHP API
-───────────────────────────────────────────────────────────── */
-const SALES_REPS: SalesRep[] = [
-  { id: "sr1", name: "Hiwot Tadesse" },
-  { id: "sr2", name: "Bereket Assefa" },
-  { id: "sr3", name: "Fikremariam Alemu" },
-]
 
-const SAMPLE_CUSTOMERS: Customer[] = []
-
+/* ────────────────────────────────────────────────────────────
+   NO HARDCODED DATA — all data loads from the Supabase API at runtime
+──────────────────────────────────────────────────────────── */
 const SAMPLE_ACTIVITY: ActivityEvent[] = []
-
 const FULL_ACTIVITY: Record<string, ActivityEvent[]> = {}
 
 /* ─────────────────────────────────────────────────────────────
@@ -119,6 +112,14 @@ const STATUS_CFG: Record<CustomerStatus, {
     iconPath:
       "M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 8v4M12 16h.01",
     notice: "Customer registration is waiting for manager approval.",
+  },
+  approved: {
+    label: "Approved",
+    color: "#15803D",
+    bg: "#F0FDF4",
+    border: "#86EFAC",
+    iconPath: "M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3",
+    notice: "Customer has been approved by management and is now active.",
   },
   active: {
     label: "Active",
@@ -147,6 +148,14 @@ const STATUS_CFG: Record<CustomerStatus, {
       "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636",
     notice: "This customer account is currently inactive.",
   },
+}
+
+/* Safe lookup — never crashes even if backend sends an unexpected status value */
+function getStatusCfg(status: string) {
+  return (
+    STATUS_CFG[status as CustomerStatus] ??
+    STATUS_CFG.active
+  )
 }
 
 const TYPE_LABELS: Record<CustomerType, string> = {
@@ -275,7 +284,7 @@ const Card: FC<{ children: ReactNode style?: React.CSSProperties }> = ({
 )
 
 const StatusBadge: FC<{ status: CustomerStatus }> = ({ status }) => {
-  const cfg = STATUS_CFG[status]
+  const cfg = getStatusCfg(status)
   return (
     <div
       role="status"
@@ -900,6 +909,21 @@ const CustomerListView: FC<{
   })
   const isSalesRep = role === "sales-rep"
   const PER_PAGE = 10
+  const [salesReps, setSalesReps] = useState<SalesRep[]>([])
+
+  // Load sales reps from API (profiles with sales-rep role)
+  useEffect(() => {
+    apiRequest<any[]>("/profiles/sales-reps", "GET")
+      .then((data) => {
+        if (data && data.length > 0) {
+          setSalesReps(data.map((u: any) => ({
+            id: u.id || u.userId,
+            name: u.name || u.displayName || u.full_name || `${u.firstName || ""} ${u.lastName || ""}`.trim() || "Sales Rep",
+          })))
+        }
+      })
+      .catch(() => setSalesReps([]))
+  }, [])
 
   const fetchCustomers = useCallback(async () => {
     setLoadState("loading")
@@ -955,11 +979,12 @@ const CustomerListView: FC<{
   const filterLabels: Record<string, Record<string, string>> = {
     status: {
       pending: "Pending Approval",
+      approved: "Approved",
       active: "Active",
       rejected: "Rejected",
       inactive: "Inactive",
     },
-    salesRep: Object.fromEntries(SALES_REPS.map((r) => [r.id, r.name])),
+    salesRep: Object.fromEntries(salesReps.map((r) => [r.id, r.name])),
     location: {
       "Addis Ababa": "Addis Ababa",
       Adama: "Adama",
@@ -1220,7 +1245,7 @@ const CustomerListView: FC<{
                   {
                     label: "Sales Representative",
                     key: "salesRep",
-                    options: SALES_REPS.map((r) => ({
+                    options: salesReps.map((r) => ({
                       value: r.id,
                       label: r.name,
                     })),
@@ -2662,9 +2687,9 @@ const CustomerDetailView: FC<{
   const [activeTab, setActiveTab] = useState<DetailTab>("overview")
   const [showUrgent, setShowUrgent] = useState(false)
 
-  const cfg = STATUS_CFG[localStatus]
+  const cfg = getStatusCfg(localStatus)
   const isPending = localStatus === "pending"
-  const isActive = localStatus === "active"
+  const isActive = localStatus === "active" || localStatus === "approved"
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -2677,25 +2702,7 @@ const CustomerDetailView: FC<{
   const handleApprove = async () => {
     setActionLoading(true)
     await approveCustomer(customer.id, "General Manager")
-    // Send system notification to sales representative
-    try {
-      const raw = localStorage.getItem("erp_notifications_list")
-      const list = raw ? JSON.parse(raw) : []
-      const notif = {
-        id: Date.now(),
-        category: "info",
-        title: "Customer Registration Approved",
-        what: `Customer "${customer.name}" has been approved by management and is now active.`,
-        why: "Customer request approved by General Manager.",
-        module: "customers",
-        moduleId: customer.id,
-        time: "Just now",
-        timeRaw: Date.now(),
-        read: false,
-      }
-      localStorage.setItem("erp_notifications_list", JSON.stringify([notif, ...list]))
-    } catch {}
-
+    // Notification is created inside the service with salesRepId for correct routing
     setActionLoading(false)
     setApproveOpen(false)
     setLocalStatus("active")
@@ -2713,26 +2720,7 @@ const CustomerDetailView: FC<{
     setActionLoading(true)
     const reasonText = rejectReason.trim()
     await rejectCustomer(customer.id, reasonText, "General Manager")
-
-    // Send system notification to sales representative
-    try {
-      const raw = localStorage.getItem("erp_notifications_list")
-      const list = raw ? JSON.parse(raw) : []
-      const notif = {
-        id: Date.now(),
-        category: "warning",
-        title: "Customer Registration Rejected",
-        what: `Your customer registration request for "${customer.name}" has been rejected.`,
-        why: `Reason: ${reasonText}`,
-        module: "customers",
-        moduleId: customer.id,
-        time: "Just now",
-        timeRaw: Date.now(),
-        read: false,
-      }
-      localStorage.setItem("erp_notifications_list", JSON.stringify([notif, ...list]))
-    } catch {}
-
+    // Notification is created inside the service with salesRepId for correct routing
     setActionLoading(false)
     setRejectOpen(false)
     setLocalStatus("rejected")
@@ -3086,11 +3074,11 @@ const CustomerDetailView: FC<{
                   <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap: 16 }}>
                     <InfoField
                       label="Responsible Sales Representative"
-                      value={customer.salesRep?.name || "Yohannes Mesfin"}
+                      value={customer.salesRep?.name || ""}
                     />
                     <InfoField
                       label="Employee ID"
-                      value={customer.salesRep?.employeeId || "EMP-104"}
+                      value={customer.salesRep?.employeeId || ""}
                       mono
                     />
                     <InfoField
@@ -3717,6 +3705,21 @@ const CustomerFormView: FC<{
     notes: customer?.notes ?? "",
   })
   const [errors, setErrors] = useState<FormErrors>({})
+  const [salesReps, setSalesReps] = useState<SalesRep[]>([])
+
+  // Load real sales reps from API
+  useEffect(() => {
+    apiRequest<any[]>("/profiles/sales-reps", "GET")
+      .then((data) => {
+        if (data && data.length > 0) {
+          setSalesReps(data.map((u: any) => ({
+            id: u.id || u.userId,
+            name: u.name || u.displayName || u.full_name || `${u.firstName || ""} ${u.lastName || ""}`.trim() || "Sales Rep",
+          })))
+        }
+      })
+      .catch(() => setSalesReps([]))
+  }, [])
 
   const setField = (k: keyof FormData) => (v: string) => {
     setData((p) => ({ ...p, [k]: v }))
@@ -4159,10 +4162,10 @@ const CustomerFormView: FC<{
                   id="f-rep"
                   value={data.salesRepId}
                   onChange={setField("salesRepId")}
-                  options={SALES_REPS.map((r) => ({
-                    value: r.id,
-                    label: r.name,
-                  }))}
+                  options={salesReps.map((r) => ({
+                      value: r.id,
+                      label: r.name,
+                    }))}
                   placeholder="Select a representative"
                   disabled={isSubmitting}
                 />
@@ -4171,7 +4174,7 @@ const CustomerFormView: FC<{
                   <InputField
                     id="f-rep"
                     value={
-                      SALES_REPS.find((r) => r.id === data.salesRepId)?.name ??
+                      salesReps.find((r) => r.id === data.salesRepId)?.name ??
                       "Assigned by the server"
                     }
                     onChange={() => {}}

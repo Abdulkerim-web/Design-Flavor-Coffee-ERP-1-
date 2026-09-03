@@ -1,6 +1,8 @@
 /* Responsive: mobile ≤640 | tablet 641–1024 | laptop 1025–1440 | desktop >1440 */
 import { useState, useRef, useEffect } from "react"
 import { useBreakpoint } from "../hooks/useBreakpoint"
+import { apiRequest } from "../services/api"
+import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 import {
   RadarChart,
   Radar,
@@ -10,8 +12,7 @@ import {
   Tooltip,
 } from "recharts"
 
-/* ── Data ───────────────────────────────────────────── */
-const SUPPLIERS: any[] = []
+/* ── Data is loaded from API, no static mock data ───────────────── */
 
 type DetailTab = "overview" | "procurement" | "quality" | "docs"
 type SortKey = "rating" | "volume" | "alpha"
@@ -74,7 +75,7 @@ function RadarTip({ active, payload }: any) {
 }
 
 function PayBadge({ status }: { status: string }) {
-  const m: Record<string, { bg: string text: string }> = {
+  const m: Record<string, { bg: string, text: string }> = {
     paid: { bg: "#F0FDF4", text: "#15803D" },
     pending: { bg: "#EFF6FF", text: "#1D4ED8" },
     overdue: { bg: "#FEF2F2", text: "#B91C1C" },
@@ -99,7 +100,7 @@ function PayBadge({ status }: { status: string }) {
 }
 
 function QcBadge({ status }: { status: string }) {
-  const m: Record<string, { bg: string text: string label: string }> = {
+  const m: Record<string, { bg: string, text: string, label: string }> = {
     approved: { bg: "#F0FDF4", text: "#15803D", label: "Approved" },
     hold: { bg: "#FEF3C7", text: "#B45309", label: "QC Hold" },
     rejected: { bg: "#FEF2F2", text: "#B91C1C", label: "Rejected" },
@@ -122,7 +123,7 @@ function QcBadge({ status }: { status: string }) {
   )
 }
 
-/* ── Main ───────────────────────────────────────────── */
+/* ── Main ──────────────────────── */
 export default function Suppliers() {
   const { isMobile, isTablet, isLaptop, isDesktop, isNarrow } = useBreakpoint()
   const pagePadding = isMobile
@@ -133,13 +134,36 @@ export default function Suppliers() {
         ? "24px 28px"
         : "28px 32px"
   const maxWidthStyle = isDesktop ? { maxWidth: 1600, margin: "0 auto" } : {}
-  const [selected, setSelected] = useState(SUPPLIERS[0])
+  const [suppliers, setSuppliers] = useState<any[]>([])
+  const [loadState, setLoadState] = useState<"loading" | "ok" | "error">("loading")
+  const [refreshCount, setRefreshCount] = useState(0)
+  const [selected, setSelected] = useState<any>(null)
   const [detailTab, setDetailTab] = useState<DetailTab>("overview")
   const [search, setSearch] = useState("")
   const [sort, setSort] = useState<SortKey>("rating")
   const [sortOpen, setSortOpen] = useState(false)
   const sortRef = useRef<HTMLDivElement>(null)
 
+  // Load suppliers from API
+  useEffect(() => {
+    setLoadState("loading")
+    apiRequest<any[]>("/suppliers", "GET")
+      .then((data) => {
+        const list = data || []
+        setSuppliers(list)
+        if (list.length > 0) setSelected((prev: any) => prev ?? list[0])
+        setLoadState("ok")
+      })
+      .catch(() => {
+        setSuppliers([])
+        setLoadState("error")
+      })
+  }, [refreshCount])
+
+  // Real-time updates from Supabase
+  useSupabaseRealtime("suppliers", () => setRefreshCount((c) => c + 1))
+
+  // Close sort dropdown on outside click
   useEffect(() => {
     const h = (e: MouseEvent) => {
       if (sortRef.current && !sortRef.current.contains(e.target as Node))
@@ -149,19 +173,19 @@ export default function Suppliers() {
     return () => document.removeEventListener("mousedown", h)
   }, [sortOpen])
 
-  const sortedList = [...SUPPLIERS]
+  const sortedList = [...suppliers]
     .filter(
       (s) =>
         !search ||
-        s.name.toLowerCase().includes(search.toLowerCase()) ||
-        s.origin.toLowerCase().includes(search.toLowerCase()),
+        (s.name || "").toLowerCase().includes(search.toLowerCase()) ||
+        (s.origin || "").toLowerCase().includes(search.toLowerCase()),
     )
     .sort((a, b) =>
       sort === "rating"
-        ? b.rating - a.rating
+        ? (b.rating || 0) - (a.rating || 0)
         : sort === "volume"
-          ? b.totalKg - a.totalKg
-          : a.shortName.localeCompare(b.shortName),
+          ? (b.totalKg || 0) - (a.totalKg || 0)
+          : (a.shortName || a.name || "").localeCompare(b.shortName || b.name || ""),
     )
 
   const SORT_LABELS: Record<SortKey, string> = {
@@ -230,7 +254,7 @@ export default function Suppliers() {
                   marginTop: 1,
                 }}
               >
-                {SUPPLIERS.filter((s) => s.status === "active").length} active
+                {suppliers.filter((s) => s.status === "active").length} active
                 suppliers
               </div>
             </div>
@@ -395,7 +419,15 @@ export default function Suppliers() {
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "8px 10px" }}>
-          {sortedList.length === 0 && (
+          {loadState === "loading" ? (
+            <div style={{ padding: "32px 16px", textAlign: "center" as const, color: "var(--text-muted)", fontSize: 13 }}>
+              Loading suppliers…
+            </div>
+          ) : loadState === "error" ? (
+            <div style={{ padding: "32px 16px", textAlign: "center" as const, color: "#B91C1C", fontSize: 13 }}>
+              Failed to load suppliers. Please refresh.
+            </div>
+          ) : sortedList.length === 0 ? (
             <div
               style={{
                 padding: "32px 16px",
@@ -404,11 +436,11 @@ export default function Suppliers() {
                 fontSize: 13,
               }}
             >
-              No results for "{search}"
+              {search ? `No results for "${search}"` : "No suppliers yet. Add your first supplier to get started."}
             </div>
-          )}
+          ) : null}
           {sortedList.map((s) => {
-            const isActive = selected.id === s.id
+            const isActive = selected?.id === s.id
             return (
               <button
                 key={s.id}
@@ -580,6 +612,23 @@ export default function Suppliers() {
           background: "var(--bg-primary)",
         }}
       >
+        {!selected ? (
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100%",
+            minHeight: 320,
+            gap: 12,
+            color: "var(--text-muted)",
+          }}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M3 3h7l2 2h9a1 1 0 011 1v12a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z"/></svg>
+            <div style={{ fontSize: 14, fontWeight: 500 }}>
+              {loadState === "loading" ? "Loading suppliers\u2026" : "Select a supplier to view details"}
+            </div>
+          </div>
+        ) : (<>
         {/* Profile Header */}
         <div
           style={{
@@ -1827,7 +1876,7 @@ export default function Suppliers() {
                 </div>
               </div>
             </div>
-          )}
+          )}</> {/* end selected null guard */}
         </div>
       </main>
     </div>

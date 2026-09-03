@@ -1,6 +1,7 @@
 /* Responsive: mobile ≤640 | tablet 641–1024 | laptop 1025–1440 | desktop >1440 */
 import { useState } from "react"
 import { useBreakpoint } from "../hooks/useBreakpoint"
+import { useAuth } from "../contexts/AuthContext"
 import {
   RadarChart,
   PolarGrid,
@@ -1416,6 +1417,7 @@ function InspectionWorkspace({
 /* ── Main ───────────────────────────────────────────── */
 export default function Quality() {
   const { isMobile, isTablet, isLaptop, isDesktop, isNarrow } = useBreakpoint()
+  const { currentUser } = useAuth()
   const pagePadding = isMobile
     ? "12px 12px"
     : isTablet
@@ -1442,7 +1444,7 @@ export default function Quality() {
       supplier: activeLot.supplier,
       origin: activeLot.origin,
       date: new Date().toISOString().slice(0, 10),
-      inspector: "Selamawit Bekele",
+      inspector: currentUser?.name || "QC Inspector",
       moisture: data.moisture,
       defects: data.defects,
       screenSize: data.screenSize,

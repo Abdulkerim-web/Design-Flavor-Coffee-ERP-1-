@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type FC } from "react"
+import { useState, useEffect, type FormEvent, type FC } from "react"
 import { useBreakpoint } from "../hooks/useBreakpoint"
 import { useToast } from "../contexts/ToastContext"
 import {
@@ -6,6 +6,7 @@ import {
   type CreateCustomerPayload,
   type CustomerType,
 } from "../services/customers"
+import { apiRequest } from "../services/api"
 
 const TYPE_LABELS: Record<CustomerType, string> = {
   hotel: "Hotel",
@@ -16,12 +17,6 @@ const TYPE_LABELS: Record<CustomerType, string> = {
   other: "Other",
 }
 
-const SALES_REPS = [
-  { id: "sr1", name: "Hiwot Tadesse" },
-  { id: "sr2", name: "Bereket Assefa" },
-  { id: "sr3", name: "Fikremariam Alemu" },
-]
-
 export const CustomerFormModal: FC<{
   open: boolean
   onClose: () => void
@@ -29,6 +24,20 @@ export const CustomerFormModal: FC<{
 }> = ({ open, onClose, onSuccess }) => {
   const { isMobile } = useBreakpoint()
   const toast = useToast()
+  const [salesReps, setSalesReps] = useState<{ id: string; name: string }[]>([])
+
+  useEffect(() => {
+    apiRequest<any[]>("/profiles/sales-reps", "GET")
+      .then((data) => {
+        if (data && data.length > 0) {
+          setSalesReps(data.map((u: any) => ({
+            id: u.id || u.userId,
+            name: u.name || u.displayName || u.full_name || "Sales Rep",
+          })))
+        }
+      })
+      .catch(() => setSalesReps([]))
+  }, [])
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [data, setData] = useState<CreateCustomerPayload>({
@@ -271,7 +280,7 @@ export const CustomerFormModal: FC<{
                 }}
               >
                 <option value="">-- Assign later --</option>
-                {SALES_REPS.map((r) => (
+                {salesReps.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name}
                   </option>

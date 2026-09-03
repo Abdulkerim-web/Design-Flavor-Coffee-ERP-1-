@@ -27,6 +27,7 @@ import Delivery from "./pages/Delivery"
 import Finance from "./pages/Finance"
 import Reports from "./pages/Reports"
 import Users from "./pages/Users"
+import EmployeeManagement from "./pages/EmployeeManagement"
 import Audit from "./pages/Audit"
 import Settings from "./pages/Settings"
 import CustomerPortal from "./pages/CustomerPortal"
@@ -40,7 +41,7 @@ import Notifications from "./pages/Notifications"
 import DesignSystem from "./pages/DesignSystem"
 import QuickActionsPanel from "./components/QuickActionsPanel"
 
-type ModuleId = "dashboard" | "inventory" | "suppliers" | "quality" | "production" | "verification" | "packaging" | "orders" | "delivery" | "finance" | "reports" | "users" | "audit" | "settings" | "portal" | "customers" | "payments" | "banking" | "expenses" | "payroll" | "approvals" | "notifications" | "design-system"
+type ModuleId = "dashboard" | "inventory" | "suppliers" | "quality" | "production" | "verification" | "packaging" | "orders" | "delivery" | "finance" | "reports" | "users" | "employees" | "audit" | "settings" | "portal" | "customers" | "payments" | "banking" | "expenses" | "payroll" | "approvals" | "notifications" | "design-system"
 
 const MODULES: Record<ModuleId, React.FC> = {
   dashboard: Dashboard,
@@ -55,6 +56,7 @@ const MODULES: Record<ModuleId, React.FC> = {
   finance: Finance,
   reports: Reports,
   users: Users,
+  employees: EmployeeManagement,
   audit: Audit,
   settings: Settings,
   portal: CustomerPortal,

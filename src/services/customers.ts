@@ -77,11 +77,12 @@ export function saveCustomerLocally(cust: Customer) {
   }
 }
 
-// System default sales reps map
-const DEFAULT_SALES_REPS: Record<string, { name: string; employeeId: string }> = {
-  "USR-003": { name: "Yohannes Mesfin", employeeId: "EMP-104" },
-  "USR-004": { name: "Abebe Bikila", employeeId: "EMP-108" },
-  "USR-005": { name: "Tigist Assefa", employeeId: "EMP-112" },
+// Build sales rep info from the API response fields — no hardcoded names
+function buildSalesRepInfo(c: any) {
+  const name = c.salesRepName || c.sales_rep_name || ""
+  const employeeId = c.salesRepEmployeeId || c.sales_rep_employee_id || ""
+  const id = c.salesRepId || c.sales_rep_id || ""
+  return { name, employeeId, id }
 }
 
 export async function listCustomers(
@@ -103,7 +104,7 @@ export async function listCustomers(
 
     // Map backend entities to Customer interface
     const mappedBackend = all.map((c) => {
-      const repInfo = DEFAULT_SALES_REPS[c.salesRepId || "USR-003"] || { name: c.salesRepName || "Yohannes Mesfin", employeeId: c.salesRepEmployeeId || "EMP-104" }
+      const repInfo = buildSalesRepInfo(c)
       return {
         id: c.id,
         ref: c.businessNumber || c.ref || "CUS-UNKNOWN",
@@ -116,15 +117,15 @@ export async function listCustomers(
         contactPhone: c.phone || c.contactPhone || "N/A",
         email: c.email || c.contactEmail || undefined,
         contactEmail: c.email || c.contactEmail || "N/A",
-        address: c.address || "Main Branch",
-        location: "Addis Ababa",
-        city: c.city || "Addis Ababa",
+        address: c.address || "",
+        location: c.location || c.city || "",
+        city: c.city || c.location || "",
         creditLimit: c.creditLimit || "ETB 0.00",
         outstandingBalance: c.outstandingBalance || "ETB 0.00",
         salesRep: c.salesRep || {
-          id: c.salesRepId || "USR-003",
-          name: c.salesRepName || repInfo.name,
-          employeeId: c.salesRepEmployeeId || repInfo.employeeId,
+          id: repInfo.id,
+          name: repInfo.name,
+          employeeId: repInfo.employeeId,
         },
         submittedAt: c.submittedAt || c.createdAt || new Date().toISOString(),
         approvedBy: c.approvedBy,
@@ -152,7 +153,9 @@ export async function listCustomers(
         !c.ref.toLowerCase().includes(q)
       )
         return false
-      if (filters.status && c.status !== filters.status) return false
+      // Treat "approved" as equivalent to "active" for filtering purposes
+      const normalizeStatus = (s: string) => (s === "approved" ? "active" : s)
+      if (filters.status && normalizeStatus(c.status) !== normalizeStatus(filters.status)) return false
       if (filters.salesRepId && c.salesRep?.id !== filters.salesRepId)
         return false
       return true
@@ -185,8 +188,8 @@ export async function getCustomer(id: string) {
       email: c.email || undefined,
       contactEmail: c.email || "N/A",
       address: c.address || "Main Branch",
-      location: "Addis Ababa",
-      city: "Addis Ababa",
+      location: c.location || c.city || "",
+      city: c.city || c.location || "",
       creditLimit: "ETB 0.00",
       outstandingBalance: "ETB 0.00",
       salesRep: c.salesRepId ? { id: c.salesRepId, name: "Sales Rep" } : null,
@@ -198,11 +201,9 @@ export async function getCustomer(id: string) {
 export async function createCustomer(_payload: CreateCustomerPayload) {
   return safeRequest<{ ref: string }>(async () => {
     let res: any = null
-    const repId = _payload.salesRepId || "USR-003"
-    const repInfo = DEFAULT_SALES_REPS[repId] || {
-      name: _payload.salesRepName || "Yohannes Mesfin",
-      employeeId: _payload.salesRepEmployeeId || "EMP-104",
-    }
+    const repId = _payload.salesRepId || ""
+    const repName = _payload.salesRepName || ""
+    const repEmployeeId = _payload.salesRepEmployeeId || ""
 
     try {
       res = await apiRequest<any>("/customers", "POST", {
@@ -213,8 +214,8 @@ export async function createCustomer(_payload: CreateCustomerPayload) {
         phone: _payload.contactPhone,
         email: _payload.contactEmail,
         salesRepId: repId,
-        salesRepName: repInfo.name,
-        salesRepEmployeeId: repInfo.employeeId,
+        salesRepName: repName,
+        salesRepEmployeeId: repEmployeeId,
         branchDetails: {
           name: "Main Branch",
           address: (_payload.address || "") + ", " + (_payload.city || ""),
@@ -282,7 +283,7 @@ export async function approveCustomer(id: string, managerId: string) {
     })
 
     if (target) {
-      target.status = "approved"
+      target.status = "active"  // normalise to "active" — the canonical approved state
       target.approvedBy = managerId || "General Manager"
       target.approvedAt = approvedTime
       saveCustomerLocally(target)
@@ -293,15 +294,15 @@ export async function approveCustomer(id: string, managerId: string) {
         ref: "CUS-" + id.slice(0, 6).toUpperCase(),
         name: "Customer",
         type: "cafe",
-        status: "approved",
+        status: "active",  // normalise to canonical active state
         contactName: "N/A",
         contactPhone: "N/A",
         contactEmail: "N/A",
         address: "N/A",
-        city: "Addis Ababa",
+        city: "",
         creditLimit: "ETB 0.00",
         outstandingBalance: "ETB 0.00",
-        salesRep: { id: "USR-003", name: "Yohannes Mesfin", employeeId: "EMP-104" },
+        salesRep: { id: "", name: "", employeeId: "" },
         approvedBy: managerId || "General Manager",
         approvedAt: approvedTime,
         createdAt: new Date().toLocaleDateString(),
@@ -316,10 +317,42 @@ export async function approveCustomer(id: string, managerId: string) {
           overrideCust.contactName = full.contactPerson || full.contact_person || overrideCust.contactName
           overrideCust.contactPhone = full.phone || overrideCust.contactPhone
           overrideCust.contactEmail = full.email || overrideCust.contactEmail
+          // Restore sales rep from API data
+          if (full.salesRepId) {
+            overrideCust.salesRep = {
+              id: full.salesRepId,
+              name: full.salesRepName || overrideCust.salesRep?.name || "Sales Rep",
+              employeeId: full.salesRepEmployeeId || overrideCust.salesRep?.employeeId,
+            }
+          }
         }
       } catch { /* ignore */ }
       saveCustomerLocally(overrideCust)
     }
+
+    // Persist an approval notification so sales reps see it in Notifications
+    try {
+      const savedCustomers = getSavedCustomers()
+      const approvedCust = savedCustomers.find((c) => c.id === id)
+      const salesRepId = approvedCust?.salesRep?.id
+      const customerName = approvedCust?.name || "Customer"
+      const raw = localStorage.getItem("erp_notifications_list")
+      const list = raw ? JSON.parse(raw) : []
+      const notif = {
+        id: Date.now(),
+        category: "info",
+        title: "Customer Registration Approved",
+        what: `Customer "${customerName}" has been approved by management and is now active.`,
+        why: "Customer request approved by General Manager.",
+        module: "customers",
+        moduleId: id,
+        salesRepId: salesRepId || null,
+        time: "Just now",
+        timeRaw: Date.now(),
+        read: false,
+      }
+      localStorage.setItem("erp_notifications_list", JSON.stringify([notif, ...list]))
+    } catch { /* ignore */ }
 
     try {
       await apiRequest<{ success: boolean }>(`/customers/${id}/approve`, "POST", { managerId })
@@ -364,10 +397,10 @@ export async function rejectCustomer(
         contactPhone: "N/A",
         contactEmail: "N/A",
         address: "N/A",
-        city: "Addis Ababa",
+        city: "",
         creditLimit: "ETB 0.00",
         outstandingBalance: "ETB 0.00",
-        salesRep: { id: "USR-003", name: "Yohannes Mesfin", employeeId: "EMP-104" },
+        salesRep: { id: "", name: "", employeeId: "" },
         rejectedBy: managerId || "General Manager",
         rejectedAt: rejectedTime,
         rejectionReason: reason.trim(),
@@ -383,10 +416,42 @@ export async function rejectCustomer(
           overrideCust.contactName = full.contactPerson || full.contact_person || overrideCust.contactName
           overrideCust.contactPhone = full.phone || overrideCust.contactPhone
           overrideCust.contactEmail = full.email || overrideCust.contactEmail
+          // Restore sales rep from API data
+          if (full.salesRepId) {
+            overrideCust.salesRep = {
+              id: full.salesRepId,
+              name: full.salesRepName || overrideCust.salesRep?.name || "Sales Rep",
+              employeeId: full.salesRepEmployeeId || overrideCust.salesRep?.employeeId,
+            }
+          }
         }
       } catch { /* ignore */ }
       saveCustomerLocally(overrideCust)
     }
+
+    // Persist a rejection notification so sales reps see the reason in Notifications
+    try {
+      const savedCustomers = getSavedCustomers()
+      const rejectedCust = savedCustomers.find((c) => c.id === id)
+      const salesRepId = rejectedCust?.salesRep?.id
+      const customerName = rejectedCust?.name || "Customer"
+      const raw = localStorage.getItem("erp_notifications_list")
+      const list = raw ? JSON.parse(raw) : []
+      const notif = {
+        id: Date.now(),
+        category: "warning",
+        title: "Customer Registration Rejected",
+        what: `Customer "${customerName}" registration has been rejected by management.`,
+        why: `Reason: ${reason.trim()}`,
+        module: "customers",
+        moduleId: id,
+        salesRepId: salesRepId || null,
+        time: "Just now",
+        timeRaw: Date.now(),
+        read: false,
+      }
+      localStorage.setItem("erp_notifications_list", JSON.stringify([notif, ...list]))
+    } catch { /* ignore */ }
 
     try {
       await apiRequest<{ success: boolean }>(`/customers/${id}/reject`, "POST", {

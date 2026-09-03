@@ -92,277 +92,9 @@ function fakeHash(id: string) {
 }
 
 /* ── Audit log entries ─────────────────────────────────── */
-const LOGS: AuditLog[] = [
-  {
-    id: "AUD-11041",
-    ts: "2026-08-06 09:14:33.841",
-    user: "Abebe Girma",
-    role: "general-manager",
-    module: "Finance",
-    actionCode: "QUANTITY_OVERRIDE",
-    actionType: "OVERRIDE",
-    ip: "192.168.1.10",
-    device: "macOS / Chrome 126",
-    recordId: "TRX-9901",
-    diff: [
-      { field: "amount", old: "38500.00", new: "45000.00" },
-      { field: "approved_by", old: "null", new: '"Abebe Girma"' },
-    ],
-    hash: fakeHash("AUD-11041"),
-  },
-  {
-    id: "AUD-11040",
-    ts: "2026-08-06 09:02:17.214",
-    user: "Selamawit Bekele",
-    role: "qc-inspector",
-    module: "Quality",
-    actionCode: "RECORD_CREATED",
-    actionType: "CREATE",
-    ip: "192.168.1.24",
-    device: "Windows 11 / Edge 125",
-    recordId: "QC-LOT-0294",
-    diff: [
-      { field: "moisture_pct", old: "null", new: '"11.2"' },
-      { field: "cup_score", old: "null", new: '"87.5"' },
-      { field: "status", old: "null", new: '"APPROVED"' },
-    ],
-    hash: fakeHash("AUD-11040"),
-  },
-  {
-    id: "AUD-11039",
-    ts: "2026-08-06 08:50:09.007",
-    user: "Solomon Tesfaye",
-    role: "inventory-manager",
-    module: "Inventory",
-    actionCode: "STOCK_ADJUSTED",
-    actionType: "UPDATE",
-    ip: "192.168.1.18",
-    device: "macOS / Safari 17",
-    recordId: "GR-LOT-0291",
-    diff: [
-      { field: "current_weight_kg", old: "500.00", new: "450.00" },
-      { field: "last_modified", old: '"2026-08-05"', new: '"2026-08-06"' },
-    ],
-    hash: fakeHash("AUD-11039"),
-  },
-  {
-    id: "AUD-11038",
-    ts: "2026-08-06 08:33:55.512",
-    user: "Dawit Haile",
-    role: "head-roaster",
-    module: "Production",
-    actionCode: "BATCH_COMMITTED",
-    actionType: "CREATE",
-    ip: "192.168.1.31",
-    device: "Ubuntu / Firefox 127",
-    recordId: "BAT-2026-0291",
-    diff: [
-      { field: "status", old: '"PENDING_VERIFY"', new: '"VERIFIED"' },
-      { field: "output_weight_kg", old: '"27.40"', new: '"27.40"' },
-      { field: "verified_by", old: "null", new: '"Dawit Haile"' },
-    ],
-    hash: fakeHash("AUD-11038"),
-  },
-  {
-    id: "AUD-11037",
-    ts: "2026-08-06 08:20:01.998",
-    user: "Tigist Alemu",
-    role: "accountant",
-    module: "Finance",
-    actionCode: "LEDGER_EXPORTED",
-    actionType: "EXPORT",
-    ip: "192.168.1.44",
-    device: "Windows 11 / Chrome 126",
-    recordId: "EXP-AUG2026",
-    diff: [
-      { field: "export_format", old: "null", new: '"PDF"' },
-      { field: "period", old: "null", new: '"2026-08"' },
-    ],
-    hash: fakeHash("AUD-11037"),
-  },
-  {
-    id: "AUD-11036",
-    ts: "2026-08-06 08:14:22.330",
-    user: "Abebe Girma",
-    role: "general-manager",
-    module: "Auth",
-    actionCode: "USER_LOGIN",
-    actionType: "LOGIN",
-    ip: "192.168.1.10",
-    device: "macOS / Chrome 126",
-    recordId: "USR-AG",
-    diff: [
-      { field: "session_id", old: "null", new: '"ses_1a2b3c4d"' },
-      { field: "login_method", old: "null", new: '"password+2FA"' },
-    ],
-    hash: fakeHash("AUD-11036"),
-  },
-  {
-    id: "AUD-11035",
-    ts: "2026-08-05 17:44:08.601",
-    user: "Yohannes Mesfin",
-    role: "driver-supervisor",
-    module: "Delivery",
-    actionCode: "DRIVER_ASSIGNED",
-    actionType: "UPDATE",
-    ip: "192.168.1.55",
-    device: "Android / Chrome Mobile",
-    recordId: "DEL-2026-0094",
-    diff: [
-      { field: "driver_id", old: "null", new: '"DRV-004"' },
-      { field: "vehicle_plate", old: "null", new: '"AA-3-40012"' },
-      { field: "dispatch_time", old: "null", new: '"2026-08-06T07:00"' },
-    ],
-    hash: fakeHash("AUD-11035"),
-  },
-  {
-    id: "AUD-11034",
-    ts: "2026-08-05 16:30:44.188",
-    user: "Selamawit Bekele",
-    role: "qc-inspector",
-    module: "Inventory",
-    actionCode: "LOT_QUARANTINED",
-    actionType: "UPDATE",
-    ip: "192.168.1.24",
-    device: "Windows 11 / Edge 125",
-    recordId: "GR-LOT-0289",
-    diff: [
-      { field: "qc_status", old: '"PENDING"', new: '"QUARANTINED"' },
-      { field: "defect_reason", old: "null", new: '"moisture_14.6pct"' },
-      { field: "hold_tag", old: "null", new: '"QC-HOLD-0289"' },
-    ],
-    hash: fakeHash("AUD-11034"),
-  },
-  {
-    id: "AUD-11033",
-    ts: "2026-08-05 15:12:19.445",
-    user: "System Process",
-    role: "system",
-    module: "Orders",
-    actionCode: "TELEGRAM_SYNC",
-    actionType: "UPDATE",
-    ip: "10.0.0.1",
-    device: "Server / Node.js 22",
-    recordId: "ORD-2026-0388",
-    diff: [
-      { field: "telegram_status", old: '"PENDING"', new: '"SYNCED"' },
-      { field: "telegram_msg_id", old: "null", new: '"5991234"' },
-    ],
-    hash: fakeHash("AUD-11033"),
-  },
-  {
-    id: "AUD-11032",
-    ts: "2026-08-05 14:08:55.702",
-    user: "Solomon Tesfaye",
-    role: "inventory-manager",
-    module: "Inventory",
-    actionCode: "STOCK_DELETED",
-    actionType: "DELETE",
-    ip: "192.168.1.18",
-    device: "macOS / Safari 17",
-    recordId: "GR-LOT-0284",
-    diff: [
-      { field: "lot_status", old: '"DEPLETED"', new: "DELETED" },
-      { field: "deleted_at", old: "null", new: '"2026-08-05T14:08"' },
-      { field: "reason", old: "null", new: '"fully_consumed"' },
-    ],
-    hash: fakeHash("AUD-11032"),
-  },
-  {
-    id: "AUD-11031",
-    ts: "2026-08-05 11:59:33.003",
-    user: "Tigist Alemu",
-    role: "accountant",
-    module: "Finance",
-    actionCode: "TRANSACTION_CREATED",
-    actionType: "CREATE",
-    ip: "192.168.1.44",
-    device: "Windows 11 / Chrome 126",
-    recordId: "TRX-9899",
-    diff: [
-      { field: "amount", old: "null", new: "187500.00" },
-      { field: "category", old: "null", new: '"green-bean-purchase"' },
-      { field: "bank_ref", old: "null", new: '"AWB-33110092"' },
-    ],
-    hash: fakeHash("AUD-11031"),
-  },
-  {
-    id: "AUD-11030",
-    ts: "2026-08-05 10:22:14.102",
-    user: "Abebe Girma",
-    role: "general-manager",
-    module: "Production",
-    actionCode: "YIELD_OVERRIDE",
-    actionType: "OVERRIDE",
-    ip: "192.168.1.10",
-    device: "macOS / Chrome 126",
-    recordId: "BAT-2026-0288",
-    diff: [
-      { field: "verified_weight_kg", old: '"26.90"', new: '"27.20"' },
-      {
-        field: "override_reason",
-        old: "null",
-        new: '"scale_calibration_error"',
-      },
-      { field: "override_by", old: "null", new: '"Abebe Girma"' },
-    ],
-    hash: fakeHash("AUD-11030"),
-  },
-  {
-    id: "AUD-11029",
-    ts: "2026-08-05 09:47:02.819",
-    user: "Yohannes Mesfin",
-    role: "driver-supervisor",
-    module: "Delivery",
-    actionCode: "DELIVERY_FAILED",
-    actionType: "UPDATE",
-    ip: "192.168.1.55",
-    device: "Android / Chrome Mobile",
-    recordId: "DEL-2026-0091",
-    diff: [
-      { field: "status", old: '"IN_TRANSIT"', new: '"FAILED"' },
-      { field: "failure_reason", old: "null", new: '"customer_absent"' },
-      { field: "failed_at", old: "null", new: '"2026-08-05T09:45"' },
-    ],
-    hash: fakeHash("AUD-11029"),
-  },
-  {
-    id: "AUD-11028",
-    ts: "2026-08-05 08:30:01.550",
-    user: "System Process",
-    role: "system",
-    module: "Packaging",
-    actionCode: "STOCK_AUTO_DEDUCTED",
-    actionType: "UPDATE",
-    ip: "10.0.0.1",
-    device: "Server / Node.js 22",
-    recordId: "FG-SKU-0411",
-    diff: [
-      { field: "bags_available", old: '"320"', new: '"288"' },
-      { field: "bags_reserved", old: '"0"', new: '"32"' },
-      { field: "deducted_for", old: "null", new: '"ORD-2026-0387"' },
-    ],
-    hash: fakeHash("AUD-11028"),
-  },
-  {
-    id: "AUD-11027",
-    ts: "2026-08-04 17:55:22.441",
-    user: "Tigist Alemu",
-    role: "accountant",
-    module: "Finance",
-    actionCode: "PAYROLL_PROCESSED",
-    actionType: "CREATE",
-    ip: "192.168.1.44",
-    device: "Windows 11 / Chrome 126",
-    recordId: "TRX-9896",
-    diff: [
-      { field: "amount", old: "null", new: "184000.00" },
-      { field: "category", old: "null", new: '"salaries"' },
-      { field: "period", old: "null", new: '"2026-08"' },
-    ],
-    hash: fakeHash("AUD-11027"),
-  },
-]
+// Audit logs loaded dynamically from DB — no hardcoded entries
+const EMPTY_LOGS: AuditLog[] = []
+
 
 /* ── Helper components ─────────────────────────────────── */
 function ActionBadge({ code, type }: { code: string type: ActionType }) {
@@ -748,13 +480,39 @@ export default function Audit() {
   const [endDate, setEndDate] = useState("")
   const [expanded, setExpanded] = useState<string | null>(null)
   const [sealAnim, setSealAnim] = useState(false)
+  const [logs, setLogs] = useState<AuditLog[]>(EMPTY_LOGS)
+  const [logsLoading, setLogsLoading] = useState(true)
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     searchRef.current?.focus()
+    // Fetch real audit logs from DB
+    import("../services/api").then(({ apiRequest }) => {
+      apiRequest<any[]>("/audit/logs", "GET")
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            setLogs(data.map((e: any) => ({
+              id: e.id || `AUD-${Date.now()}`,
+              ts: e.created_at || e.ts || new Date().toISOString(),
+              user: e.user_name || e.user || e.performed_by || "System",
+              role: (e.user_role || e.role || "system") as RoleKey,
+              module: (e.module || "Auth") as ModuleKey,
+              actionCode: e.action_code || e.actionCode || e.action || "ACTION",
+              actionType: (e.action_type || e.actionType || "UPDATE") as ActionType,
+              ip: e.ip_address || e.ip || "",
+              device: e.device || e.user_agent || "",
+              recordId: e.record_id || e.recordId || "",
+              diff: Array.isArray(e.diff) ? e.diff : [],
+              hash: e.hash || fakeHash(e.id || ""),
+            })))
+          }
+        })
+        .catch(() => setLogs([]))
+        .finally(() => setLogsLoading(false))
+    })
   }, [])
 
-  const filtered = LOGS.filter((log) => {
+  const filtered = logs.filter((log) => {
     const q = search.toLowerCase()
     if (
       q &&
@@ -772,8 +530,8 @@ export default function Audit() {
     return true
   })
 
-  const overrideCount = LOGS.filter((l) => l.actionType === "OVERRIDE").length
-  const deleteCount = LOGS.filter((l) => l.actionType === "DELETE").length
+  const overrideCount = logs.filter((l) => l.actionType === "OVERRIDE").length
+  const deleteCount = logs.filter((l) => l.actionType === "DELETE").length
 
   return (
     <div
@@ -946,7 +704,7 @@ export default function Audit() {
         </div>
         <div style={{ display: "flex", gap: 14 }}>
           {[
-            { label: "Total Events", value: LOGS.length },
+            { label: "Total Events", value: logs.length },
             { label: "Overrides", value: overrideCount, red: true },
             { label: "Deletions", value: deleteCount, red: true },
           ].map((s) => (
@@ -1197,7 +955,7 @@ export default function Audit() {
             color: "var(--text-muted)",
           }}
         >
-          {filtered.length} / {LOGS.length} events
+          {filtered.length} / {logs.length} events
         </div>
 
         {(search ||

@@ -185,7 +185,7 @@ const YIELD_RANGES: YieldRange[] = [
     maxYield: "88%",
     targetYield: "85%",
     lastUpdated: "2026-07-01",
-    updatedBy: "Abebe Girma",
+    updatedBy: "",
   },
   {
     id: "yr-002",
@@ -195,7 +195,7 @@ const YIELD_RANGES: YieldRange[] = [
     maxYield: "86%",
     targetYield: "83%",
     lastUpdated: "2026-07-01",
-    updatedBy: "Abebe Girma",
+    updatedBy: "",
   },
   {
     id: "yr-003",
@@ -205,7 +205,7 @@ const YIELD_RANGES: YieldRange[] = [
     maxYield: "90%",
     targetYield: "87%",
     lastUpdated: "2026-07-15",
-    updatedBy: "Hiwot Tadesse",
+    updatedBy: "",
   },
   {
     id: "yr-004",
@@ -215,7 +215,7 @@ const YIELD_RANGES: YieldRange[] = [
     maxYield: "88%",
     targetYield: "85%",
     lastUpdated: "2026-07-15",
-    updatedBy: "Hiwot Tadesse",
+    updatedBy: "",
   },
   {
     id: "yr-005",
@@ -225,7 +225,7 @@ const YIELD_RANGES: YieldRange[] = [
     maxYield: "85%",
     targetYield: "82%",
     lastUpdated: "2026-06-20",
-    updatedBy: "Abebe Girma",
+    updatedBy: "",
   },
   {
     id: "yr-006",
@@ -235,7 +235,7 @@ const YIELD_RANGES: YieldRange[] = [
     maxYield: "82%",
     targetYield: "79%",
     lastUpdated: "2026-06-20",
-    updatedBy: "Abebe Girma",
+    updatedBy: "",
   },
 ]
 const YIELD_AUDIT: AuditEntry[] = [
@@ -244,7 +244,7 @@ const YIELD_AUDIT: AuditEntry[] = [
     field: "Guji Light Target Yield",
     oldValue: "84%",
     newValue: "85%",
-    changedBy: "Abebe Girma",
+    changedBy: "",
     changedAt: "2026-07-01 09:14",
     reason: "Adjusted based on July production data",
   },
@@ -253,7 +253,7 @@ const YIELD_AUDIT: AuditEntry[] = [
     field: "Yirgacheffe Light Target",
     oldValue: "86%",
     newValue: "87%",
-    changedBy: "Hiwot Tadesse",
+    changedBy: "",
     changedAt: "2026-07-15 11:30",
     reason: "Updated after Q2 yield review",
   },
@@ -264,7 +264,7 @@ const VAT_AUDIT: AuditEntry[] = [
     field: "VAT Rate",
     oldValue: "14%",
     newValue: "15%",
-    changedBy: "Abebe Girma",
+    changedBy: "",
     changedAt: "2026-01-01 00:00",
     reason: "EAR mandate effective 1 Jan 2026",
   },
@@ -273,7 +273,7 @@ const VAT_AUDIT: AuditEntry[] = [
     field: "VAT Rate",
     oldValue: "10%",
     newValue: "14%",
-    changedBy: "Abebe Girma",
+    changedBy: "",
     changedAt: "2025-01-01 00:00",
     reason: "Annual rate update per EAR directive",
   },
@@ -287,7 +287,7 @@ const PRICING_DATA: PricingEntry[] = [
     pricePerKg: "ETB 1,450",
     effectiveFrom: "2026-08-01",
     lastUpdated: "2026-07-28",
-    updatedBy: "Abebe Girma",
+    updatedBy: "",
   },
   {
     id: "pr-002",
@@ -297,7 +297,7 @@ const PRICING_DATA: PricingEntry[] = [
     pricePerKg: "ETB 1,380",
     effectiveFrom: "2026-08-01",
     lastUpdated: "2026-07-28",
-    updatedBy: "Abebe Girma",
+    updatedBy: "",
   },
   {
     id: "pr-003",
@@ -307,7 +307,7 @@ const PRICING_DATA: PricingEntry[] = [
     pricePerKg: "ETB 1,620",
     effectiveFrom: "2026-08-01",
     lastUpdated: "2026-07-28",
-    updatedBy: "Abebe Girma",
+    updatedBy: "",
   },
   {
     id: "pr-004",
@@ -317,7 +317,7 @@ const PRICING_DATA: PricingEntry[] = [
     pricePerKg: "ETB 1,540",
     effectiveFrom: "2026-08-01",
     lastUpdated: "2026-07-28",
-    updatedBy: "Abebe Girma",
+    updatedBy: "",
   },
   {
     id: "pr-005",
@@ -327,7 +327,7 @@ const PRICING_DATA: PricingEntry[] = [
     pricePerKg: "ETB 1,290",
     effectiveFrom: "2026-08-01",
     lastUpdated: "2026-07-28",
-    updatedBy: "Abebe Girma",
+    updatedBy: "",
   },
   {
     id: "pr-006",
@@ -337,7 +337,7 @@ const PRICING_DATA: PricingEntry[] = [
     pricePerKg: "ETB 1,220",
     effectiveFrom: "2026-08-01",
     lastUpdated: "2026-07-28",
-    updatedBy: "Abebe Girma",
+    updatedBy: "",
   },
 ]
 const PACKAGING_DATA: PackagingItem[] = [

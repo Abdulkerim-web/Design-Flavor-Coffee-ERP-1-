@@ -5,6 +5,7 @@
  * Frontend never calculates totals, approval eligibility, or accounting treatment.
  */
 import { useState, useEffect } from "react"
+import { apiRequest } from "../services/api"
 import {
   getExpenseSummary,
   listExpensesFull,
@@ -538,11 +539,6 @@ function CancelModal({
 
 // ─── Pay modal ────────────────────────────────────────────────────────────────
 
-const BANK_ACCOUNTS = [
-  { id: "ba-cbe", label: "CBE — 1000 •••• •••• 5823" },
-  { id: "ba-awash", label: "Awash — 0132 •••• •••• 0441" },
-]
-
 function PayModal({
   expense,
   onConfirm,
@@ -552,8 +548,26 @@ function PayModal({
   onConfirm: (account: string) => Promise<void>
   onClose: () => void
 }) {
-  const [selected, setSelected] = useState(BANK_ACCOUNTS[0].id)
+  const [bankAccounts, setBankAccounts] = useState<{ id: string; label: string }[]>([])
+  const [selected, setSelected] = useState("")
   const [loading, setLoading] = useState(false)
+  const [accsLoading, setAccsLoading] = useState(true)
+
+  useEffect(() => {
+    setAccsLoading(true)
+    apiRequest<any[]>("/finance/accounts", "GET")
+      .then((accs) => {
+        const list = (accs || []).map((a: any) => ({
+          id: String(a.id),
+          label: a.label || `${a.bankName || a.bank_name || "Bank"} — ${a.maskedAccountNumber || a.masked_account_number || "****"}`,
+        }))
+        setBankAccounts(list)
+        if (list.length > 0) setSelected(list[0].id)
+      })
+      .catch(() => setBankAccounts([]))
+      .finally(() => setAccsLoading(false))
+  }, [])
+
   async function handle() {
     setLoading(true)
     await onConfirm(selected)
@@ -572,7 +586,7 @@ function PayModal({
           >
             Cancel
           </button>
-          <button className="btn-primary" onClick={handle} disabled={loading}>
+          <button className="btn-primary" onClick={handle} disabled={loading || !selected || accsLoading}>
             {loading ? "Processing…" : "Pay Expense"}
           </button>
         </>
@@ -611,45 +625,59 @@ function PayModal({
           marginBottom: 14,
         }}
       >
-        {BANK_ACCOUNTS.map((ba) => (
-          <label
-            key={ba.id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "10px 14px",
-              border: `1px solid ${
-                selected === ba.id
-                  ? "var(--brand-primary)"
-                  : "var(--border-neutral)"
-              }`,
-              borderRadius: "var(--radius-md)",
-              cursor: "pointer",
-              background:
-                selected === ba.id
-                  ? "var(--color-status-info-surface)"
-                  : "transparent",
-            }}
-          >
-            <input
-              type="radio"
-              name="payAccount"
-              value={ba.id}
-              checked={selected === ba.id}
-              onChange={() => setSelected(ba.id)}
-            />
-            <span
+        {accsLoading ? (
+          <div style={{ fontSize: 13, color: "var(--text-muted)", padding: "8px 0" }}>Loading accounts…</div>
+        ) : bankAccounts.length === 0 ? (
+          <div style={{
+            padding: "12px 14px",
+            background: "var(--surface-02)",
+            borderRadius: "var(--radius-md)",
+            fontSize: 13,
+            color: "var(--text-muted)",
+          }}>
+            No bank accounts configured. Add a bank account in Banking &gt; Accounts first.
+          </div>
+        ) : (
+          bankAccounts.map((ba) => (
+            <label
+              key={ba.id}
               style={{
-                fontFamily: "DM Mono, monospace",
-                fontSize: 13,
-                color: "var(--text-primary)",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "10px 14px",
+                border: `1px solid ${
+                  selected === ba.id
+                    ? "var(--brand-primary)"
+                    : "var(--border-neutral)"
+                }`,
+                borderRadius: "var(--radius-md)",
+                cursor: "pointer",
+                background:
+                  selected === ba.id
+                    ? "var(--color-status-info-surface)"
+                    : "transparent",
               }}
             >
-              {ba.label}
-            </span>
-          </label>
-        ))}
+              <input
+                type="radio"
+                name="payAccount"
+                value={ba.id}
+                checked={selected === ba.id}
+                onChange={() => setSelected(ba.id)}
+              />
+              <span
+                style={{
+                  fontFamily: "DM Mono, monospace",
+                  fontSize: 13,
+                  color: "var(--text-primary)",
+                }}
+              >
+                {ba.label}
+              </span>
+            </label>
+          ))
+        )}
       </div>
       <div
         style={{

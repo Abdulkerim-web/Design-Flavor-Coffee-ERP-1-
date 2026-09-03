@@ -356,9 +356,6 @@ function PayrollRunDetail({
       },
     ]
     const updated: PayrollRun = { ...run, status: "pending-approval", timeline: updatedTimeline }
-    try {
-      localStorage.setItem("erp_payroll_run", JSON.stringify(updated))
-    } catch {}
     onRunUpdated(updated)
     try {
       const r = await submitPayrollForApproval(run.id)
@@ -381,9 +378,6 @@ function PayrollRunDetail({
       },
     ]
     const updated: PayrollRun = { ...run, status: "approved", timeline: updatedTimeline }
-    try {
-      localStorage.setItem("erp_payroll_run", JSON.stringify(updated))
-    } catch {}
     onRunUpdated(updated)
     try {
       const r = await approvePayrollRun(run.id, "current-user")
@@ -406,9 +400,6 @@ function PayrollRunDetail({
       },
     ]
     const updated: PayrollRun = { ...run, status: "paid", timeline: updatedTimeline }
-    try {
-      localStorage.setItem("erp_payroll_run", JSON.stringify(updated))
-    } catch {}
     onRunUpdated(updated)
     try {
       const r = await finalizePayrollRun(run.id)
@@ -947,17 +938,7 @@ export default function Payroll({ routeParams }: { routeParams?: { id?: string }
 
   useEffect(() => {
     getPayrollRun().then((r) => {
-      let baseRun = r.data
-      try {
-        const raw = localStorage.getItem("erp_payroll_run")
-        if (raw) {
-          const saved = JSON.parse(raw)
-          if (saved && saved.status) {
-            baseRun = { ...baseRun, ...saved }
-          }
-        }
-      } catch {}
-      if (baseRun) setRun(baseRun)
+      if (r.data) setRun(r.data)
       else setError(r.error ?? "Unable to load payroll run.")
       setLoading(false)
     })
@@ -965,17 +946,7 @@ export default function Payroll({ routeParams }: { routeParams?: { id?: string }
 
   useSupabaseRealtime("payroll", async () => {
     const r = await getPayrollRun()
-    let baseRun = r.data
-    try {
-      const raw = localStorage.getItem("erp_payroll_run")
-      if (raw) {
-        const saved = JSON.parse(raw)
-        if (saved && saved.status) {
-          baseRun = { ...baseRun, ...saved }
-        }
-      }
-    } catch {}
-    if (baseRun) setRun(baseRun)
+    if (r.data) setRun(r.data)
   })
 
   if (!canView)

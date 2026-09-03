@@ -347,10 +347,10 @@ export async function createOrder(_payload: CreateOrderPayload) {
         ref: "CUS-001",
         status: "active",
       },
-      salesRep: { id: "USR-003", name: "Yohannes Mesfin" },
-      creatorId: "USR-003",
-      creatorName: "Yohannes Mesfin",
-      creatorRole: "Sales Representative",
+      salesRep: { id: _payload.creatorId || "", name: _payload.creatorName || "" },
+      creatorId: _payload.creatorId || "",
+      creatorName: _payload.creatorName || "",
+      creatorRole: _payload.creatorRole || "Sales Representative",
       items: _payload.lines.map((l, idx) => ({
         id: `item-${idx}-${Date.now()}`,
         coffeeType: l.coffeeType,
@@ -380,7 +380,7 @@ export async function createOrder(_payload: CreateOrderPayload) {
         {
           id: `audit-${Date.now()}`,
           action: "Order Created",
-          actor: "Yohannes Mesfin",
+          actor: _payload.creatorName || "Sales Representative",
           actorRole: "Sales Representative",
           timestamp: new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }),
           note: `Created order for ${totalKg} KG.`,

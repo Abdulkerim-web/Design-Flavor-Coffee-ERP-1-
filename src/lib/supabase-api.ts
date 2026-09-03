@@ -9,36 +9,6 @@ const supabaseServiceRoleKey =
 
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
 
-// ── IN-MEMORY MOCKS ──
-let mockExpenses: any[] = []
-let mockPayments: any[] = []
-let mockPayroll: any = {
-  id: "pr-1",
-  period: "August 2026",
-  status: "draft",
-  employeeCount: 0,
-  totalAmount: "ETB 0",
-  pendingReviewCount: 0,
-  changesCount: 0,
-  employees: [],
-  timeline: [],
-}
-let mockBanking: any[] = []
-let mockExpenseCategories: any[] = [
-  { id: "cat-1", name: "Utility", code: "UTL", color: "#6366F1", active: true },
-  { id: "cat-2", name: "Supplies", code: "SUP", color: "#10B981", active: true },
-]
-let mockBankAccounts: any[] = [
-  {
-    id: "acc-1",
-    name: "Main Operating",
-    type: "checking",
-    number: "****1234",
-    currency: "ETB",
-    status: "active",
-    balance: "150000",
-  },
-]
 
 export async function handleSupabaseApiRequest(
   endpoint: string,
@@ -55,6 +25,145 @@ export async function handleSupabaseApiRequest(
   }
   if (path === "/auth/logout" && method === "POST") {
     return { success: true }
+  }
+
+  // ── EMPLOYEE MANAGEMENT ──────────────────────────────────────────────────
+
+  // GET /employees — list all employees
+  if (path === "/employees" && method === "GET") {
+    try {
+      const { data } = await supabaseAdmin
+        .from("profiles")
+        .select("id, full_name, role, email, phone, username, department, status, created_at, created_by_name, last_login")
+        .order("created_at", { ascending: false })
+      return data || []
+    } catch { return [] }
+  }
+
+  // POST /employees — create new employee (also creates Supabase Auth user)
+  if (path === "/employees" && method === "POST") {
+    const { fullName, role, email, phone, username, department, password, managerId, managerName } = body || {}
+    if (!email || !password || !fullName || !role) {
+      throw new Error("fullName, role, email, and password are required.")
+    }
+    // Validate password strength
+    if (password.length < 8)           throw new Error("Password must be at least 8 characters.")
+    if (!/[A-Z]/.test(password))       throw new Error("Password must include an uppercase letter.")
+    if (!/[0-9]/.test(password))       throw new Error("Password must include a number.")
+
+    // Check email uniqueness
+    const { data: existing } = await supabaseAdmin.from("profiles").select("id").eq("email", email).maybeSingle()
+    if (existing) throw new Error("An employee with this email already exists.")
+
+    // Check username uniqueness
+    if (username) {
+      const { data: existingUser } = await supabaseAdmin.from("profiles").select("id").eq("username", username).maybeSingle()
+      if (existingUser) throw new Error("This username is already taken.")
+    }
+
+    // Create Supabase Auth user
+    let authUserId: string | null = null
+    try {
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { full_name: fullName, role },
+      })
+      if (authError) throw new Error(authError.message)
+      authUserId = authData.user?.id || null
+    } catch (authErr: any) {
+      // If Supabase Auth fails, still create profile record
+      console.warn("Auth user creation failed:", authErr.message)
+    }
+
+    // Insert profile record
+    const profileId = authUserId || `emp-${Date.now()}`
+    const { data: profile, error: profileErr } = await supabaseAdmin
+      .from("profiles")
+      .insert([{
+        id: profileId,
+        full_name: fullName,
+        role,
+        email,
+        phone: phone || "",
+        username: username || "",
+        department: department || "",
+        status: "active",
+        created_by_name: managerName || "Manager",
+        manager_id: managerId || null,
+        created_at: new Date().toISOString(),
+      }])
+      .select()
+      .single()
+    if (profileErr) throw new Error(profileErr.message)
+    return profile
+  }
+
+  // PUT /employees/:id — update employee profile
+  if (path.startsWith("/employees/") && !path.includes("/password") && method === "PUT") {
+    const empId = parts[1]
+    const { fullName, role, email, phone, username, department, status } = body || {}
+    const updates: any = {}
+    if (fullName)    updates.full_name  = fullName
+    if (role)        updates.role       = role
+    if (email)       updates.email      = email
+    if (phone)       updates.phone      = phone
+    if (username)    updates.username   = username
+    if (department)  updates.department = department
+    if (status)      updates.status     = status
+    const { data, error } = await supabaseAdmin.from("profiles").update(updates).eq("id", empId).select().single()
+    if (error) throw new Error(error.message)
+    return data
+  }
+
+  // POST /employees/:id/password — change password (admin or self)
+  if (path.startsWith("/employees/") && path.endsWith("/password") && method === "POST") {
+    const empId = parts[1]
+    const { newPassword, adminReset, currentPassword } = body || {}
+    if (!newPassword)             throw new Error("New password is required.")
+    if (newPassword.length < 8)   throw new Error("Password must be at least 8 characters.")
+    if (!/[A-Z]/.test(newPassword)) throw new Error("Password must include an uppercase letter.")
+    if (!/[0-9]/.test(newPassword)) throw new Error("Password must include a number.")
+    try {
+      await supabaseAdmin.auth.admin.updateUserById(empId, { password: newPassword })
+    } catch (e: any) {
+      throw new Error(e.message || "Failed to update password in auth system.")
+    }
+    return { success: true }
+  }
+
+  // ── AUDIT LOGS ──
+  if (path === "/audit/logs") {
+    if (method === "GET") {
+      try {
+        const { data } = await supabaseAdmin
+          .from("audit_logs")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(500)
+        return data || []
+      } catch {
+        return [] // Return empty if table doesn't exist yet
+      }
+    }
+    if (method === "POST") {
+      try {
+        await supabaseAdmin.from("audit_logs").insert([{
+          action_code: body.actionCode,
+          action_type: body.actionType,
+          module: body.module,
+          record_id: body.recordId,
+          user_name: body.user,
+          user_role: body.role,
+          ip_address: body.ip,
+          device: body.device,
+          diff: body.diff || [],
+          created_at: new Date().toISOString(),
+        }])
+      } catch { /* ignore if table doesn't exist */ }
+      return { success: true }
+    }
   }
 
   // ── IN-MEMORY INTERCEPTORS FOR FINANCE & EXPENSES ──
@@ -152,12 +261,89 @@ export async function handleSupabaseApiRequest(
   }
 
   if (path.startsWith("/finance/expense-categories")) {
-    if (method === "GET") return mockExpenseCategories
-    if (method === "POST") {
-      const newCat = { id: "cat-" + Math.floor(Math.random() * 10000), ...body, active: true }
-      mockExpenseCategories.push(newCat)
-      return newCat
+    if (method === "GET") {
+      // Fetch categories from Supabase if table exists, otherwise return empty
+      try {
+        const { data } = await supabaseAdmin.from("expense_categories").select("*").order("name")
+        return data && data.length > 0 ? data : []
+      } catch {
+        return []
+      }
     }
+    if (method === "POST") {
+      try {
+        const { data } = await supabaseAdmin.from("expense_categories").insert([{ ...body, active: true }]).select()
+        return data?.[0] || { id: "cat-" + Date.now(), ...body, active: true }
+      } catch {
+        return { id: "cat-" + Date.now(), ...body, active: true }
+      }
+    }
+  }
+
+  // ── PROFILES / SALES REPS ──
+  if (path === "/profiles/sales-reps" && method === "GET") {
+    try {
+      const { data } = await supabaseAdmin
+        .from("profiles")
+        .select("id, full_name, first_name, last_name, display_name, role")
+        .in("role", ["sales-rep", "sales_rep", "SALES_REP"])
+        .order("full_name")
+      if (data && data.length > 0) {
+        return data.map((u: any) => ({
+          id: u.id,
+          name: u.full_name || u.display_name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || "Sales Rep",
+        }))
+      }
+    } catch { /* fall through */ }
+    // Fallback: return all non-admin users if role column not available
+    try {
+      const { data } = await supabaseAdmin
+        .from("profiles")
+        .select("id, full_name, first_name, last_name, display_name")
+        .order("full_name")
+        .limit(50)
+      if (data && data.length > 0) {
+        return data.map((u: any) => ({
+          id: u.id,
+          name: u.full_name || u.display_name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || "User",
+        }))
+      }
+    } catch { /* ignore */ }
+    return []
+  }
+
+  // ── PROFILES / DRIVERS ──
+  if (path === "/profiles/drivers" && method === "GET") {
+    try {
+      const { data } = await supabaseAdmin
+        .from("profiles")
+        .select("id, full_name, first_name, last_name, display_name, vehicle, vehicle_plate, role")
+        .in("role", ["delivery-staff", "driver", "DRIVER", "delivery_staff"])
+        .order("full_name")
+      if (data && data.length > 0) {
+        return data.map((u: any) => ({
+          id: u.id,
+          name: u.full_name || u.display_name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || "Driver",
+          vehicle: u.vehicle || u.vehicle_plate || "",
+        }))
+      }
+    } catch { /* fall through */ }
+    // Fallback: all profiles
+    try {
+      const { data } = await supabaseAdmin
+        .from("profiles")
+        .select("id, full_name, first_name, last_name, display_name")
+        .order("full_name")
+        .limit(50)
+      if (data && data.length > 0) {
+        return data.map((u: any) => ({
+          id: u.id,
+          name: u.full_name || u.display_name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || "Staff",
+          vehicle: "",
+        }))
+      }
+    } catch { /* ignore */ }
+    return []
   }
 
   // ── PAYMENTS RECORD ──
@@ -208,23 +394,87 @@ export async function handleSupabaseApiRequest(
   if (path.startsWith("/finance/payroll")) {
     const base = path.split("?")[0]
     if (method === "GET") {
-      if (base === "/finance/payroll") return mockPayroll
+      if (base === "/finance/payroll") {
+        // Fetch current payroll run from DB
+        try {
+          const { data } = await supabaseAdmin
+            .from("payroll_runs")
+            .select("*")
+            .order("created_at", { ascending: false })
+            .limit(1)
+          if (data && data.length > 0) {
+            const run = data[0]
+            // Fetch employees for this run
+            const { data: employees } = await supabaseAdmin
+              .from("payroll_employees")
+              .select("*")
+              .eq("run_id", run.id)
+            return {
+              id: run.id,
+              period: run.period || new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+              status: run.status || "draft",
+              employeeCount: run.employee_count || 0,
+              totalAmount: run.total_amount || "ETB 0",
+              pendingReviewCount: run.pending_review_count || 0,
+              changesCount: run.changes_count || 0,
+              employees: (employees || []).map((e: any) => ({
+                id: e.id,
+                name: e.name,
+                role: e.role || e.position,
+                baseSalary: e.base_salary || "ETB 0",
+                allowances: e.allowances || "ETB 0",
+                deductions: e.deductions || "ETB 0",
+                netPay: e.net_pay || "ETB 0",
+                bankAccount: e.bank_account || "—",
+                reviewStatus: e.review_status || "ok",
+              })),
+              timeline: run.timeline || [],
+            }
+          }
+        } catch { /* fall through */ }
+        // No payroll runs yet — return clean empty draft
+        return {
+          id: "pr-new",
+          period: new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+          status: "draft",
+          employeeCount: 0,
+          totalAmount: "ETB 0",
+          pendingReviewCount: 0,
+          changesCount: 0,
+          employees: [],
+          timeline: [],
+        }
+      }
       return null
     }
     if (method === "POST") {
+      const runId = parts[2]
       if (path.endsWith("/submit")) {
-        mockPayroll.status = "pending-approval"
-        return mockPayroll
+        try {
+          await supabaseAdmin.from("payroll_runs").update({ status: "pending-approval" }).eq("id", runId)
+        } catch { /* ignore if table missing */ }
+        return { success: true, status: "pending-approval" }
       }
       if (path.endsWith("/approve")) {
-        mockPayroll.status = "approved"
-        return mockPayroll
+        try {
+          await supabaseAdmin.from("payroll_runs").update({
+            status: "approved",
+            approved_by: body.userId || "Manager",
+            approved_at: new Date().toISOString(),
+          }).eq("id", runId)
+        } catch { /* ignore if table missing */ }
+        return { success: true, status: "approved" }
       }
       if (path.endsWith("/finalize")) {
-        mockPayroll.status = "paid"
-        return mockPayroll
+        try {
+          await supabaseAdmin.from("payroll_runs").update({
+            status: "paid",
+            finalized_at: new Date().toISOString(),
+          }).eq("id", runId)
+        } catch { /* ignore if table missing */ }
+        return { success: true, status: "paid" }
       }
-      return mockPayroll
+      return { success: true }
     }
   }
   // ── CUSTOMER APPROVAL / REJECTION ──
@@ -331,7 +581,32 @@ export async function handleSupabaseApiRequest(
     }
   }
 
-  if (path === "/finance/accounts" && method === "GET") return mockBankAccounts
+  if (path === "/finance/accounts" && method === "GET") {
+    // Fetch real bank accounts from Supabase
+    try {
+      const { data } = await supabaseAdmin.from("bank_accounts").select("*").order("created_at")
+      if (data && data.length > 0) {
+        return data.map((acc: any) => ({
+          id: acc.id,
+          bankName: acc.bank_name || acc.name || "Bank",
+          accountName: acc.account_name || acc.name || "Account",
+          maskedAccountNumber: acc.masked_account_number || acc.account_number || "****0000",
+          rawAccountRef: acc.account_number || acc.id,
+          calculatedBalance: acc.balance ? `ETB ${parseFloat(acc.balance).toLocaleString()}` : "ETB 0",
+          lastTransactionDate: acc.updated_at ? new Date(acc.updated_at).toLocaleDateString() : "—",
+          lastTransactionDesc: "—",
+          reconciliationStatus: "pending",
+          reconciliationPeriod: "—",
+          openingBalance: acc.opening_balance ? `ETB ${parseFloat(acc.opening_balance).toLocaleString()}` : "ETB 0",
+          transactionCount: 0,
+          // For PayModal dropdown compatibility
+          name: acc.account_name || acc.bank_name || "Account",
+          label: `${acc.bank_name || "Bank"} — ${acc.masked_account_number || acc.account_number || "****0000"}`,
+        }))
+      }
+    } catch { /* fall through to empty */ }
+    return []
+  }
 
   // ── Dashboards & Summaries ──
   if (path === "/dashboard/manager" && method === "GET") return await getManagerDashboard()
@@ -504,6 +779,41 @@ export async function handleSupabaseApiRequest(
     return { success: true }
   }
 
+  // ── ROASTING: Pending verification ──
+  if (path === "/roasting/pending-verification" && method === "GET") {
+    try {
+      const { data } = await supabaseAdmin
+        .from("roasting_batches")
+        .select("*, orders(orderNumber, customer_id)")
+        .in("status", ["ROASTED", "PENDING_VERIFY", "completed"])
+        .order("created_at", { ascending: false })
+        .limit(20)
+      return data || []
+    } catch { return [] }
+  }
+
+  // ── ROASTING: Yield history ──
+  if (path === "/roasting/yield-history" && method === "GET") {
+    try {
+      const { data } = await supabaseAdmin
+        .from("roasting_batches")
+        .select("id, batch_number, green_input_kg, roasted_output_kg, created_at, roast_profile, coffee_type, status")
+        .in("status", ["VERIFIED", "COMPLETED", "completed", "ROASTED"])
+        .order("created_at", { ascending: false })
+        .limit(30)
+      if (data && data.length > 0) {
+        return data.map((b: any) => ({
+          ...b,
+          yield_pct: b.green_input_kg > 0
+            ? +((b.roasted_output_kg / b.green_input_kg) * 100).toFixed(1)
+            : 0,
+          date: b.created_at ? b.created_at.slice(0, 10) : "",
+        }))
+      }
+      return []
+    } catch { return [] }
+  }
+
   // ── Generic CRUD Table Mapping ──
   let table = parts[0]
   if (path.startsWith("/inventory/lots")) table = "lots"
@@ -615,7 +925,7 @@ async function ensureDefaultOrderAndItem() {
       customer_id: customerId,
       status: "pending-confirmation",
       branch_id: "BRN-001",
-      sales_rep_id: "USR-003",
+      sales_rep_id: null,
       pre_vat_amount: 1000,
       vat_rate: 15.0,
       vat_amount: 150,
@@ -707,9 +1017,9 @@ async function ensureDefaultOrderAndItem() {
         business_number: `CUS-${Math.floor(Math.random() * 10000)}`,
         active: true,
         status: body.status || "pending",
-        sales_rep_id: body.salesRepId || "USR-003",
-        sales_rep_name: body.salesRepName || "Yohannes Mesfin",
-        sales_rep_employee_id: body.salesRepEmployeeId || "EMP-104",
+        sales_rep_id: body.salesRepId || "",
+        sales_rep_name: body.salesRepName || "",
+        sales_rep_employee_id: body.salesRepEmployeeId || "",
         submitted_at: new Date().toISOString(),
       }
     } else if (table === "orders") {
@@ -745,9 +1055,9 @@ async function ensureDefaultOrderAndItem() {
         status: "pending-confirmation",
         customer_id: customerId,
         branch_id: "BRN-001",
-        sales_rep_id: body.creatorId || "USR-003",
-        created_by_user_id: body.creatorId || "USR-003",
-        created_by_name: body.creatorName || "Yohannes Mesfin",
+        sales_rep_id: body.creatorId || "",
+        created_by_user_id: body.creatorId || "",
+        created_by_name: body.creatorName || "",
         created_by_role: body.creatorRole || "Sales Representative",
         is_urgent: body.urgent || false,
         pre_vat_amount: preVatAmount,
@@ -901,49 +1211,40 @@ async function getManagerDashboard() {
   }))
 
   const attentionCards = []
-  if (mockPayroll.status === "pending-approval") {
-    attentionCards.push({
-      id: "payroll-approval-card",
-      severity: "warning",
-      category: "Payroll Approval",
-      title: `Monthly Payroll Run (${mockPayroll.period || "Current"}) Pending Approval`,
-      description: `Total Net Pay: ${mockPayroll.totalAmount || "ETB 148,500"} | ${mockPayroll.employeeCount || 12} Employees`,
-      primaryAction: "Review Payroll",
-      module: "payroll",
-      age: "Needs Action",
-    })
-  }
-  // Cross-reference localStorage to exclude customers already approved/rejected locally
-  let localOverrides: Record<string, string> = {}
+  // Check payroll runs pending approval from Supabase
   try {
-    const raw = typeof localStorage !== "undefined" ? localStorage.getItem("erp_customers_records") : null
-    if (raw) {
-      const saved = JSON.parse(raw)
-      if (Array.isArray(saved)) {
-        saved.forEach((c: any) => {
-          if (c.id && c.status) localOverrides[c.id] = c.status
-        })
-      }
+    const { data: payrollData } = await supabaseAdmin
+      .from("payroll_runs")
+      .select("id, period, status, total_amount, employee_count")
+      .eq("status", "pending-approval")
+      .order("created_at", { ascending: false })
+      .limit(1)
+    if (payrollData && payrollData.length > 0) {
+      const pay = payrollData[0]
+      attentionCards.push({
+        id: `payroll-${pay.id}`,
+        severity: "warning",
+        category: "Payroll Approval",
+        title: `Monthly Payroll Run (${pay.period || "Current"}) Pending Approval`,
+        description: `Total Net Pay: ${pay.total_amount || "ETB 0"} | ${pay.employee_count || 0} Employees`,
+        primaryAction: "Review Payroll",
+        module: "payroll",
+        age: "Needs Action",
+      })
     }
-  } catch { /* ignore */ }
+  } catch { /* ignore if table doesn't exist */ }
 
-  const pendingCustomers = customersArr.filter((c: any) => {
-    const dbStatus = c.status
-    // Check if localStorage has an override for this customer
-    const localStatus = localOverrides[c.id]
-    if (localStatus && localStatus !== "pending" && localStatus !== "pending_approval" && localStatus !== "pending-approval") {
-      // Customer was already approved/rejected locally — exclude from pending queue
-      return false
-    }
-    return !dbStatus || dbStatus === "pending" || dbStatus === "pending_approval" || dbStatus === "pending-approval"
-  })
+  // Pending customers from DB only (no localStorage on server)
+  const pendingCustomers = customersArr.filter((c: any) =>
+    !c.status || c.status === "pending" || c.status === "pending_approval" || c.status === "pending-approval"
+  )
   for (const c of pendingCustomers) {
     attentionCards.push({
       id: `cus-${c.id}`,
       severity: "info",
       category: "Pending Customer Review",
       title: `Customer Registration Request: ${c.name}`,
-      description: `Ref: ${c.business_number || "CUS"} | Type: ${c.type || "cafe"} | Sales Rep: ${c.sales_rep_name || "Yohannes Mesfin"}`,
+      description: `Ref: ${c.business_number || "CUS"} | Type: ${c.type || "cafe"} | Sales Rep: ${c.sales_rep_name || ""}`,
       primaryAction: "View Customer",
       module: "customers",
       age: "Pending Review",

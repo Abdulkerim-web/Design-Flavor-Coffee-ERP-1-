@@ -3180,9 +3180,27 @@ function saveDeliveryLocally(rec: DeliveryRecord) {
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<DeliveryStatus | "">("")
   const [showDispatchModal, setShowDispatchModal] = useState(false)
-  const [dispatchOrderRef, setDispatchOrderRef] = useState("ORD-1042")
-  const [dispatchDriver, setDispatchDriver] = useState("Yohannes Mesfin")
+  const [dispatchOrderRef, setDispatchOrderRef] = useState("")
+  const [dispatchDriver, setDispatchDriver] = useState("")
   const [dispatchNotes, setDispatchNotes] = useState("")
+  const [drivers, setDrivers] = useState<{ id: string; name: string; vehicle?: string }[]>([])
+
+  // Load real drivers from profiles API
+  useEffect(() => {
+    import("../services/api").then(({ apiRequest }) => {
+      apiRequest<any[]>("/profiles/drivers", "GET")
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            setDrivers(data.map((u: any) => ({
+              id: u.id,
+              name: u.full_name || u.name || u.display_name || "Driver",
+              vehicle: u.vehicle || u.vehicle_plate || "",
+            })))
+          }
+        })
+        .catch(() => setDrivers([]))
+    })
+  }, [])
 
   /* Detail */
   const [detail, setDetail] = useState<DeliveryRecord | null>(null)
@@ -3661,8 +3679,13 @@ function saveDeliveryLocally(rec: DeliveryRecord) {
                   onChange={(e) => setDispatchDriver(e.target.value)}
                   style={{ width: "100%", height: 38, padding: "0 12px", borderRadius: 8, border: "1px solid var(--border-neutral)", background: "var(--surface-01)" }}
                 >
-                  <option value="Yohannes Mesfin">Yohannes Mesfin (Isuzu Truck - ET-3021)</option>
-                  <option value="Tewodros Kassahun">Tewodros Kassahun (Van - ET-1094)</option>
+                  <option value="">— Select a driver —</option>
+                  {/* Drivers are loaded from the delivery staff profiles in Supabase */}
+                  {drivers.map((d) => (
+                    <option key={d.id} value={d.name}>
+                      {d.name}{d.vehicle ? ` (${d.vehicle})` : ""}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>

@@ -509,26 +509,7 @@ const AttentionCardUI: FC<{
     setLoading(true)
     const custId = card.id.replace("cus-", "")
     await approveCustomer(custId, "General Manager")
-
-    // Send system notification
-    try {
-      const raw = localStorage.getItem("erp_notifications_list")
-      const list = raw ? JSON.parse(raw) : []
-      const notif = {
-        id: Date.now(),
-        category: "info",
-        title: "Customer Registration Approved",
-        what: `Customer request "${card.title}" has been approved by management and is now active.`,
-        why: "Approved by General Manager via Manager Dashboard.",
-        module: "customers",
-        moduleId: custId,
-        time: "Just now",
-        timeRaw: Date.now(),
-        read: false,
-      }
-      localStorage.setItem("erp_notifications_list", JSON.stringify([notif, ...list]))
-    } catch {}
-
+    // Notification is created inside approveCustomer service with salesRepId for correct routing
     setLoading(false)
     onResolveCard?.(card.id)
   }
@@ -543,26 +524,7 @@ const AttentionCardUI: FC<{
     const custId = card.id.replace("cus-", "")
     const reasonText = rejectReason.trim()
     await rejectCustomer(custId, reasonText, "General Manager")
-
-    // Send system notification
-    try {
-      const raw = localStorage.getItem("erp_notifications_list")
-      const list = raw ? JSON.parse(raw) : []
-      const notif = {
-        id: Date.now(),
-        category: "warning",
-        title: "Customer Registration Rejected",
-        what: `Customer registration request "${card.title}" has been rejected.`,
-        why: `Reason: ${reasonText}`,
-        module: "customers",
-        moduleId: custId,
-        time: "Just now",
-        timeRaw: Date.now(),
-        read: false,
-      }
-      localStorage.setItem("erp_notifications_list", JSON.stringify([notif, ...list]))
-    } catch {}
-
+    // Notification is created inside rejectCustomer service with salesRepId for correct routing
     setLoading(false)
     setRejectModalOpen(false)
     onResolveCard?.(card.id)
