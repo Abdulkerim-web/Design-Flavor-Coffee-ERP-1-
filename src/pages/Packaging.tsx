@@ -1026,34 +1026,14 @@ function MaterialsTable({
 }
 
 /* ─── List View ──────────────────────────────────────────────── */
-/* Helper to store and retrieve packing jobs permanently in localStorage */
-function getSavedPackingJobs(): PackingJob[] {
-  try {
-    const raw = localStorage.getItem("erp_packing_jobs")
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
-}
-
-function savePackingJobLocally(job: PackingJob) {
-  try {
-    const existing = getSavedPackingJobs()
-    const updated = [job, ...existing.filter((j) => j.id !== job.id)]
-    localStorage.setItem("erp_packing_jobs", JSON.stringify(updated))
-  } catch {
-    /* ignore */
-  }
-}
+// Removed localStorage fallbacks to enforce true database connectivity
 
 function ListView({
-  onSelect,
-}: {
-  onSelect: (job: PackingJob, view: View) => void
-}) {
+
+function ListView({ onSelect }: { onSelect: (id: string) => void }) {
   const { currentUser } = useAuth()
   const { isNarrow } = useBreakpoint()
-  const [jobs, setJobs] = useState<PackingJob[]>(() => getSavedPackingJobs())
+  const [jobs, setJobs] = useState<PackingJob[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
@@ -1082,6 +1062,11 @@ function ListView({
   const [packJobRef, setPackJobRef] = useState("")
   const [packSize, setPackSize] = useState("")
   const [packBags, setPackBags] = useState("100")
+  const [modalBatchRef, setModalBatchRef] = useState("")
+  const [modalPackType, setModalPackType] = useState("")
+  const [modalPackCount, setModalPackCount] = useState("")
+  const [modalPackWeight, setModalPackWeight] = useState("")
+  const [modalJobNotes, setModalJobNotes] = useState("")
 
   useEffect(() => {
     void load()
@@ -1218,20 +1203,6 @@ function ListView({
                   className="btn-primary"
                   style={{ padding: "8px 18px", borderRadius: 8, background: "#2B4D3A", color: "#FFF", border: "none", fontWeight: 600 }}
                   onClick={async () => {
-                    const newJob: PackingJob = {
-                      id: `pj-${Date.now()}`,
-                      ref: packJobRef || `PJ-${Math.floor(Math.random() * 9000 + 1000)}`,
-                      orderRef: "ORD-1001",
-                      customer: "General Customer",
-                      coffee: packSize.includes("250g") ? "Guji Grade 1 Natural (250g)" : packSize.includes("500g") ? "Yirgacheffe Washed (500g)" : "Sidama Specialty (1kg)",
-                      roastLevel: "Medium",
-                      requiredPackedQty: packBags + " Bags",
-                      packedQty: packBags + " Bags",
-                      remainingQty: "0 Bags",
-                      status: "ready-for-delivery",
-                    }
-                    savePackingJobLocally(newJob)
-                    setJobs((prev) => [newJob, ...prev.filter((j) => j.id !== newJob.id)])
                     setShowPackModal(false)
                     try {
                       await apiRequest("/packaging/entries", "POST", { jobRef: packJobRef, size: packSize, bags: packBags })

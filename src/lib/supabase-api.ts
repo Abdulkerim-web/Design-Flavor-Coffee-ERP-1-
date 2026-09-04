@@ -1352,7 +1352,18 @@ export async function handleSupabaseApiRequest(
       }])
 
       // 4. Update stock_balances for GREEN coffee
-      const { data: stock } = await supabaseAdmin.from("stock_      } else {
+      const { data: stock } = await supabaseAdmin.from("stock_balances")
+        .select("*")
+        .eq("item_id", pId)
+        .eq("itemType", "GREEN")
+        .maybeSingle()
+        
+      if (stock) {
+        await supabaseAdmin.from("stock_balances").update({
+          on_hand: parseFloat(stock.on_hand || 0) + acceptedQuantity,
+          available: parseFloat(stock.available || 0) + acceptedQuantity
+        }).eq("item_id", pId).eq("itemType", "GREEN")
+      } else {
         await supabaseAdmin.from("stock_balances").insert([{
           item_id: pId,
           itemType: "GREEN",

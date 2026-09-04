@@ -2,6 +2,8 @@
 import { useState } from "react"
 import { useBreakpoint } from "../hooks/useBreakpoint"
 import { useAuth } from "../contexts/AuthContext"
+import { apiRequest } from "../services/api"
+import { toast } from "sonner"
 import {
   RadarChart,
   PolarGrid,
@@ -1436,8 +1438,26 @@ export default function Quality() {
   } | null>(null)
   const [completedLog, setCompletedLog] = useState(COMPLETED)
 
-  const handleCommit = (verdict: "approved" | "rejected", data: any) => {
+  const handleCommit = async (verdict: "approved" | "rejected", data: any) => {
     if (!activeLot) return
+    
+    // Send to backend
+    try {
+      await apiRequest("/receiving", "POST", {
+        supplierId: "SUP-001", // Active lot supplier mapping would go here
+        coffeeProductId: "COF-001", // Active lot origin mapping would go here
+        inspectorId: currentUser?.id,
+        receivedQuantity: activeLot.declaredWeight,
+        acceptedQuantity: verdict === "approved" ? activeLot.declaredWeight : 0, // Simplified for now
+        qcNotes: JSON.stringify(data),
+        verdict
+      })
+      toast.success(verdict === "approved" ? "Stock Received & Inventory Updated" : "Receiving Rejected")
+    } catch (err: any) {
+      toast.error("Failed to save QC record", { description: err.message })
+      return // Halt local UI update if backend fails
+    }
+
     const newEntry = {
       id: `QC-${9025 + completedLog.length}`,
       lot: `GRN-${activeLot.origin.slice(0, 3).toUpperCase()}-2026-0${Math.floor(Math.random() * 90) + 10}`,

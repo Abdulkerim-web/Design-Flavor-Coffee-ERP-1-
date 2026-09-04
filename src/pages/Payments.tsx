@@ -409,25 +409,7 @@ function OperationalTimeline({
   )
 }
 
-/* Helper to store and retrieve payment records permanently in localStorage */
-function getSavedPayments(): PaymentRecord[] {
-  try {
-    const raw = localStorage.getItem("erp_payment_records")
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
-}
-
-function savePaymentRecordLocally(rec: PaymentRecord) {
-  try {
-    const existing = getSavedPayments()
-    const updated = [rec, ...existing.filter((p) => p.id !== rec.id)]
-    localStorage.setItem("erp_payment_records", JSON.stringify(updated))
-  } catch {
-    /* ignore */
-  }
-}
+// Removed localStorage fallbacks to enforce true database connectivity
 
 /* ─── Record Payment Modal ───────────────────────────────────── */
 function RecordPaymentModal({
@@ -476,7 +458,6 @@ function RecordPaymentModal({
         paymentStatus: "partially-paid",
         transactions: [newTx, ...payment.transactions],
       }
-      savePaymentRecordLocally(updatedPayment)
       await recordPayment({
         paymentId: payment.id,
         amount: amount.trim(),
@@ -2226,15 +2207,9 @@ function PaymentDetailView({
     setLoading(true)
     setError(null)
     try {
-      const savedLocal = getSavedPayments()
-      const localPayment = savedLocal.find((p) => p.id === paymentId)
-      if (localPayment) {
-        setPayment(localPayment)
-      } else {
-        const res = await getPayment(paymentId)
-        if (res.data) setPayment(res.data)
-        else throw new Error(res.error ?? "Not found")
-      }
+      const res = await getPayment(paymentId)
+      if (res.data) setPayment(res.data)
+      else throw new Error(res.error ?? "Not found")
     } catch {
       setError("Failed to load payment details.")
     } finally {

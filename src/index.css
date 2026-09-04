@@ -22,34 +22,34 @@
 /* ─── Design Tokens ─────────────────────────────────────────── */
 :root {
   /* Canvas */
-  --bg-primary:      #FAFAF8;
+  --bg-primary:      #F9F9F9;
   --surface-01:      #FFFFFF;
-  --surface-02:      #F5F3EF;
-  --surface-hover:   #EEEDE8;
-  --border-neutral:  #E5E3DC;
-  --border-focus:    #2B4D3A;
+  --surface-02:      #F4F5F7;
+  --surface-hover:   #F0F0F0;
+  --border-neutral:  #E0E0E0;
+  --border-focus:    #714B67;
 
-  /* Brand */
-  --brand-primary:   #2B4D3A;
-  --brand-hover:     #1F382A;
-  --accent-gold:     #B8860B;
-  --accent-roaster:  #6E4A32;
+  /* Brand (Odoo Aesthetic) */
+  --brand-primary:   #714B67;
+  --brand-hover:     #5A3C52;
+  --accent-gold:     #017E84; /* Re-purposed to Teal for accent */
+  --accent-roaster:  #714B67;
 
   /* Semantic */
-  --sem-success:     #16A34A;
-  --sem-warning:     #F59E0B;
-  --sem-danger:      #DC2626;
-  --sem-info:        #2563EB;
+  --sem-success:     #17A2B8; /* Odoo often uses teal/cyan for success/info */
+  --sem-warning:     #F0AD4E;
+  --sem-danger:      #D9534F;
+  --sem-info:        #017E84;
 
   /* Text */
-  --text-primary:    #1F2937;
-  --text-secondary:  #6B7280;
-  --text-muted:      #9CA3AF;
+  --text-primary:    #212529;
+  --text-secondary:  #495057;
+  --text-muted:      #868E96;
 
   /* Elevation */
-  --shadow-card:     0px 1px 3px rgba(0,0,0,0.04), 0px 1px 2px rgba(0,0,0,0.02);
-  --shadow-flyout:   0px 10px 15px -3px rgba(0,0,0,0.08), 0px 4px 6px -2px rgba(0,0,0,0.03);
-  --shadow-modal:    0px 25px 50px -12px rgba(0,0,0,0.18);
+  --shadow-card:     0px 1px 3px rgba(0,0,0,0.05), 0px 1px 2px rgba(0,0,0,0.03);
+  --shadow-flyout:   0px 8px 16px -4px rgba(0,0,0,0.1), 0px 4px 6px -2px rgba(0,0,0,0.05);
+  --shadow-modal:    0px 20px 40px -10px rgba(0,0,0,0.2);
 
   /* Tailwind mapping */
   --background:        var(--bg-primary);
@@ -62,8 +62,8 @@
   --secondary-foreground: var(--text-primary);
   --muted:             var(--surface-02);
   --muted-foreground:  var(--text-secondary);
-  --accent:            var(--accent-gold);
-  --accent-foreground: var(--text-primary);
+  --accent:            #017E84; /* Teal accent */
+  --accent-foreground: #FFFFFF;
   --border:            var(--border-neutral);
   --ring:              var(--border-focus);
   --radius:            8px;
@@ -75,8 +75,8 @@
   --dur-slow: 300ms;
 
   /* Brand extended */
-  --brand-espresso:  #1A2E22;
-  --brand-roast:     #6E4A32;
+  --brand-espresso:  #493142; /* Darker Odoo purple */
+  --brand-roast:     #017E84; /* Reusing Teal for highlights */
 
   /* Border radius scale */
   --radius-sm:   4px;
