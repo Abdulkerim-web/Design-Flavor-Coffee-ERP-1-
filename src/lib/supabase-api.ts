@@ -56,10 +56,22 @@ export async function handleSupabaseApiRequest(
   if (path === "/employees" && method === "GET") {
     try {
       const { data } = await supabaseAdmin
-        .from("profiles")
-        .select("id, full_name, role, email, phone, username, department, status, created_at, created_by_name, last_login")
+        .from("users")
+        .select("id, name, role_id, email, department, status, created_at, last_active")
         .order("created_at", { ascending: false })
-      return data || []
+      return (data || []).map((u: any) => ({
+        id: u.id,
+        full_name: u.name,
+        role: u.role_id,
+        email: u.email,
+        phone: "",
+        username: "",
+        department: u.department,
+        status: u.status,
+        created_at: u.created_at,
+        created_by_name: "System",
+        last_login: u.last_active,
+      }))
     } catch { return [] }
   }
 
@@ -75,12 +87,12 @@ export async function handleSupabaseApiRequest(
     if (!/[0-9]/.test(password))       throw new Error("Password must include a number.")
 
     // Check email uniqueness
-    const { data: existing } = await supabaseAdmin.from("profiles").select("id").eq("email", email).maybeSingle()
+    const { data: existing } = await supabaseAdmin.from("users").select("id").eq("email", email).maybeSingle()
     if (existing) throw new Error("An employee with this email already exists.")
 
     // Check username uniqueness
     if (username) {
-      const { data: existingUser } = await supabaseAdmin.from("profiles").select("id").eq("username", username).maybeSingle()
+      const { data: existingUser } = await supabaseAdmin.from("users").select("id").eq("email", username).maybeSingle()
       if (existingUser) throw new Error("This username is already taken.")
     }
 
@@ -103,24 +115,29 @@ export async function handleSupabaseApiRequest(
     // Insert profile record
     const profileId = authUserId || `emp-${Date.now()}`
     const { data: profile, error: profileErr } = await supabaseAdmin
-      .from("profiles")
+      .from("users")
       .insert([{
         id: profileId,
-        full_name: fullName,
-        role,
+        name: fullName,
+        role_id: role,
         email,
-        phone: phone || "",
-        username: username || "",
+        business_number: `EMP-${Math.floor(Math.random() * 10000)}`,
         department: department || "",
         status: "active",
-        created_by_name: managerName || "Manager",
-        manager_id: managerId || null,
         created_at: new Date().toISOString(),
       }])
       .select()
       .single()
     if (profileErr) throw new Error(profileErr.message)
-    return profile
+    return {
+      id: profile.id,
+      full_name: profile.name,
+      role: profile.role_id,
+      email: profile.email,
+      department: profile.department,
+      status: profile.status,
+      created_at: profile.created_at,
+    }
   }
 
   // PUT /employees/:id — update employee profile
@@ -128,14 +145,12 @@ export async function handleSupabaseApiRequest(
     const empId = parts[1]
     const { fullName, role, email, phone, username, department, status } = body || {}
     const updates: any = {}
-    if (fullName)    updates.full_name  = fullName
-    if (role)        updates.role       = role
+    if (fullName)    updates.name  = fullName
+    if (role)        updates.role_id       = role
     if (email)       updates.email      = email
-    if (phone)       updates.phone      = phone
-    if (username)    updates.username   = username
     if (department)  updates.department = department
     if (status)      updates.status     = status
-    const { data, error } = await supabaseAdmin.from("profiles").update(updates).eq("id", empId).select().single()
+    const { data, error } = await supabaseAdmin.from("users").update(updates).eq("id", empId).select().single()
     if (error) throw new Error(error.message)
     return data
   }
@@ -375,31 +390,31 @@ export async function handleSupabaseApiRequest(
         "Sales Representative", "salesperson", "SalesRep",
       ]
       const { data } = await supabaseAdmin
-        .from("profiles")
-        .select("id, full_name, first_name, last_name, display_name, role, status")
-        .in("role", salesRoleVariants)
+        .from("users")
+        .select("id, name, role_id, status")
+        .in("role_id", salesRoleVariants)
         .neq("status", "inactive")
-        .order("full_name")
+        .order("name")
       if (data && data.length > 0) {
         return data.map((u: any) => ({
           id: u.id,
-          name: u.full_name || u.display_name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || "Sales Rep",
+          name: u.name || "Sales Rep",
         }))
       }
     } catch { /* fall through */ }
     // Fallback: return ALL active profiles so the dropdown is always populated
     try {
       const { data } = await supabaseAdmin
-        .from("profiles")
-        .select("id, full_name, first_name, last_name, display_name, role, status")
+        .from("users")
+        .select("id, name, role_id, status")
         .neq("status", "inactive")
-        .order("full_name")
+        .order("name")
         .limit(100)
       if (data && data.length > 0) {
         return data.map((u: any) => ({
           id: u.id,
-          name: u.full_name || u.display_name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || "Employee",
-          role: u.role || "",
+          name: u.name || "Employee",
+          role: u.role_id || "",
         }))
       }
     } catch { /* ignore */ }
@@ -459,29 +474,29 @@ export async function handleSupabaseApiRequest(
   if (path === "/profiles/drivers" && method === "GET") {
     try {
       const { data } = await supabaseAdmin
-        .from("profiles")
-        .select("id, full_name, first_name, last_name, display_name, vehicle, vehicle_plate, role")
-        .in("role", ["delivery-staff", "driver", "DRIVER", "delivery_staff"])
-        .order("full_name")
+        .from("users")
+        .select("id, name, role_id")
+        .in("role_id", ["delivery-staff", "driver", "DRIVER", "delivery_staff"])
+        .order("name")
       if (data && data.length > 0) {
         return data.map((u: any) => ({
           id: u.id,
-          name: u.full_name || u.display_name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || "Driver",
-          vehicle: u.vehicle || u.vehicle_plate || "",
+          name: u.name || "Driver",
+          vehicle: "",
         }))
       }
     } catch { /* fall through */ }
     // Fallback: all profiles
     try {
       const { data } = await supabaseAdmin
-        .from("profiles")
-        .select("id, full_name, first_name, last_name, display_name")
-        .order("full_name")
+        .from("users")
+        .select("id, name")
+        .order("name")
         .limit(50)
       if (data && data.length > 0) {
         return data.map((u: any) => ({
           id: u.id,
-          name: u.full_name || u.display_name || `${u.first_name || ""} ${u.last_name || ""}`.trim() || "Staff",
+          name: u.name || "Driver",
           vehicle: "",
         }))
       }
@@ -550,11 +565,11 @@ export async function handleSupabaseApiRequest(
             // Fetch employee lines for this run — correct table: payroll_run_lines
             const { data: lines } = await supabaseAdmin
               .from("payroll_run_lines")
-              .select("*, profile:profiles(full_name, role, department)")
+              .select("*, profile:users(name, role_id, department)")
               .eq("payroll_run_id", run.id)
-            // Also fetch total employee count from profiles
+            // Also fetch total employee count from users
             const { count: totalEmployees } = await supabaseAdmin
-              .from("profiles")
+              .from("users")
               .select("id", { count: "exact", head: true })
               .neq("status", "inactive")
             const runLines = lines || []
@@ -611,19 +626,53 @@ export async function handleSupabaseApiRequest(
         try {
           await supabaseAdmin.from("payroll_runs").update({
             status: "approved",
-            approved_by: body.userId || "Manager",
-            approved_at: new Date().toISOString(),
+            approved_by_manager_id: body.userId || "Manager",
+            updated_at: new Date().toISOString(),
           }).eq("id", runId)
         } catch { /* ignore if table missing */ }
         return { success: true, status: "approved" }
       }
       if (path.endsWith("/finalize")) {
         try {
+          // 1. Mark as paid
           await supabaseAdmin.from("payroll_runs").update({
             status: "paid",
-            finalized_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           }).eq("id", runId)
-        } catch { /* ignore if table missing */ }
+          
+          // 2. Fetch the total amount from run and lines
+          const { data: run } = await supabaseAdmin.from("payroll_runs").select("total_amount, period_start").eq("id", runId).single()
+          
+          if (run) {
+            const total = parseFloat(run.total_amount || 0)
+            
+            // 3. Create expense record
+            await supabaseAdmin.from("expenses").insert([{
+              amount: total,
+              category: "Payroll",
+              description: `Payroll for period starting ${run.period_start}`,
+              status: "paid",
+              payment_method: "BANK_TRANSFER",
+              requested_by_user_id: body.userId || "System",
+              approved_by_manager_id: body.userId || "Manager"
+            }])
+            
+            // 4. Deduct from bank account
+            const { data: bank } = await supabaseAdmin.from("company_bank_accounts").select("*").limit(1).maybeSingle()
+            if (bank) {
+              await supabaseAdmin.from("bank_transactions").insert([{
+                bank_account_id: bank.id,
+                amount: -Math.abs(total),
+                sourceType: "PAYROLL",
+                source_id: runId,
+                reference_note: `Payroll run ${runId}`
+              }])
+              // In a real Odoo we update bank balance, but we use views or aggregate sums for true balance here
+            }
+          }
+        } catch (err) {
+          console.error("Payroll finalize failed:", err)
+        }
         return { success: true, status: "paid" }
       }
       return { success: true }
@@ -1253,33 +1302,145 @@ export async function handleSupabaseApiRequest(
 
   // ── Custom Actions ──
   if (path === "/receiving" && method === "POST") {
-    return { success: true }
+    const { supplierId, coffeeProductId, inspectorId, receivedQuantity, acceptedQuantity, qcNotes, verdict } = body || {}
+    
+    // Default to the first active supplier/product if not provided
+    const { data: defaultSupplier } = await supabaseAdmin.from("suppliers").select("id").eq("is_active", true).limit(1).maybeSingle()
+    const { data: defaultProduct } = await supabaseAdmin.from("coffee_products").select("id").eq("active", true).limit(1).maybeSingle()
+    
+    const sId = supplierId || defaultSupplier?.id || "SUP-001"
+    const pId = coffeeProductId || defaultProduct?.id || "COF-001"
+    const status = verdict === "approved" ? "accepted" : "rejected"
+    
+    // 1. Create receiving_record
+    const { data: rec, error: recErr } = await supabaseAdmin.from("receiving_records").insert([{
+      supplier_id: sId,
+      coffee_product_id: pId,
+      storekeeper_user_id: inspectorId || "USR-004", // default to inventory manager
+      inspector_user_id: inspectorId || "USR-007",
+      received_quantity: receivedQuantity || 0,
+      accepted_quantity: acceptedQuantity || 0,
+      rejected_quantity: (receivedQuantity || 0) - (acceptedQuantity || 0),
+      qc_notes: qcNotes || "",
+      status
+    }]).select().single()
+    
+    if (recErr) throw new Error("Failed to save receiving record: " + recErr.message)
+    
+    if (verdict === "approved" && acceptedQuantity > 0) {
+      // 2. Create Lot
+      const lotId = `LOT-${new Date().getFullYear()}-${Math.floor(Math.random() * 9000) + 1000}`
+      await supabaseAdmin.from("lots").insert([{
+        id: lotId,
+        coffee_product_id: pId,
+        receiving_record_id: rec.id,
+        initial_quantity: acceptedQuantity,
+        unit_cost_etb: 150.00, // mock cost
+        total_cost_etb: acceptedQuantity * 150.00
+      }])
+
+      // 3. Create inventory_transaction (IN)
+      await supabaseAdmin.from("inventory_transactions").insert([{
+        type: "receipt",
+        direction: "in",
+        quantity: acceptedQuantity,
+        coffee_product_id: pId,
+        reference_entity_type: "receiving_records",
+        reference_entity_id: rec.id,
+        performed_by_user_id: inspectorId || "USR-007",
+        notes: `Received and QC approved`
+      }])
+
+      // 4. Update stock_balances for GREEN coffee
+      const { data: stock } = await supabaseAdmin.from("stock_      } else {
+        await supabaseAdmin.from("stock_balances").insert([{
+          item_id: pId,
+          itemType: "GREEN",
+          on_hand: acceptedQuantity,
+          available: acceptedQuantity,
+          reserved: 0
+        }])
+      }
+      
+      // Notify inventory manager
+      await writeNotification("inventory-manager", "New Stock Received", `Lot ${lotId} (${acceptedQuantity} kg) has passed QC and entered stock.`, "info", "receiving_records", rec.id)
+    }
+
+    return { success: true, receivingRecord: rec }
   }
+
   if (path.startsWith("/orders/") && path.endsWith("/confirm") && method === "POST") {
     const orderId = parts[1]
-    // Update order to roasting status
-    await supabaseAdmin.from("orders").update({ status: "roasting", updated_at: new Date().toISOString() }).eq("id", orderId)
-    // Auto-create a roasting batch for this order
-    try {
-      const { data: ord } = await supabaseAdmin.from("orders").select("total_amount, quantity_kg, customer_id, sales_rep_id").eq("id", orderId).single()
-      const { data: item } = await supabaseAdmin.from("order_items").select("id, quantity").eq("order_id", orderId).limit(1).single()
-      const qty = parseFloat(item?.quantity || ord?.quantity_kg || "60") || 60
-      const { data: batch } = await supabaseAdmin.from("roasting_batches").insert([{
-        order_id: orderId,
-        order_item_id: item?.id || "00000000-0000-0000-0000-000000000000",
-        status: "SCHEDULED",
-        green_input_quantity: qty,
-        expected_roasted_quantity: qty * 0.85,
-        applied_yield_percentage: 85.0,
-        acceptable_range_percentage: 5.0,
-      }]).select().single()
-      // Notify production team
-      await writeNotification("roaster", "New Roasting Batch Scheduled",
-        `Order confirmed. Batch of ${qty} kg green coffee ready for roasting.`,
-        "info", "orders", orderId)
-    } catch (batchErr) {
-      console.warn("[Order Confirm] Batch creation failed:", batchErr)
+    
+    // Fetch order and items
+    const { data: ord } = await supabaseAdmin.from("orders").select("id, customer_id").eq("id", orderId).single()
+    const { data: items } = await supabaseAdmin.from("order_items").select("*").eq("order_id", orderId)
+    
+    if (!ord || !items || items.length === 0) throw new Error("Order not found or has no items.")
+    
+    let allItemsAvailable = true
+    
+    // Check stock for each item
+    for (const item of items) {
+      const pId = item.coffee_product_id
+      const qty = parseFloat(item.quantity)
+      
+      const { data: stock } = await supabaseAdmin.from("stock_balances")
+        .select("*")
+        .eq("item_id", pId)
+        .eq("itemType", "ROASTED")
+        .maybeSingle()
+        
+      if (!stock || parseFloat(stock.available || 0) < qty) {
+        allItemsAvailable = false
+        // Create roasting batch for this deficit
+        await supabaseAdmin.from("roasting_batches").insert([{
+          order_id: orderId,
+          order_item_id: item.id,
+          status: "SCHEDULED",
+          green_input_quantity: qty / 0.85, // estimate green coffee needed
+          expected_roasted_quantity: qty,
+          applied_yield_percentage: 85.0,
+          acceptable_range_percentage: 5.0,
+        }])
+      } else {
+        // Reserve stock
+        await supabaseAdmin.from("stock_balances").update({
+          reserved: parseFloat(stock.reserved || 0) + qty,
+          available: parseFloat(stock.available || 0) - qty
+        }).eq("item_id", pId).eq("itemType", "ROASTED")
+        
+        // Log transaction
+        await supabaseAdmin.from("inventory_transactions").insert([{
+          type: "sales_reservation",
+          direction: "reserve",
+          quantity: qty,
+          coffee_product_id: pId,
+          reference_entity_type: "orders",
+          reference_entity_id: orderId,
+          performed_by_user_id: body.managerId || "System",
+          notes: `Reserved for Order ${orderId}`
+        }])
+      }
     }
+    
+    if (allItemsAvailable) {
+      // Everything is in stock, send to delivery!
+      await supabaseAdmin.from("orders").update({ status: "ready-for-delivery", updated_at: new Date().toISOString() }).eq("id", orderId)
+      
+      await supabaseAdmin.from("delivery_records").insert([{
+        order_id: orderId,
+        customer_id: ord.customer_id,
+        status: "READY_FOR_ASSIGNMENT"
+      }])
+      
+      await writeNotification("delivery-staff", "New Delivery Ready", `Order ${orderId.slice(0,6).toUpperCase()} is ready for dispatch.`, "info", "orders", orderId)
+    } else {
+      // Send to production
+      await supabaseAdmin.from("orders").update({ status: "roasting", updated_at: new Date().toISOString() }).eq("id", orderId)
+      await writeNotification("roaster", "New Roasting Scheduled", `Order ${orderId.slice(0,6).toUpperCase()} requires roasting.`, "info", "orders", orderId)
+    }
+    
     return { success: true }
   }
   if (path.startsWith("/orders/") && path.endsWith("/reject") && method === "POST") {
@@ -1295,21 +1456,95 @@ export async function handleSupabaseApiRequest(
   if (path.startsWith("/roasting/") && path.endsWith("/complete") && method === "POST") {
     const id = parts[1]
     const actualYield = parseFloat(String(body.actualYield || body.actual_roasted_quantity || 0))
+    
+    // Fetch batch details
+    const { data: batch } = await supabaseAdmin.from("roasting_batches").select("*").eq("id", id).single()
+    if (!batch) throw new Error("Batch not found")
+      
+    // Fetch product ID from order item
+    const { data: item } = await supabaseAdmin.from("order_items").select("coffee_product_id").eq("id", batch.order_item_id).maybeSingle()
+    const pId = item?.coffee_product_id || "COF-001"
+    
+    // 1. OUT Transaction (Green Coffee)
+    const greenQty = parseFloat(batch.green_input_quantity || 0)
+    await supabaseAdmin.from("inventory_transactions").insert([{
+      type: "manufacturing_consumption",
+      direction: "out",
+      quantity: greenQty,
+      coffee_product_id: pId,
+      reference_entity_type: "roasting_batches",
+      reference_entity_id: id,
+      performed_by_user_id: body.managerId || "System",
+      notes: "Consumed for roasting"
+    }])
+    
+    const { data: greenStock } = await supabaseAdmin.from("stock_balances").select("*").eq("item_id", pId).eq("itemType", "GREEN").maybeSingle()
+    if (greenStock) {
+      await supabaseAdmin.from("stock_balances").update({
+        on_hand: Math.max(0, parseFloat(greenStock.on_hand || 0) - greenQty),
+        available: Math.max(0, parseFloat(greenStock.available || 0) - greenQty)
+      }).eq("item_id", pId).eq("itemType", "GREEN")
+    }
+
+    // 2. IN Transaction (Roasted Coffee)
+    await supabaseAdmin.from("inventory_transactions").insert([{
+      type: "manufacturing_production",
+      direction: "in",
+      quantity: actualYield,
+      coffee_product_id: pId,
+      reference_entity_type: "roasting_batches",
+      reference_entity_id: id,
+      performed_by_user_id: body.managerId || "System",
+      notes: "Produced from roasting"
+    }])
+    
+    const { data: roastedStock } = await supabaseAdmin.from("stock_balances").select("*").eq("item_id", pId).eq("itemType", "ROASTED").maybeSingle()
+    if (roastedStock) {
+      await supabaseAdmin.from("stock_balances").update({
+        on_hand: parseFloat(roastedStock.on_hand || 0) + actualYield,
+        available: parseFloat(roastedStock.available || 0) + actualYield
+      }).eq("item_id", pId).eq("itemType", "ROASTED")
+    } else {
+      await supabaseAdmin.from("stock_balances").insert([{
+        item_id: pId,
+        itemType: "ROASTED",
+        on_hand: actualYield,
+        available: actualYield,
+        reserved: 0
+      }])
+    }
+
+    // 3. Discrepancy Check
+    const expectedYield = parseFloat(batch.expected_roasted_quantity || 0)
+    const diff = Math.abs(expectedYield - actualYield)
+    const margin = expectedYield * ((parseFloat(batch.acceptable_range_percentage || 5.0)) / 100)
+    
+    if (diff > margin) {
+      await supabaseAdmin.from("discrepancies").insert([{
+        entity_type: "roasting_batches",
+        entity_id: id,
+        expectedQuantity: expectedYield,
+        actualQuantity: actualYield,
+        difference: diff,
+        status: "pending-review"
+      }])
+      await writeNotification("general-manager", "Yield Discrepancy Alert", `Batch ${id.slice(0,6).toUpperCase()} yielded ${actualYield}kg (Expected ${expectedYield}kg).`, "warning", "roasting_batches", id)
+    }
+
+    // 4. Finalize Batch & Advance Order
     await supabaseAdmin.from("roasting_batches").update({
       status: "COMPLETED",
       actual_roasted_quantity: actualYield,
       updated_at: new Date().toISOString(),
     }).eq("id", id)
-    // Update the linked order status to packaging
+
     try {
-      const { data: batch } = await supabaseAdmin.from("roasting_batches").select("order_id").eq("id", id).single()
-      if (batch?.order_id) {
+      if (batch.order_id) {
         await supabaseAdmin.from("orders").update({ status: "packaging", updated_at: new Date().toISOString() }).eq("id", batch.order_id)
-        await writeNotification("packaging-staff", "Ready for Packaging",
-          `Roasting complete. ${actualYield} kg of roasted coffee is ready for packaging.`,
-          "info", "roasting_batches", id)
+        await writeNotification("packaging-staff", "Ready for Packaging", `Roasting complete. ${actualYield} kg of roasted coffee is ready for packaging.`, "info", "roasting_batches", id)
       }
     } catch { /* ignore */ }
+    
     return { success: true }
   }
 
@@ -1520,7 +1755,6 @@ async function ensureDefaultOrderAndItem() {
         active: true,
         status: body.status || "pending",
         sales_rep_id: body.salesRepId || "",
-        sales_rep_name: body.salesRepName || "",
         submitted_at: new Date().toISOString(),
       }
     } else if (table === "orders") {
@@ -1678,6 +1912,32 @@ async function ensureDefaultOrderAndItem() {
       .eq("id", id)
       .select()
     if (error) throw error
+    
+    // Auto-create AR (Payments) when delivery completes
+    if (table === "delivery_records" && (body.status === "FULLY_DELIVERED" || body.status === "fully-delivered" || body.deliveryStatus === "fully-delivered")) {
+      const del = data[0]
+      if (del && del.order_id) {
+        // Fetch order total
+        const { data: ord } = await supabaseAdmin.from("orders").select("total_amount").eq("id", del.order_id).maybeSingle()
+        if (ord) {
+          // Check if payment already exists
+          const { data: existingPay } = await supabaseAdmin.from("payments").select("id").eq("order_id", del.order_id).maybeSingle()
+          if (!existingPay) {
+            await supabaseAdmin.from("payments").insert([{
+              order_id: del.order_id,
+              amount: ord.total_amount,
+              payment_method: "PENDING_AR", // Accounts Receivable
+              idempotency_key: `AR-${del.order_id}`,
+              registered_by_user_id: body.managerId || "System"
+            }])
+            // Mark order as DELIVERED
+            await supabaseAdmin.from("orders").update({ status: "delivered", updated_at: new Date().toISOString() }).eq("id", del.order_id)
+            await writeNotification("accountant", "New Accounts Receivable", `Delivery ${id.slice(0,6).toUpperCase()} complete. AR created for ETB ${ord.total_amount}.`, "info", "payments", del.order_id)
+          }
+        }
+      }
+    }
+    
     return camelizeKeys(data[0])
   }
 
@@ -1694,18 +1954,20 @@ async function ensureDefaultOrderAndItem() {
 }
 
 async function getManagerDashboard() {
-  const [{ data: ordersData }, { data: batchesData }, { data: customersData }] = await Promise.all([
-    supabaseAdmin.from("orders").select("*").order("created_at", { ascending: false }),
-    supabaseAdmin.from("roasting_batches").select("*").eq("status", "ROASTING"),
-    supabaseAdmin.from("customers").select("*"),
+  const [
+    { data: ordersData },
+    { count: activeRoastingCount },
+    { count: activeCustomersCount }
+  ] = await Promise.all([
+    supabaseAdmin.from("orders").select("id, status"),
+    supabaseAdmin.from("roasting_batches").select("id", { count: "exact", head: true }).eq("status", "ROASTING"),
+    supabaseAdmin.from("customers").select("id", { count: "exact", head: true }).eq("active", true),
   ])
 
   const ordersArr = ordersData || []
-  const customersArr = customersData || []
-  const batchesArr = batchesData || []
-
+  
   const activeOrders = ordersArr.filter(
-    (o: any) => !["CANCELLED", "DELIVERED", "COMPLETED"].includes(o.status)
+    (o: any) => !["CANCELLED", "DELIVERED", "COMPLETED", "cancelled", "delivered"].includes(o.status)
   )
 
   const kpiCards = [
@@ -1722,20 +1984,21 @@ async function getManagerDashboard() {
     },
     {
       label: "Total Active Customers",
-      value: `${customersArr.length} clients`,
+      value: `${activeCustomersCount || 0} clients`,
       sub: `Active customers in database`,
       icon: "M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 010 7.75",
     },
     {
       label: "Active Roasting",
-      value: `${batchesArr.length} batches`,
+      value: `${activeRoastingCount || 0} batches`,
       sub: "In progress",
       icon: "M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0",
     },
   ]
 
   const statusCounts = ordersArr.reduce((acc: any, o: any) => {
-    acc[o.status] = (acc[o.status] || 0) + 1
+    const st = o.status || "pending"
+    acc[st] = (acc[st] || 0) + 1
     return acc
   }, {})
 
@@ -1745,18 +2008,21 @@ async function getManagerDashboard() {
     color:
       String(status).includes("PENDING") || String(status).includes("pending")
         ? "#F59E0B"
-        : String(status).includes("CANCEL")
+        : String(status).includes("CANCEL") || String(status).includes("cancel")
         ? "#EF4444"
         : "#10B981",
   }))
 
   const attentionCards = []
 
-  // Pending customers requiring approval
-  const pendingCustomers = customersArr.filter((c: any) =>
-    !c.status || c.status === "pending" || c.status === "pending_approval" || c.status === "pending-approval"
-  )
-  for (const c of pendingCustomers) {
+  // Pending customers requiring approval (efficient query)
+  const { data: pendingCustomersData } = await supabaseAdmin
+    .from("customers")
+    .select("id, name, business_number, type, sales_rep_name")
+    .in("status", ["pending", "pending_approval", "pending-approval"])
+    .limit(10)
+    
+  for (const c of (pendingCustomersData || [])) {
     attentionCards.push({
       id: `cus-${c.id}`,
       severity: "info",
