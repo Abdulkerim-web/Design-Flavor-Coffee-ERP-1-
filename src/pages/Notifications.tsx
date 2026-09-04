@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
 import { useBreakpoint } from "../hooks/useBreakpoint"
 import { useToast } from "../contexts/ToastContext"
+import { useAuth } from "../contexts/AuthContext"
 
 type Category = "urgent" | "approval" | "warning" | "info"
 type LoadState = "loading" | "ok" | "error"
@@ -71,7 +72,7 @@ const SAMPLE_NOTIFS: Notif[] = []
 
 type FilterKey = "all" | Category | "unread"
 
-const FILTERS: { key: FilterKey label: string }[] = [
+const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All" },
   { key: "unread", label: "Unread" },
   { key: "urgent", label: "Urgent" },
@@ -83,25 +84,49 @@ const FILTERS: { key: FilterKey label: string }[] = [
 export default function Notifications() {
   const { isMobile } = useBreakpoint()
   const toast = useToast()
+  const { currentUser } = useAuth()
   const [filter, setFilter] = useState<FilterKey>("all")
-  const [notifs, setNotifs] = useState<Notif[]>(() => {
-    try {
-      const raw = localStorage.getItem("erp_notifications_list")
-      return raw ? JSON.parse(raw) : SAMPLE_NOTIFS
-    } catch {
-      return SAMPLE_NOTIFS
-    }
-  })
+  const [notifs, setNotifs] = useState<Notif[]>([])
   const [loadState, setLoadState] = useState<LoadState>("loading")
 
-  // Simulate initial load
+  // Load notifications from Supabase on mount
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("erp_notifications_list")
-      if (raw) setNotifs(JSON.parse(raw))
-    } catch {}
-    const t = setTimeout(() => setLoadState("ok"), 400)
-    return () => clearTimeout(t)
+    setLoadState("loading")
+    import("../services/api").then(({ apiRequest }) => {
+      apiRequest<any[]>(`/notifications?userId=${currentUser?.id || ""}`, "GET")
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            setNotifs(data.map((n: any) => ({
+              id: n.id,
+              category: (n.category || "info") as Category,
+              title: n.title || "Notification",
+              what: n.what || n.message || "",
+              why: n.why || n.reason || "",
+              action: n.action ?? undefined,
+              module: n.module || n.related_entity_type || "",
+              moduleId: n.moduleId || n.related_entity_id || "",
+              time: n.time || n.created_at || new Date().toLocaleString(),
+              timeRaw: n.timeRaw || (n.created_at ? new Date(n.created_at).getTime() : Date.now()),
+              read: !!n.read || !!n.is_read,
+            })))
+          } else {
+            // Fallback to localStorage if Supabase has no data yet
+            try {
+              const raw = localStorage.getItem("erp_notifications_list")
+              if (raw) setNotifs(JSON.parse(raw))
+            } catch {}
+          }
+          setLoadState("ok")
+        })
+        .catch(() => {
+          // Fallback to localStorage on network error
+          try {
+            const raw = localStorage.getItem("erp_notifications_list")
+            if (raw) setNotifs(JSON.parse(raw))
+          } catch {}
+          setLoadState("ok")
+        })
+    })
   }, [])
 
   // Realtime: listen for notifications inserted/updated/deleted
@@ -141,10 +166,18 @@ export default function Notifications() {
     return n.category === filter
   })
 
-  const markRead = (id: number) =>
+  const markRead = (id: number) => {
     setNotifs((ns) => ns.map((n) => (n.id === id ? { ...n, read: true } : n)))
+    // Persist to Supabase
+    import("../services/api").then(({ apiRequest }) => {
+      apiRequest("/notifications", "POST", { action: "mark-read", id }).catch(() => {})
+    })
+  }
   const markAll = () => {
     setNotifs((ns) => ns.map((n) => ({ ...n, read: true })))
+    import("../services/api").then(({ apiRequest }) => {
+      apiRequest("/notifications", "POST", { action: "mark-all-read", userId: currentUser?.id }).catch(() => {})
+    })
     toast.success("All notifications marked as read.")
   }
 

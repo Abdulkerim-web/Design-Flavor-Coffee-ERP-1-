@@ -20,62 +20,8 @@ interface Notification {
   read: boolean
 }
 
-const NOTIFICATIONS: Notification[] = [
-  {
-    id: 1,
-    category: "approval",
-    read: false,
-    title: "Order Awaiting Approval",
-    what: "Order #ORD-1042 — Guji Medium, 50 KG, Harar Coffee Exporters",
-    why: "Stock feasibility check shows a potential shortfall of 10.6 KG. Manager confirmation required before roasting can begin.",
-    action: "Review Order",
-    time: "12 min ago",
-    module: "Orders",
-  },
-  {
-    id: 2,
-    category: "urgent",
-    read: false,
-    title: "Stock Shortage — Yirgacheffe Grade 1",
-    what: "Current stock: 120 KG. Reorder threshold: 200 KG.",
-    why: "Two active orders totalling 180 KG may not be fulfilled without immediate restocking.",
-    action: "Review Stock",
-    time: "1h ago",
-    module: "Inventory",
-  },
-  {
-    id: 3,
-    category: "urgent",
-    read: false,
-    title: "QC Rejection — Lot #GR-0291",
-    what: "Moisture content 14.6% exceeded the 13% maximum threshold.",
-    why: "Lot quarantined. 500 KG of Sidama Grade 1 cannot proceed to roasting until reviewed.",
-    action: "Open QC Report",
-    time: "2h ago",
-    module: "Quality",
-  },
-  {
-    id: 4,
-    category: "warning",
-    read: true,
-    title: "Invoice Overdue — Ethiopian Airlines Catering",
-    what: "INV-2024-0819 — ETB 156,000.00 — 3 days past due date.",
-    why: "Payment has not been received. Customer contact may be required to avoid dispute.",
-    action: "View Invoice",
-    time: "1d ago",
-    module: "Finance",
-  },
-  {
-    id: 5,
-    category: "info",
-    read: true,
-    title: "Delivery Completed — Order #ORD-1038",
-    what: "25 KG Limu Espresso delivered to Hilton Addis Ababa — Main Kitchen.",
-    why: "Customer signature received. Awaiting payment confirmation within 3 business days.",
-    time: "2d ago",
-    module: "Delivery",
-  },
-]
+// Notifications start empty — fetched from DB on mount
+const INITIAL_NOTIFICATIONS: Notification[] = []
 
 const CATEGORY_CONFIG: Record<NotifCategory, {
   label: string
@@ -160,16 +106,67 @@ export default function TopBar({
   const [notifOpen, setNotifOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [statusHover, setStatusHover] = useState(false)
-  const [notifs, setNotifs] = useState(NOTIFICATIONS)
+  const [notifs, setNotifs] = useState<Notification[]>(INITIAL_NOTIFICATIONS)
+  const [notifLoading, setNotifLoading] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const { isMobile, isTablet } = useBreakpoint()
   const { mode, setMode, isDark } = useTheme()
 
-  const unreadCount = notifs.filter((n) => !n.read).length
-  const urgentCount = notifs.filter(
-    (n) => !n.read && n.category === "urgent",
-  ).length
+  // Fetch real notifications from Supabase for the current user
+  useEffect(() => {
+    const userId = currentUser?.id
+    if (!userId) {
+      setNotifs([])
+      return
+    }
+    let cancelled = false
+
+    async function fetchNotifications() {
+      setNotifLoading(true)
+      try {
+        const { createClient } = await import("@supabase/supabase-js")
+        const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || "https://udvtogofulclohhvdnzc.supabase.co"
+        const supabaseKey = (import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY as string) || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkdnRvZ29mdWxjbG9oaHZkbnpjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjkyMjIzNCwiZXhwIjoyMTAyNDk4MjM0fQ.LWTXMgNfSwIukBQuIR5v71CuhlNkCd6OpszP3UTcwT0"
+        const sb = createClient(supabaseUrl, supabaseKey)
+        const userRole = currentUser?.role || ""
+        let notifQuery = sb.from("notifications").select("*")
+        if (userId && userRole) {
+          notifQuery = notifQuery.or(`recipient_user_id.eq.${userId},recipient_user_id.eq.${userRole}`)
+        } else if (userId) {
+          notifQuery = notifQuery.eq("recipient_user_id", userId)
+        }
+        const { data } = await notifQuery.order("created_at", { ascending: false }).limit(30)
+        if (!cancelled && data) {
+          const mapped: Notification[] = (data as any[]).map((n, idx) => ({
+            id: idx + 1,
+            category: (n.type || "info") as NotifCategory,
+            read: !!n.is_read,
+            title: n.title || "Notification",
+            what: n.message || "",
+            why: n.reason || "",
+            action: n.action_label || undefined,
+            time: n.created_at ? new Date(n.created_at).toLocaleString() : "",
+            module: n.related_entity_type || "System",
+            _dbId: n.id, // preserve DB id for markAllRead
+          } as Notification & { _dbId: string }))
+          setNotifs(mapped)
+        }
+      } catch {
+        // Keep previous state on error
+      } finally {
+        if (!cancelled) setNotifLoading(false)
+      }
+    }
+
+    void fetchNotifications()
+    // Refresh every 30 seconds
+    const interval = setInterval(() => { void fetchNotifications() }, 30_000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [currentUser?.id])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -192,10 +189,10 @@ export default function TopBar({
     return () => document.removeEventListener("mousedown", handler)
   }, [userMenuOpen])
 
-  const crumbs = BREADCRUMB_MAP[activeModule] ?? ["Flavor Coffee", "Dashboard"]
-
-  const markAllRead = () =>
-    setNotifs((ns) => ns.map((n) => ({ ...n, read: true })))
+  const unreadCount = notifs.filter((n) => !n.read).length
+  const urgentCount = notifs.filter(
+    (n) => !n.read && n.category === "urgent",
+  ).length
 
   const ThemeBtn = ({
     m,
@@ -230,6 +227,27 @@ export default function TopBar({
       {label}
     </button>
   )
+
+  const crumbs = BREADCRUMB_MAP[activeModule] ?? ["Flavor Coffee", "Dashboard"]
+
+  const markAllRead = async () => {
+    // Optimistic local update
+    setNotifs((ns) => ns.map((n) => ({ ...n, read: true })))
+    // Persist to DB (best-effort)
+    try {
+      const userId = currentUser?.id
+      if (!userId) return
+      const { createClient } = await import("@supabase/supabase-js")
+      const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || "https://udvtogofulclohhvdnzc.supabase.co"
+      const supabaseKey = (import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY as string) || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkdnRvZ29mdWxjbG9oaHZkbnpjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjkyMjIzNCwiZXhwIjoyMTAyNDk4MjM0fQ.LWTXMgNfSwIukBQuIR5v71CuhlNkCd6OpszP3UTcwT0"
+      const sb = createClient(supabaseUrl, supabaseKey)
+      await sb
+        .from("notifications")
+        .update({ is_read: true, status: "read" })
+        .eq("recipient_user_id", userId)
+        .eq("is_read", false)
+    } catch { /* ignore */ }
+  }
 
   return (
     <header

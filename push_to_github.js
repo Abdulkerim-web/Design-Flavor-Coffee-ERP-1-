@@ -2,13 +2,17 @@
 /**
  * GitHub API pusher — no git binary needed
  * Usage: node push_to_github.js <GITHUB_TOKEN>
- * 
+ *
  * Pushes changed source files to the main branch of the repo
  */
 
-const https = require("https");
-const fs = require("fs");
-const path = require("path");
+import https from "https";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const REPO = "Abdulkerim-web/Design-Flavor-Coffee-ERP-1-";
 const BRANCH = "main";
@@ -20,10 +24,14 @@ if (!TOKEN) {
 }
 
 const FILES_TO_PUSH = [
-  "src/pages/Production.tsx",
   "src/lib/supabase-api.ts",
-  "src/services/operations.ts",
+  "src/services/delivery.ts",
+  "src/services/customers.ts",
+  "src/pages/Production.tsx",
+  "src/pages/Delivery.tsx",
+  "src/pages/Packaging.tsx",
   "src/pages/Payments.tsx",
+  "src/App.tsx",
 ];
 
 const BASE_DIR = path.join(__dirname);
@@ -76,7 +84,7 @@ async function pushFile(filePath) {
   const existingSha = await getFileSha(filePath);
 
   const body = {
-    message: `fix: real-time list update and correct DB inserts for ${path.basename(filePath)}`,
+    message: `fix: zero data mode — remove all demo data from DB + localStorage; purge hardcoded fallbacks (${path.basename(filePath)})`,
     content: encoded,
     branch: BRANCH,
     ...(existingSha ? { sha: existingSha } : {}),

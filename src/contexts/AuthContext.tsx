@@ -65,14 +65,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const demoUser = INITIAL_USERS.find(u => u.email === email)
       const finalRole = demoUser ? demoUser.role : (data.user.role ?? "general-manager")
 
+      // User ID priority:
+      //   1. API response id (now correctly populated by supabase-api.ts auth mock)
+      //   2. INITIAL_USERS id matched by email (reliable fallback)
+      //   3. Safe non-empty default (prevents undefined from cascading into DB queries)
+      const finalId = data.user.id || demoUser?.id || "USR-000"
+
       const user: AuthUser = {
-        id: data.user.id,
-        name: data.user.name || data.user.email,
+        id: finalId,
+        name: data.user.name || demoUser?.name || data.user.email,
         email: data.user.email,
         role: finalRole as RoleId,
-        avatar: data.user.avatar || "https://i.pravatar.cc/150?u=" + data.user.id,
-        avatarColor: data.user.avatarColor || "bg-blue-500",
-        department: data.user.department || "Staff",
+        avatar: data.user.avatar || "https://i.pravatar.cc/150?u=" + finalId,
+        avatarColor: data.user.avatarColor || demoUser?.avatarColor || "bg-blue-500",
+        department: data.user.department || demoUser?.department || "Staff",
         permissions: data.user.permissions,
       }
 

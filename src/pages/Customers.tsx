@@ -894,8 +894,9 @@ const CustomerListView: FC<{
   onNew: () => void
   canCreate: boolean
   role: string
+  currentUserId?: string
   refreshCount?: number
-}> = ({ onView, onNew, canCreate, role, refreshCount = 0 }) => {
+}> = ({ onView, onNew, canCreate, role, currentUserId, refreshCount = 0 }) => {
   const { isMobile } = useBreakpoint()
   const [loadState, setLoadState] = useState<LoadState>("loading")
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -927,9 +928,14 @@ const CustomerListView: FC<{
 
   const fetchCustomers = useCallback(async () => {
     setLoadState("loading")
+    // When the user is a sales rep, always scope to their own customers.
+    // This is the authoritative filter — their user ID is used as salesRepId.
+    const effectiveSalesRepId = isSalesRep && currentUserId
+      ? currentUserId
+      : filters.salesRep
     const res = await listCustomers({
       status: filters.status as any,
-      salesRepId: filters.salesRep,
+      salesRepId: effectiveSalesRepId,
       search: search,
     })
     if (res.state === "ok" && res.data) {
@@ -938,7 +944,7 @@ const CustomerListView: FC<{
     } else {
       setLoadState("error")
     }
-  }, [filters, search, refreshCount])
+  }, [filters, search, refreshCount, isSalesRep, currentUserId])
 
   useEffect(() => {
     fetchCustomers()
@@ -4329,6 +4335,7 @@ export default function Customers({
         onNew={goNew}
         canCreate={canCreate}
         role={role}
+        currentUserId={currentUser?.id}
         refreshCount={refreshCount}
       />
       <CustomerFormModal
