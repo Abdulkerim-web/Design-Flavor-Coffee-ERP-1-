@@ -1,5 +1,5 @@
 /* Responsive: mobile ≤640 | tablet 641–1024 | laptop 1025–1440 | desktop >1440 */
-import { useState, type FC, type CSSProperties } from "react"
+import { useState, useEffect, type FC, type CSSProperties } from "react"
 import { canRead, type RoleId, ROLES } from "../lib/rbac"
 import { useBreakpoint } from "../hooks/useBreakpoint"
 import { useTheme } from "../contexts/ThemeContext"
@@ -109,14 +109,10 @@ const icons = {
   expand: "M13 5l7 7-7 7M3 19l7-7-7-7",
 }
 
-/* ── Nav badges — amber = action required, red = urgent ───────── */
-const NAV_BADGES: Record<string, { count: number urgency: "amber" | "red" }> = {
-  orders: { count: 5, urgency: "amber" },
-  approvals: { count: 3, urgency: "amber" },
-  notifications: { count: 2, urgency: "red" },
-  finance: { count: 2, urgency: "amber" },
-  delivery: { count: 3, urgency: "amber" },
-}
+/* ── Nav badges — fetched from DB; only shown when count > 0 ─── */
+// Empty initial state — badges start hidden, populated after DB fetch
+type NavBadgeMap = Record<string, { count: number; urgency: "amber" | "red" }>
+const EMPTY_NAV_BADGES: NavBadgeMap = {}
 
 const BADGE_COLORS = {
   amber: {
@@ -225,6 +221,80 @@ export default function Sidebar({
   const { isTablet } = useBreakpoint()
   const { isDark } = useTheme()
   const [companyOpen, setCompanyOpen] = useState(false)
+
+  // ── Real badge counts fetched from DB ────────────────────────
+  const [navBadges, setNavBadges] = useState<NavBadgeMap>(EMPTY_NAV_BADGES)
+
+  useEffect(() => {
+    const userId = currentUser?.id
+    if (!userId) {
+      setNavBadges(EMPTY_NAV_BADGES)
+      return
+    }
+
+    let cancelled = false
+
+    async function fetchBadges() {
+      try {
+        const { createClient } = await import("@supabase/supabase-js")
+        const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || "https://udvtogofulclohhvdnzc.supabase.co"
+        const supabaseKey = (import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY as string) || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkdnRvZ29mdWxjbG9oaHZkbnpjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjkyMjIzNCwiZXhwIjoyMTAyNDk4MjM0fQ.LWTXMgNfSwIukBQuIR5v71CuhlNkCd6OpszP3UTcwT0"
+        const sb = createClient(supabaseUrl, supabaseKey)
+
+        const [notifRes, ordersRes, approvalsRes, deliveryRes, financeRes] = await Promise.all([
+          // Unread notifications for this specific user OR their role
+          sb.from("notifications")
+            .select("id", { count: "exact", head: true })
+            .or(`recipient_user_id.eq.${userId},recipient_user_id.eq.${currentUser?.role}`)
+            .eq("is_read", false),
+          // Orders awaiting confirmation
+          sb.from("orders")
+            .select("id", { count: "exact", head: true })
+            .eq("status", "pending-confirmation"),
+          // Pending customer registrations + pending expense approvals
+          sb.from("customers")
+            .select("id", { count: "exact", head: true })
+            .eq("status", "pending"),
+          // Deliveries ready for assignment
+          sb.from("delivery_records")
+            .select("id", { count: "exact", head: true })
+            .eq("status", "READY_FOR_ASSIGNMENT"),
+          // Pending expense approvals
+          sb.from("expenses")
+            .select("id", { count: "exact", head: true })
+            .eq("status", "pending-approval"),
+        ])
+
+        if (cancelled) return
+
+        const notifCount = notifRes.count ?? 0
+        const ordersCount = ordersRes.count ?? 0
+        const approvalsCount = approvalsRes.count ?? 0
+        const deliveryCount = deliveryRes.count ?? 0
+        const financeCount = financeRes.count ?? 0
+
+        const newBadges: NavBadgeMap = {}
+        if (notifCount > 0) newBadges.notifications = { count: notifCount, urgency: "red" }
+        if (ordersCount > 0) newBadges.orders = { count: ordersCount, urgency: "amber" }
+        if (approvalsCount > 0) newBadges.approvals = { count: approvalsCount, urgency: "amber" }
+        if (deliveryCount > 0) newBadges.delivery = { count: deliveryCount, urgency: "amber" }
+        if (financeCount > 0) newBadges.finance = { count: financeCount, urgency: "amber" }
+
+        setNavBadges(newBadges)
+      } catch {
+        // Silently fail — badges remain hidden rather than showing stale counts
+        if (!cancelled) setNavBadges(EMPTY_NAV_BADGES)
+      }
+    }
+
+    void fetchBadges()
+    // Refresh every 60 seconds
+    const interval = setInterval(() => { void fetchBadges() }, 60_000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [currentUser?.id])
   // Auto-collapse on tablet (icon rail only)
   const effectiveCollapsed = isTablet ? true : collapsed
   const W = isMobile ? 280 : effectiveCollapsed ? 64 : 240
@@ -697,10 +767,10 @@ export default function Sidebar({
                         </span>
                       )}
 
-                      {/* Nav badge */}
-                      {NAV_BADGES[item.id] &&
+                      {/* Nav badge — only rendered when count > 0 (real DB data) */}
+                      {navBadges[item.id] && navBadges[item.id].count > 0 &&
                         (() => {
-                          const badge = NAV_BADGES[item.id]
+                          const badge = navBadges[item.id]
                           const bc = BADGE_COLORS[badge.urgency]
                           return (
                             <div

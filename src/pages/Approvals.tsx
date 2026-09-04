@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { listOrders, confirmOrder, rejectOrder } from "../services/orders"
 import { listExpensesFull, approveExpense, rejectExpense, getPayrollRun, approvePayrollRun } from "../services/finance-ops"
+import { listCustomers, approveCustomer, rejectCustomer } from "../services/customers"
 import { useAuth } from "../contexts/AuthContext"
 import { useToast } from "../contexts/ToastContext"
 import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
@@ -20,6 +21,8 @@ export default function Approvals() {
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState<string | null>(null)
   const [refreshCount, setRefreshCount] = useState(0)
+  const [rejectItem, setRejectItem] = useState<ApprovalItem | null>(null)
+  const [rejectionReasonInput, setRejectionReasonInput] = useState("")
 
   useEffect(() => {
     let mounted = true
@@ -29,10 +32,23 @@ export default function Approvals() {
       const newItems: ApprovalItem[] = []
 
       try {
-        const [ordersRes, expensesRes] = await Promise.all([
+        const [ordersRes, expensesRes, customersRes] = await Promise.all([
           listOrders({ status: "pending-confirmation" }),
           listExpensesFull({ status: "pending-approval" }),
+          listCustomers({ status: "pending" }),
         ])
+
+        if (customersRes.state === "ok" && customersRes.data) {
+          customersRes.data.items.forEach((c: any) => {
+            newItems.push({
+              id: c.id,
+              ref: c.ref || `CUS-${c.id.slice(0, 6)}`,
+              type: "Customer Approval",
+              desc: `Customer "${c.name}" — Registered by ${c.salesRep?.name || "Sales Rep"}`,
+              originalData: c,
+            })
+          })
+        }
 
         if (ordersRes.state === "ok" && ordersRes.data) {
           ordersRes.data.items.forEach((o: any) => {
@@ -85,13 +101,17 @@ export default function Approvals() {
   }, [refreshCount])
 
   // Realtime updates: refetch when relevant DB tables change
+  useSupabaseRealtime("customers",() => setRefreshCount((c) => c + 1))
   useSupabaseRealtime("orders",   () => setRefreshCount((c) => c + 1))
   useSupabaseRealtime("expenses", () => setRefreshCount((c) => c + 1))
 
   const handleApprove = async (item: ApprovalItem) => {
     setProcessing(item.id)
     try {
-      if (item.type === "Order Approval") {
+      if (item.type === "Customer Approval") {
+        await approveCustomer(item.id, currentUser?.id || "MANAGER-1")
+        toast.success("Customer registration approved", { description: `${item.ref} has been approved.` })
+      } else if (item.type === "Order Approval") {
         await confirmOrder(item.id, currentUser?.id || "MANAGER-1")
         toast.success("Order approved", { description: `${item.ref} has been confirmed.` })
       } else if (item.type === "Payroll Approval") {
@@ -108,20 +128,33 @@ export default function Approvals() {
     setRefreshCount((c) => c + 1)
   }
 
-  const handleReject = async (item: ApprovalItem) => {
+  const handleRejectClick = (item: ApprovalItem) => {
+    if (item.type === "Customer Approval") {
+      setRejectItem(item)
+      setRejectionReasonInput("")
+    } else {
+      executeReject(item, "Rejected by manager")
+    }
+  }
+
+  const executeReject = async (item: ApprovalItem, reason: string) => {
     setProcessing(item.id)
     try {
-      if (item.type === "Order Approval") {
-        await rejectOrder(item.id, "Rejected by manager", currentUser?.id || "MANAGER-1")
+      if (item.type === "Customer Approval") {
+        await rejectCustomer(item.id, reason, currentUser?.id || "MANAGER-1")
+        toast.error("Customer registration rejected", { description: `${item.ref} was rejected.` })
+      } else if (item.type === "Order Approval") {
+        await rejectOrder(item.id, reason, currentUser?.id || "MANAGER-1")
         toast.error("Order rejected", { description: `${item.ref} was rejected.` })
       } else {
-        await rejectExpense(item.id, "Rejected by manager")
+        await rejectExpense(item.id, reason)
         toast.error("Expense rejected", { description: `${item.ref} was rejected.` })
       }
     } catch (err: any) {
       toast.error("Rejection failed", { description: err?.message || "Please try again." })
     }
     setProcessing(null)
+    setRejectItem(null)
     setRefreshCount((c) => c + 1)
   }
 
@@ -175,7 +208,7 @@ export default function Approvals() {
                 <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                   <button
                     id={`approve-reject-${item.id}`}
-                    onClick={() => handleReject(item)}
+                    onClick={() => handleRejectClick(item)}
                     style={{ padding: "6px 14px", borderRadius: 6, border: "1px solid var(--border-neutral)", background: "var(--bg-primary)", color: "var(--text-secondary)", fontSize: 12.5, fontFamily: "Inter", cursor: "pointer" }}
                   >
                     Reject
@@ -190,6 +223,45 @@ export default function Approvals() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Rejection Modal */}
+        {rejectItem && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+            <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} onClick={() => setRejectItem(null)} />
+            <div style={{ position: "relative", width: "100%", maxWidth: 440, background: "var(--surface-01)", borderRadius: 12, padding: 24, boxShadow: "0 20px 40px rgba(0,0,0,0.25)", border: "1px solid var(--border-neutral)" }}>
+              <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
+                Reject Registration: {rejectItem.ref}
+              </h3>
+              <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "0 0 14px" }}>
+                Please specify a reason for rejecting this customer registration. The reason will be stored in the database and visible to the sales representative.
+              </p>
+              <textarea
+                value={rejectionReasonInput}
+                onChange={(e) => setRejectionReasonInput(e.target.value)}
+                placeholder="Reason for rejection (required)..."
+                rows={3}
+                style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-neutral)", background: "var(--surface-01)", color: "var(--text-primary)", fontSize: 13, boxSizing: "border-box", marginBottom: 16, fontFamily: "inherit" }}
+              />
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setRejectItem(null)}
+                  style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid var(--border-neutral)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer", fontSize: 13 }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!rejectionReasonInput.trim()}
+                  onClick={() => executeReject(rejectItem, rejectionReasonInput.trim())}
+                  style={{ padding: "8px 18px", borderRadius: 6, border: "none", background: "#DC2626", color: "white", cursor: rejectionReasonInput.trim() ? "pointer" : "not-allowed", fontWeight: 600, fontSize: 13, opacity: rejectionReasonInput.trim() ? 1 : 0.6 }}
+                >
+                  Confirm Rejection
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

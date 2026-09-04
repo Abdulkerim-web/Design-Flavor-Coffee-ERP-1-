@@ -91,28 +91,33 @@ export async function listCustomers(
 ) {
   return safeRequest<ListEnvelope<Customer>>(async () => {
     let all: any[] = []
+
+    // Build API endpoint with server-side salesRepId filter so the DB scopes the result
+    let apiEndpoint = "/customers"
+    if (filters.salesRepId) {
+      apiEndpoint += `?salesRepId=${encodeURIComponent(filters.salesRepId)}`
+    }
+
     try {
-      const res = await apiRequest<any[]>("/customers", "GET")
+      const res = await apiRequest<any[]>(apiEndpoint, "GET")
       if (Array.isArray(res)) {
         all = res
       }
     } catch {
-      /* fallback */
+      /* fallback to local cache below */
     }
-
-    const savedLocal = getSavedCustomers()
 
     // Map backend entities to Customer interface
     const mappedBackend = all.map((c) => {
       const repInfo = buildSalesRepInfo(c)
       return {
         id: c.id,
-        ref: c.businessNumber || c.ref || "CUS-UNKNOWN",
+        ref: c.businessNumber || c.business_number || c.ref || "CUS-UNKNOWN",
         name: c.name,
         type: c.type || "cafe",
         status: c.status || "active",
-        contactPerson: c.contactPerson || c.contactName || "N/A",
-        contactName: c.contactPerson || c.contactName || "N/A",
+        contactPerson: c.contactPerson || c.contact_person || c.contactName || "N/A",
+        contactName: c.contactPerson || c.contact_person || c.contactName || "N/A",
         phone: c.phone || c.contactPhone || "N/A",
         contactPhone: c.phone || c.contactPhone || "N/A",
         email: c.email || c.contactEmail || undefined,
@@ -123,36 +128,46 @@ export async function listCustomers(
         creditLimit: c.creditLimit || "ETB 0.00",
         outstandingBalance: c.outstandingBalance || "ETB 0.00",
         salesRep: c.salesRep || {
-          id: repInfo.id,
-          name: repInfo.name,
-          employeeId: repInfo.employeeId,
+          id: repInfo.id || c.sales_rep_id || "",
+          name: repInfo.name || c.sales_rep_name || "",
+          employeeId: repInfo.employeeId || c.sales_rep_employee_id || "",
         },
-        submittedAt: c.submittedAt || c.createdAt || new Date().toISOString(),
-        approvedBy: c.approvedBy,
-        approvedAt: c.approvedAt,
-        rejectedBy: c.rejectedBy,
-        rejectedAt: c.rejectedAt,
-        rejectionReason: c.rejectionReason,
-        createdAt: c.createdAt ? new Date(c.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
+        submittedAt: c.submittedAt || c.submitted_at || c.createdAt || c.created_at || new Date().toISOString(),
+        approvedBy: c.approvedBy || c.approved_by,
+        approvedAt: c.approvedAt || c.approved_at,
+        rejectedBy: c.rejectedBy || c.rejected_by,
+        rejectedAt: c.rejectedAt || c.rejected_at,
+        rejectionReason: c.rejectionReason || c.rejection_reason,
+        createdAt: (c.createdAt || c.created_at) ? new Date(c.createdAt || c.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
       }
     })
 
-    // Use backend data directly from Supabase
-    const mapped = mappedBackend
+    // Merge optimistic local records (created since last real-time sync) but only
+    // if they match the salesRepId filter to avoid cross-user contamination.
+    const savedLocal = getSavedCustomers()
+    const backendIds = new Set(mappedBackend.map((c) => c.id))
+    const localOnly = savedLocal.filter((lc) => {
+      if (backendIds.has(lc.id)) return false // already in backend response
+      if (filters.salesRepId && lc.salesRep?.id !== filters.salesRepId) return false
+      return true
+    })
+
+    // Use backend data as the authoritative source, supplement with local-only optimistic records
+    const mapped = [...mappedBackend, ...localOnly]
 
     const filtered = mapped.filter((c) => {
       const q = (filters.search ?? "").toLowerCase()
       if (
         q &&
         !c.name.toLowerCase().includes(q) &&
-        !c.ref.toLowerCase().includes(q)
+        !(c.ref || "").toLowerCase().includes(q)
       )
         return false
       // Treat "approved" as equivalent to "active" for filtering purposes
       const normalizeStatus = (s: string) => (s === "approved" ? "active" : s)
       if (filters.status && normalizeStatus(c.status) !== normalizeStatus(filters.status)) return false
-      if (filters.salesRepId && c.salesRep?.id !== filters.salesRepId)
-        return false
+      // salesRepId filter already applied at the API level; double-check for local records
+      if (filters.salesRepId && c.salesRep?.id !== filters.salesRepId) return false
       return true
     })
 
@@ -194,40 +209,49 @@ export async function getCustomer(id: string) {
 }
 
 export async function createCustomer(_payload: CreateCustomerPayload) {
-  return safeRequest<{ ref: string }>(async () => {
-    let res: any = null
+  return safeRequest<{ ref: string; id: string }>(async () => {
     const repId = _payload.salesRepId || ""
     const repName = _payload.salesRepName || ""
     const repEmployeeId = _payload.salesRepEmployeeId || ""
 
-    try {
-      res = await apiRequest<any>("/customers", "POST", {
-        businessNumber: "CUS-" + Math.floor(1000 + Math.random() * 9000),
-        name: _payload.name,
-        type: _payload.type || "cafe",
-        contactPerson: _payload.contactName,
-        phone: _payload.contactPhone,
-        email: _payload.contactEmail,
-        salesRepId: repId,
-        salesRepName: repName,
-        salesRepEmployeeId: repEmployeeId,
-        branchDetails: {
-          name: "Main Branch",
-          address: (_payload.address || "") + ", " + (_payload.city || ""),
-          contactInfo: (_payload.contactName || "") + " " + (_payload.contactPhone || ""),
-        },
-      })
-    } catch {
-      // Backend offline fallback
+    // Generate a collision-resistant business number
+    const businessNumber = `CUS-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+
+    // This call MUST succeed — do NOT catch the error here.
+    // If the Supabase insert fails (uniqueness, permissions, network), the error
+    // propagates to safeRequest which sets state="error" so the UI shows the real message.
+    const res = await apiRequest<any>("/customers", "POST", {
+      businessNumber,
+      name: _payload.name,
+      type: _payload.type || "cafe",
+      contactPerson: _payload.contactName,
+      phone: _payload.contactPhone,
+      email: _payload.contactEmail,
+      salesRepId: repId,
+      salesRepName: repName,
+      salesRepEmployeeId: repEmployeeId,
+      status: "pending",
+      branchDetails: {
+        name: "Main Branch",
+        address: (_payload.address || "") + ", " + (_payload.city || ""),
+        contactInfo: (_payload.contactName || "") + " " + (_payload.contactPhone || ""),
+      },
+    })
+
+    if (!res || !res.id) {
+      throw new Error("Customer creation failed — no record was returned from the database.")
     }
 
-    const newRef = res?.businessNumber || "CUS-" + Math.floor(1000 + Math.random() * 9000)
+    const newRef = res.businessNumber || res.business_number || businessNumber
+
+    // Persist a minimal local copy so the list view reflects the new customer
+    // immediately before the realtime subscription fires.
     const submittedTime = new Date().toLocaleString("en-US", {
       dateStyle: "medium",
       timeStyle: "short",
     })
     const newCust: Customer = {
-      id: res?.id || "c-" + Date.now(),
+      id: res.id,
       ref: newRef,
       name: _payload.name,
       type: _payload.type || "cafe",
@@ -244,14 +268,14 @@ export async function createCustomer(_payload: CreateCustomerPayload) {
       outstandingBalance: "ETB 0.00",
       salesRep: {
         id: repId,
-        name: repInfo.name,
-        employeeId: repInfo.employeeId,
+        name: repName,
+        employeeId: repEmployeeId,
       },
       submittedAt: submittedTime,
       createdAt: new Date().toLocaleDateString(),
     }
     saveCustomerLocally(newCust)
-    return { ref: newRef }
+    return { ref: newRef, id: res.id }
   })
 }
 
@@ -270,6 +294,10 @@ export async function updateCustomer(
 
 export async function approveCustomer(id: string, managerId: string) {
   return safeRequest<{ success: boolean }>(async () => {
+    // 1. Perform the DB update first. If this fails, it throws and safeRequest catches it.
+    await apiRequest<{ success: boolean }>(`/customers/${id}/approve`, "POST", { managerId })
+
+    // 2. Optimistic local updates (only executed if DB succeeded)
     const saved = getSavedCustomers()
     let target = saved.find((c) => c.id === id)
     const approvedTime = new Date().toLocaleString("en-US", {
@@ -349,11 +377,6 @@ export async function approveCustomer(id: string, managerId: string) {
       localStorage.setItem("erp_notifications_list", JSON.stringify([notif, ...list]))
     } catch { /* ignore */ }
 
-    try {
-      await apiRequest<{ success: boolean }>(`/customers/${id}/approve`, "POST", { managerId })
-    } catch {
-      /* ignore */
-    }
     return { success: true }
   })
 }
@@ -367,6 +390,14 @@ export async function rejectCustomer(
     if (!reason || !reason.trim()) {
       throw new Error("Rejection reason is required.")
     }
+    
+    // 1. DB Update First
+    await apiRequest<{ success: boolean }>(`/customers/${id}/reject`, "POST", {
+      reason: reason.trim(),
+      managerId,
+    })
+
+    // 2. Optimistic local updates
     const saved = getSavedCustomers()
     let target = saved.find((c) => c.id === id)
     const rejectedTime = new Date().toLocaleString("en-US", {
@@ -448,14 +479,6 @@ export async function rejectCustomer(
       localStorage.setItem("erp_notifications_list", JSON.stringify([notif, ...list]))
     } catch { /* ignore */ }
 
-    try {
-      await apiRequest<{ success: boolean }>(`/customers/${id}/reject`, "POST", {
-        reason: reason.trim(),
-        managerId,
-      })
-    } catch {
-      /* ignore */
-    }
     return { success: true }
   })
 }

@@ -1690,7 +1690,15 @@ const OrderListView: FC<{
     })
   })
 
+  const { currentUser } = useAuth()
+  const isSalesRep = currentUser?.role === "sales-rep"
+  const currentUserId = currentUser?.id
+
   const filtered = orders.filter((o) => {
+    if (isSalesRep && currentUserId) {
+      const isMyOrder = o.salesRep?.id === currentUserId || o.creatorId === currentUserId
+      if (!isMyOrder) return false
+    }
     const q = search.toLowerCase()
     const ms =
       !q ||

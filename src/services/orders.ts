@@ -320,20 +320,18 @@ export async function createOrder(_payload: CreateOrderPayload) {
       throw new Error(`Minimum order quantity is 10 KG. Total ordered: ${totalKg} KG. Orders below 10 KG are not allowed.`)
     }
 
-    let res: any = null
-    try {
-      res = await apiRequest<any>("/orders", "POST", {
-        customerId: _payload.customerId,
-        urgent: _payload.urgent,
-        items: _payload.lines.map((line) => ({
-          coffeeProductId: line.coffeeType,
-          quantity: line.quantity,
-          unitPrice: 1000,
-        })),
-      })
-    } catch {
-      /* ignore */
-    }
+    const res = await apiRequest<any>("/orders", "POST", {
+      customerId: _payload.customerId,
+      urgent: _payload.urgent,
+      creatorId: _payload.creatorId,
+      creatorName: _payload.creatorName,
+      creatorRole: _payload.creatorRole,
+      items: _payload.lines.map((line) => ({
+        coffeeProductId: line.coffeeType,
+        quantity: line.quantity,
+        unitPrice: 1000,
+      })),
+    })
 
     const orderRef = res?.orderNumber || "ORD-" + Math.floor(1000 + Math.random() * 9000)
     const newOrder: Order = {
