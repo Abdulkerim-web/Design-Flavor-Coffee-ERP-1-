@@ -1028,8 +1028,6 @@ function MaterialsTable({
 /* ─── List View ──────────────────────────────────────────────── */
 // Removed localStorage fallbacks to enforce true database connectivity
 
-function ListView({
-
 function ListView({ onSelect }: { onSelect: (id: string) => void }) {
   const { currentUser } = useAuth()
   const { isNarrow } = useBreakpoint()
