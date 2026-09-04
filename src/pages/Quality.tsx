@@ -3,7 +3,7 @@ import { useState } from "react"
 import { useBreakpoint } from "../hooks/useBreakpoint"
 import { useAuth } from "../contexts/AuthContext"
 import { apiRequest } from "../services/api"
-import { toast } from "sonner"
+
 import {
   RadarChart,
   PolarGrid,
@@ -1452,9 +1452,9 @@ export default function Quality() {
         qcNotes: JSON.stringify(data),
         verdict
       })
-      toast.success(verdict === "approved" ? "Stock Received & Inventory Updated" : "Receiving Rejected")
+      alert(verdict === "approved" ? "Stock Received & Inventory Updated" : "Receiving Rejected")
     } catch (err: any) {
-      toast.error("Failed to save QC record", { description: err.message })
+      alert("Failed to save QC record: " + err.message)
       return // Halt local UI update if backend fails
     }
 
