@@ -1521,7 +1521,6 @@ async function ensureDefaultOrderAndItem() {
         status: body.status || "pending",
         sales_rep_id: body.salesRepId || "",
         sales_rep_name: body.salesRepName || "",
-        sales_rep_employee_id: body.salesRepEmployeeId || "",
         submitted_at: new Date().toISOString(),
       }
     } else if (table === "orders") {
