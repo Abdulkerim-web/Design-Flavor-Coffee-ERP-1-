@@ -236,8 +236,6 @@ export async function approveCustomer(id: string, managerId: string) {
     // 1. Perform the DB update first. If this fails, it throws and safeRequest catches it.
     await apiRequest<{ success: boolean }>(`/customers/${id}/approve`, "POST", { managerId })
 
-    await apiRequest<{ success: boolean }>(`/customers/${id}/approve`, "POST", { managerId })
-
     // Persist an approval notification so sales reps see it in Notifications
     try {
       // Minimal info for the local notification fallback since the server also creates one.

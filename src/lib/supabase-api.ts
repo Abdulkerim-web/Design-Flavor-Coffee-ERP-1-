@@ -113,7 +113,7 @@ export async function handleSupabaseApiRequest(
     }
 
     // Insert profile record
-    const profileId = authUserId || `emp-${Date.now()}`
+    const profileId = authUserId || crypto.randomUUID()
     const { data: profile, error: profileErr } = await supabaseAdmin
       .from("users")
       .insert([{
@@ -684,8 +684,6 @@ export async function handleSupabaseApiRequest(
       try {
         await supabaseAdmin.from("customers").update({
           status: "approved",
-          approved_by: body.managerId || "General Manager",
-          approved_at: new Date().toISOString(),
         }).eq("id", custId)
         // Notify the sales rep who submitted this customer
         const { data: cust } = await supabaseAdmin.from("customers").select("name, sales_rep_id, sales_rep_name").eq("id", custId).single()
@@ -705,9 +703,6 @@ export async function handleSupabaseApiRequest(
       try {
         await supabaseAdmin.from("customers").update({
           status: "rejected",
-          rejected_by: body.managerId || "General Manager",
-          rejected_at: new Date().toISOString(),
-          rejection_reason: body.reason.trim(),
         }).eq("id", custId)
         // Notify the sales rep
         const { data: cust } = await supabaseAdmin.from("customers").select("name, sales_rep_id").eq("id", custId).single()
@@ -1795,7 +1790,7 @@ async function ensureDefaultOrderAndItem() {
         if (newCust?.[0]?.id) customerId = newCust[0].id
       }
       dbBody = {
-        orderNumber: `ORD-${Math.floor(Math.random() * 10000)}`,
+        order_number: `ORD-${Math.floor(Math.random() * 10000)}`,
         status: "pending-confirmation",
         customer_id: customerId,
         branch_id: "BRN-001",
