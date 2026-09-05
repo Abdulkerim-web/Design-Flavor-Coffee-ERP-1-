@@ -1794,7 +1794,12 @@ async function ensureDefaultOrderAndItem() {
         orderNumber: `ORD-${Math.floor(Math.random() * 10000)}`,
         status: "pending-confirmation",
         customer_id: customerId,
+        branch_id: "BRN-001",
+        sales_rep_id: body.creatorId || "System",
         is_urgent: body.urgent || false,
+        pre_vat_amount: preVatAmount,
+        vat_rate: vatRate,
+        vat_amount: vatAmount,
         total_amount: totalAmount,
       }
     } else if (table === "roasting_batches") {
