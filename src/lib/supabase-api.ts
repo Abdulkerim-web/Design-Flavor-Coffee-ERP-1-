@@ -121,7 +121,6 @@ export async function handleSupabaseApiRequest(
         name: fullName,
         role_id: role,
         email,
-        business_number: `EMP-${Math.floor(Math.random() * 10000)}`,
         department: department || "",
         status: "active",
         created_at: new Date().toISOString(),
@@ -1766,7 +1765,6 @@ async function ensureDefaultOrderAndItem() {
         active: true,
         status: body.status || "pending",
         sales_rep_id: body.salesRepId || "",
-        submitted_at: new Date().toISOString(),
       }
     } else if (table === "orders") {
       // BACKEND MANDATORY VALIDATION: Minimum order quantity must be >= 10 KG
