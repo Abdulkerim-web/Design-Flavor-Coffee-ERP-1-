@@ -321,6 +321,7 @@ export async function createOrder(_payload: CreateOrderPayload) {
 
 /** Confirm an order (manager action). */
 export async function confirmOrder(orderId: string, managerId: string) {
+  return safeRequest<{ success: boolean }>(async () => {
     await apiRequest(`/orders/${orderId}/confirm`, "POST", { managerId })
     return { success: true }
   })
@@ -336,7 +337,7 @@ export async function rejectOrder(
     if (!reason || !reason.trim()) {
       throw new Error("Rejection reason is required.")
     }
-    await apiRequest(`/orders/${orderId}/reject`, "POST", { reason: reasonText, managerId })
+    await apiRequest(`/orders/${orderId}/reject`, "POST", { reason: reason.trim(), managerId })
     return { success: true }
   })
 }
@@ -351,7 +352,7 @@ export async function cancelOrder(
     if (!reason || !reason.trim()) {
       throw new Error("Cancellation reason is required.")
     }
-    await apiRequest(`/orders/${orderId}/cancel`, "POST", { reason: reasonText, managerId })
+    await apiRequest(`/orders/${orderId}/cancel`, "POST", { reason: reason.trim(), managerId })
     return { success: true }
   })
 }
