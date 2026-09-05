@@ -913,3 +913,94 @@ button:focus-visible .nav-tooltip {
 @media (prefers-reduced-motion: reduce) {
   .nav-tooltip { transition: none !important; }
 }
+
+/* ─── Global Odoo Interactivity & Elegance ────────────────────────── */
+
+/* 1. Elegant Hover Transitions for all clickable elements */
+button, a, select, input[type="submit"], input[type="button"], input[type="checkbox"], input[type="radio"] {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* 2. Odoo button micro-interactions (Lift and Shadow) */
+button:not(:disabled):hover, a.btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(113, 75, 103, 0.15) !important; /* Subtle Odoo Purple shadow */
+  filter: brightness(1.05);
+}
+
+button:not(:disabled):active, a.btn:not(:disabled):active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(113, 75, 103, 0.1) !important;
+}
+
+/* 3. Input Focus Rings (Odoo Purple Glow) */
+input:focus, select:focus, textarea:focus {
+  outline: none !important;
+  border-color: var(--brand-primary) !important;
+  box-shadow: 0 0 0 3px rgba(113, 75, 103, 0.15) !important;
+}
+
+/* 4. Elegant Card Hover Effects (for dashboard cards and metrics) */
+div[style*="border-radius: 12px"], div[style*="border-radius: 16px"], .card {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+div[style*="border-radius: 12px"]:hover:not(:empty), div[style*="border-radius: 16px"]:hover:not(:empty) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-flyout) !important;
+}
+
+/* 5. Smooth Table Row / List Item Hover */
+tr, li, div[style*="border-bottom"] {
+  transition: background-color 0.15s ease !important;
+}
+
+tr:hover, div[style*="display: grid"][style*="border-bottom"]:hover {
+  background-color: var(--surface-hover) !important;
+}
+
+/* ─── Global Odoo Color Enforcements ─────────────────────────────── */
+
+/* Force overriding the hardcoded generic blue (#1D4ED8) and generic green (#15803D / #16A34A) 
+   often used in legacy inline styles to use the elegant Odoo palette instead. */
+
+/* Replace Blue accents with Odoo Purple */
+[style*="background: #1D4ED8"], [style*="background: #2563EB"], [style*="background-color: #1D4ED8"] {
+  background: var(--brand-primary) !important;
+  background-color: var(--brand-primary) !important;
+}
+[style*="color: #1D4ED8"], [style*="color: #2563EB"] {
+  color: var(--brand-primary) !important;
+}
+
+/* Replace Generic Greens with Odoo Teal/Gold for primary actions */
+[style*="background: #16A34A"], [style*="background: #15803D"], [style*="background: #10B981"] {
+  background: var(--accent-gold) !important;
+  background-color: var(--accent-gold) !important;
+}
+[style*="color: #16A34A"], [style*="color: #15803D"], [style*="color: #10B981"] {
+  color: var(--accent-gold) !important;
+}
+
+/* Override Sidebar active states and highlights */
+.sidebar-link.active, [style*="background: #F3F4F6"][style*="color: #111827"] {
+  background: rgba(113, 75, 103, 0.08) !important;
+  color: var(--brand-primary) !important;
+  border-right: 3px solid var(--brand-primary) !important;
+}
+
+/* Elegant Scrollbars for the whole system */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--border-neutral);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--brand-primary);
+}

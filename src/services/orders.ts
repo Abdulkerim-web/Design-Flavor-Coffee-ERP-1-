@@ -106,26 +106,7 @@ export interface Order {
   auditLog?: AuditTrailEntry[]
 }
 
-/* Helper to load and save order records in localStorage for full persistence */
-export function getSavedOrders(): Order[] {
-  try {
-    const raw = localStorage.getItem("erp_orders_records")
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
-}
-
-export function saveOrderLocally(order: Order) {
-  try {
-    const existing = getSavedOrders()
-    const updated = [order, ...existing.filter((o) => o.id !== order.id)]
-    localStorage.setItem("erp_orders_records", JSON.stringify(updated))
-  } catch {
-    /* ignore */
-  }
-}
-
+// Removed localStorage fallbacks
 export interface OrderListFilters {
   search?: string
   status?: OrderStatusKey | ""
@@ -334,88 +315,13 @@ export async function createOrder(_payload: CreateOrderPayload) {
     })
 
     const orderRef = res?.orderNumber || "ORD-" + Math.floor(1000 + Math.random() * 9000)
-    const newOrder: Order = {
-      id: res?.orderId || "ord-" + Date.now(),
-      ref: orderRef,
-      status: "pending-confirmation",
-      urgent: !!_payload.urgent,
-      customer: {
-        id: _payload.customerId || "cus-1",
-        name: "Customer " + (_payload.customerId || ""),
-        ref: "CUS-001",
-        status: "active",
-      },
-      salesRep: { id: _payload.creatorId || "", name: _payload.creatorName || "" },
-      creatorId: _payload.creatorId || "",
-      creatorName: _payload.creatorName || "",
-      creatorRole: _payload.creatorRole || "Sales Representative",
-      items: _payload.lines.map((l, idx) => ({
-        id: `item-${idx}-${Date.now()}`,
-        coffeeType: l.coffeeType,
-        origin: l.origin || "Guji",
-        roastLevel: l.roastLevel || "Medium",
-        quantity: l.quantity,
-        unit: "KG",
-        unitPrice: "ETB 1,000.00",
-        lineTotal: `ETB ${(l.quantity * 1000).toLocaleString()}`,
-      })),
-      totalQty: `${totalKg} KG`,
-      coffeeLabel: _payload.lines[0]?.coffeeType || "Coffee Blend",
-      subtotal: `ETB ${(totalKg * 1000).toLocaleString()}`,
-      vat: `ETB ${(totalKg * 150).toLocaleString()}`,
-      total: `ETB ${(totalKg * 1150).toLocaleString()}`,
-      delivery: { completed: 0, total: 1, label: "0 / 1 deliveries completed" },
-      payment: {
-        status: "unpaid",
-        total: `ETB ${(totalKg * 1150).toLocaleString()}`,
-        paid: "ETB 0.00",
-        remaining: `ETB ${(totalKg * 1150).toLocaleString()}`,
-      },
-      deliveryDate: _payload.deliveryDate,
-      deliveryAddress: _payload.deliveryAddress,
-      createdAt: new Date().toISOString(),
-      auditLog: [
-        {
-          id: `audit-${Date.now()}`,
-          action: "Order Created",
-          actor: _payload.creatorName || "Sales Representative",
-          actorRole: "Sales Representative",
-          timestamp: new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }),
-          note: `Created order for ${totalKg} KG.`,
-        },
-      ],
-    }
-    saveOrderLocally(newOrder)
     return { ref: orderRef }
   })
 }
 
 /** Confirm an order (manager action). */
 export async function confirmOrder(orderId: string, managerId: string) {
-  return safeRequest<{ success: boolean }>(async () => {
-    const saved = getSavedOrders()
-    const target = saved.find((o) => o.id === orderId || o.ref === orderId)
-    const timeStr = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })
-    if (target) {
-      target.status = "confirmed"
-      target.auditLog = [
-        ...(target.auditLog || []),
-        {
-          id: `audit-${Date.now()}`,
-          action: "Order Confirmed",
-          actor: managerId || "General Manager",
-          actorRole: "Manager",
-          timestamp: timeStr,
-          note: "Order confirmed and inventory reserved.",
-        },
-      ]
-      saveOrderLocally(target)
-    }
-    try {
-      await apiRequest(`/orders/${orderId}/confirm`, "POST", { managerId })
-    } catch {
-      /* ignore */
-    }
+    await apiRequest(`/orders/${orderId}/confirm`, "POST", { managerId })
     return { success: true }
   })
 }
@@ -430,33 +336,7 @@ export async function rejectOrder(
     if (!reason || !reason.trim()) {
       throw new Error("Rejection reason is required.")
     }
-    const reasonText = reason.trim()
-    const saved = getSavedOrders()
-    const target = saved.find((o) => o.id === orderId || o.ref === orderId)
-    const timeStr = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })
-    if (target) {
-      target.status = "cancelled"
-      target.rejectedBy = managerId || "General Manager"
-      target.rejectedAt = timeStr
-      target.rejectionReason = reasonText
-      target.auditLog = [
-        ...(target.auditLog || []),
-        {
-          id: `audit-${Date.now()}`,
-          action: "Order Rejected",
-          actor: managerId || "General Manager",
-          actorRole: "Manager",
-          timestamp: timeStr,
-          note: `Rejection Reason: ${reasonText}`,
-        },
-      ]
-      saveOrderLocally(target)
-    }
-    try {
-      await apiRequest(`/orders/${orderId}/reject`, "POST", { reason: reasonText, managerId })
-    } catch {
-      /* ignore */
-    }
+    await apiRequest(`/orders/${orderId}/reject`, "POST", { reason: reasonText, managerId })
     return { success: true }
   })
 }
@@ -471,33 +351,7 @@ export async function cancelOrder(
     if (!reason || !reason.trim()) {
       throw new Error("Cancellation reason is required.")
     }
-    const reasonText = reason.trim()
-    const saved = getSavedOrders()
-    const target = saved.find((o) => o.id === orderId || o.ref === orderId)
-    const timeStr = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })
-    if (target) {
-      target.status = "cancelled"
-      target.cancelledBy = managerId || "General Manager"
-      target.cancelledAt = timeStr
-      target.cancellationReason = reasonText
-      target.auditLog = [
-        ...(target.auditLog || []),
-        {
-          id: `audit-${Date.now()}`,
-          action: "Order Cancelled",
-          actor: managerId || "General Manager",
-          actorRole: "Manager",
-          timestamp: timeStr,
-          note: `Cancellation Reason: ${reasonText}`,
-        },
-      ]
-      saveOrderLocally(target)
-    }
-    try {
-      await apiRequest(`/orders/${orderId}/cancel`, "POST", { reason: reasonText, managerId })
-    } catch {
-      /* ignore */
-    }
+    await apiRequest(`/orders/${orderId}/cancel`, "POST", { reason: reasonText, managerId })
     return { success: true }
   })
 }

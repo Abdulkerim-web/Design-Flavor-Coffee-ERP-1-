@@ -57,25 +57,7 @@ export interface CreateCustomerPayload {
   salesRepEmployeeId?: string
 }
 
-/* Helper to load and save customer records in localStorage for full persistence */
-export function getSavedCustomers(): Customer[] {
-  try {
-    const raw = localStorage.getItem("erp_customers_records")
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
-}
-
-export function saveCustomerLocally(cust: Customer) {
-  try {
-    const existing = getSavedCustomers()
-    const updated = [cust, ...existing.filter((c) => c.id !== cust.id)]
-    localStorage.setItem("erp_customers_records", JSON.stringify(updated))
-  } catch {
-    /* ignore */
-  }
-}
+// Removed localStorage fallbacks
 
 // Build sales rep info from the API response fields — no hardcoded names
 function buildSalesRepInfo(c: any) {
@@ -142,18 +124,8 @@ export async function listCustomers(
       }
     })
 
-    // Merge optimistic local records (created since last real-time sync) but only
-    // if they match the salesRepId filter to avoid cross-user contamination.
-    const savedLocal = getSavedCustomers()
-    const backendIds = new Set(mappedBackend.map((c) => c.id))
-    const localOnly = savedLocal.filter((lc) => {
-      if (backendIds.has(lc.id)) return false // already in backend response
-      if (filters.salesRepId && lc.salesRep?.id !== filters.salesRepId) return false
-      return true
-    })
-
-    // Use backend data as the authoritative source, supplement with local-only optimistic records
-    const mapped = [...mappedBackend, ...localOnly]
+    // Use backend data as the authoritative source
+    const mapped = [...mappedBackend]
 
     const filtered = mapped.filter((c) => {
       const q = (filters.search ?? "").toLowerCase()
@@ -228,8 +200,6 @@ export async function createCustomer(_payload: CreateCustomerPayload) {
       phone: _payload.contactPhone,
       email: _payload.contactEmail,
       salesRepId: repId,
-      salesRepName: repName,
-      salesRepEmployeeId: repEmployeeId,
       status: "pending",
       branchDetails: {
         name: "Main Branch",
@@ -244,37 +214,6 @@ export async function createCustomer(_payload: CreateCustomerPayload) {
 
     const newRef = res.businessNumber || res.business_number || businessNumber
 
-    // Persist a minimal local copy so the list view reflects the new customer
-    // immediately before the realtime subscription fires.
-    const submittedTime = new Date().toLocaleString("en-US", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    })
-    const newCust: Customer = {
-      id: res.id,
-      ref: newRef,
-      name: _payload.name,
-      type: _payload.type || "cafe",
-      status: "pending",
-      contactPerson: _payload.contactName,
-      contactName: _payload.contactName,
-      phone: _payload.contactPhone,
-      contactPhone: _payload.contactPhone,
-      email: _payload.contactEmail,
-      contactEmail: _payload.contactEmail || "N/A",
-      address: _payload.address || "Addis Ababa",
-      city: _payload.city || "Addis Ababa",
-      creditLimit: _payload.creditLimit || "ETB 0.00",
-      outstandingBalance: "ETB 0.00",
-      salesRep: {
-        id: repId,
-        name: repName,
-        employeeId: repEmployeeId,
-      },
-      submittedAt: submittedTime,
-      createdAt: new Date().toLocaleDateString(),
-    }
-    saveCustomerLocally(newCust)
     return { ref: newRef, id: res.id }
   })
 }
@@ -297,68 +236,12 @@ export async function approveCustomer(id: string, managerId: string) {
     // 1. Perform the DB update first. If this fails, it throws and safeRequest catches it.
     await apiRequest<{ success: boolean }>(`/customers/${id}/approve`, "POST", { managerId })
 
-    // 2. Optimistic local updates (only executed if DB succeeded)
-    const saved = getSavedCustomers()
-    let target = saved.find((c) => c.id === id)
-    const approvedTime = new Date().toLocaleString("en-US", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    })
-
-    if (target) {
-      target.status = "active"  // normalise to "active" — the canonical approved state
-      target.approvedBy = managerId || "General Manager"
-      target.approvedAt = approvedTime
-      saveCustomerLocally(target)
-    } else {
-      // Customer came from Supabase, not in localStorage yet — create a localStorage override
-      const overrideCust: Customer = {
-        id,
-        ref: "CUS-" + id.slice(0, 6).toUpperCase(),
-        name: "Customer",
-        type: "cafe",
-        status: "active",  // normalise to canonical active state
-        contactName: "N/A",
-        contactPhone: "N/A",
-        contactEmail: "N/A",
-        address: "N/A",
-        city: "",
-        creditLimit: "ETB 0.00",
-        outstandingBalance: "ETB 0.00",
-        salesRep: { id: "", name: "", employeeId: "" },
-        approvedBy: managerId || "General Manager",
-        approvedAt: approvedTime,
-        createdAt: new Date().toLocaleDateString(),
-      }
-      // Try to enrich from API
-      try {
-        const full = await apiRequest<any>(`/customers/${id}`, "GET")
-        if (full) {
-          overrideCust.name = full.name || overrideCust.name
-          overrideCust.ref = full.businessNumber || full.business_number || overrideCust.ref
-          overrideCust.type = full.type || overrideCust.type
-          overrideCust.contactName = full.contactPerson || full.contact_person || overrideCust.contactName
-          overrideCust.contactPhone = full.phone || overrideCust.contactPhone
-          overrideCust.contactEmail = full.email || overrideCust.contactEmail
-          // Restore sales rep from API data
-          if (full.salesRepId) {
-            overrideCust.salesRep = {
-              id: full.salesRepId,
-              name: full.salesRepName || overrideCust.salesRep?.name || "Sales Rep",
-              employeeId: full.salesRepEmployeeId || overrideCust.salesRep?.employeeId,
-            }
-          }
-        }
-      } catch { /* ignore */ }
-      saveCustomerLocally(overrideCust)
-    }
+    await apiRequest<{ success: boolean }>(`/customers/${id}/approve`, "POST", { managerId })
 
     // Persist an approval notification so sales reps see it in Notifications
     try {
-      const savedCustomers = getSavedCustomers()
-      const approvedCust = savedCustomers.find((c) => c.id === id)
-      const salesRepId = approvedCust?.salesRep?.id
-      const customerName = approvedCust?.name || "Customer"
+      // Minimal info for the local notification fallback since the server also creates one.
+      const customerName = "Customer"
       const raw = localStorage.getItem("erp_notifications_list")
       const list = raw ? JSON.parse(raw) : []
       const notif = {
@@ -397,70 +280,10 @@ export async function rejectCustomer(
       managerId,
     })
 
-    // 2. Optimistic local updates
-    const saved = getSavedCustomers()
-    let target = saved.find((c) => c.id === id)
-    const rejectedTime = new Date().toLocaleString("en-US", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    })
-
-    if (target) {
-      target.status = "rejected"
-      target.rejectedBy = managerId || "General Manager"
-      target.rejectedAt = rejectedTime
-      target.rejectionReason = reason.trim()
-      saveCustomerLocally(target)
-    } else {
-      // Customer came from Supabase, not in localStorage yet — create a localStorage override
-      const overrideCust: Customer = {
-        id,
-        ref: "CUS-" + id.slice(0, 6).toUpperCase(),
-        name: "Customer",
-        type: "cafe",
-        status: "rejected",
-        contactName: "N/A",
-        contactPhone: "N/A",
-        contactEmail: "N/A",
-        address: "N/A",
-        city: "",
-        creditLimit: "ETB 0.00",
-        outstandingBalance: "ETB 0.00",
-        salesRep: { id: "", name: "", employeeId: "" },
-        rejectedBy: managerId || "General Manager",
-        rejectedAt: rejectedTime,
-        rejectionReason: reason.trim(),
-        createdAt: new Date().toLocaleDateString(),
-      }
-      // Try to enrich from API
-      try {
-        const full = await apiRequest<any>(`/customers/${id}`, "GET")
-        if (full) {
-          overrideCust.name = full.name || overrideCust.name
-          overrideCust.ref = full.businessNumber || full.business_number || overrideCust.ref
-          overrideCust.type = full.type || overrideCust.type
-          overrideCust.contactName = full.contactPerson || full.contact_person || overrideCust.contactName
-          overrideCust.contactPhone = full.phone || overrideCust.contactPhone
-          overrideCust.contactEmail = full.email || overrideCust.contactEmail
-          // Restore sales rep from API data
-          if (full.salesRepId) {
-            overrideCust.salesRep = {
-              id: full.salesRepId,
-              name: full.salesRepName || overrideCust.salesRep?.name || "Sales Rep",
-              employeeId: full.salesRepEmployeeId || overrideCust.salesRep?.employeeId,
-            }
-          }
-        }
-      } catch { /* ignore */ }
-      saveCustomerLocally(overrideCust)
-    }
-
     // Persist a rejection notification so sales reps see the reason in Notifications
     try {
-      const savedCustomers = getSavedCustomers()
-      const rejectedCust = savedCustomers.find((c) => c.id === id)
-      const salesRepId = rejectedCust?.salesRep?.id
-      const customerName = rejectedCust?.name || "Customer"
+      // Minimal info for the local notification fallback since the server also creates one.
+      const customerName = "Customer"
       const raw = localStorage.getItem("erp_notifications_list")
       const list = raw ? JSON.parse(raw) : []
       const notif = {
