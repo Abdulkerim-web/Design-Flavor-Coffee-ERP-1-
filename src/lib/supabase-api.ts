@@ -121,6 +121,7 @@ export async function handleSupabaseApiRequest(
         name: fullName,
         role_id: role,
         email,
+        business_number: `EMP-${Math.floor(Math.random() * 10000)}`,
         department: department || "",
         status: "active",
         created_at: new Date().toISOString(),
@@ -1790,18 +1791,10 @@ async function ensureDefaultOrderAndItem() {
         if (newCust?.[0]?.id) customerId = newCust[0].id
       }
       dbBody = {
-        order_number: `ORD-${Math.floor(Math.random() * 10000)}`,
+        orderNumber: `ORD-${Math.floor(Math.random() * 10000)}`,
         status: "pending-confirmation",
         customer_id: customerId,
-        branch_id: "BRN-001",
-        sales_rep_id: body.creatorId || "",
-        created_by_user_id: body.creatorId || "",
-        created_by_name: body.creatorName || "",
-        created_by_role: body.creatorRole || "Sales Representative",
         is_urgent: body.urgent || false,
-        pre_vat_amount: preVatAmount,
-        vat_rate: vatRate,
-        vat_amount: vatAmount,
         total_amount: totalAmount,
       }
     } else if (table === "roasting_batches") {
