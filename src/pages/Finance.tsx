@@ -35,7 +35,7 @@ function PageHeader() {
   )
 }
 
-function Skeleton({ h, className = "" }: { h?: string className?: string }) {
+function Skeleton({ h, className = "" }: { h?: string; className?: string }) {
   return (
     <div
       className={`bg-[var(--border-neutral)] rounded animate-pulse ${className}`}

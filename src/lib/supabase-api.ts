@@ -201,17 +201,6 @@ export async function handleSupabaseApiRequest(
   }
 
   // ── FINANCE DASHBOARD & BANKING ──
-  if (path === "/finance/dashboard" && method === "GET") {
-    return {
-      totalRevenue: "ETB 0",
-      totalExpenses: "ETB 0",
-      netProfit: "ETB 0",
-      cashBalance: "ETB 0",
-      pendingReceivables: "ETB 0",
-      pendingPayables: "ETB 0"
-    }
-  }
-
   if (path.startsWith("/finance/accounts")) {
     if (method === "GET" && !id) {
       const { data } = await supabaseAdmin.from("company_bank_accounts").select("*")
@@ -1508,6 +1497,25 @@ export async function handleSupabaseApiRequest(
     
     return { success: true }
   }
+
+  // ── ROASTING CUSTOM GET ENDPOINTS ──
+  if (path === "/roasting/yield-history" && method === "GET") {
+    const { data } = await supabaseAdmin.from("roasting_batches")
+      .select("*")
+      .eq("status", "COMPLETED")
+      .order("created_at", { ascending: false })
+      .limit(30)
+    return data || []
+  }
+
+  if (path === "/roasting/pending-verification" && method === "GET") {
+    const { data } = await supabaseAdmin.from("roasting_batches")
+      .select("*")
+      .eq("status", "needs-review")
+      .order("created_at", { ascending: false })
+    return data || []
+  }
+
   if (path.startsWith("/orders/") && path.endsWith("/reject") && method === "POST") {
     const id = parts[1]
     await supabaseAdmin.from("orders").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("id", id)
@@ -1685,18 +1693,35 @@ export async function handleSupabaseApiRequest(
     return { success: true }
   }
 
-  // ── INVENTORY ──
-  if (path === "/inventory/stats" && method === "GET") {
-    const { data: stocks } = await supabaseAdmin.from("stock_balances").select("*")
-    const st = stocks || []
-    return {
-      greenCoffeeTotal: `${st.filter(s => s.itemType === 'GREEN').reduce((sum, s) => sum + parseFloat(s.on_hand || 0), 0)} KG`,
-      roastedCoffeeTotal: `${st.filter(s => s.itemType === 'ROASTED').reduce((sum, s) => sum + parseFloat(s.on_hand || 0), 0)} KG`,
-      packagingTotal: `${st.filter(s => s.itemType === 'PACKAGING').reduce((sum, s) => sum + parseFloat(s.on_hand || 0), 0)} Units`,
-      lowStockItems: st.filter(s => parseFloat(s.on_hand || 0) < 50).length
+  if (path === "/packaging/entries" && method === "POST") {
+    // We deduct from packaging inventory when bags are packed
+    const { jobRef, size, bags } = body || {}
+    const qty = parseInt(bags || "0", 10)
+    
+    // 1. Fetch packing inventory (assume itemType = PACKAGING)
+    const { data: pkgStocks } = await supabaseAdmin.from("stock_balances").select("*").eq("itemType", "PACKAGING")
+    const pStock = (pkgStocks || [])[0]
+    if (pStock && qty > 0) {
+      await supabaseAdmin.from("stock_balances").update({
+        on_hand: Math.max(0, parseFloat(pStock.on_hand || 0) - qty),
+        available: Math.max(0, parseFloat(pStock.available || 0) - qty)
+      }).eq("id", pStock.id)
+      
+      // Transaction
+      await supabaseAdmin.from("inventory_transactions").insert([{
+        type: "packing_consumption",
+        direction: "out",
+        quantity: qty,
+        coffee_product_id: pStock.item_id,
+        reference_entity_type: "roasting_batches",
+        reference_entity_id: jobRef || "PACKING",
+        notes: `Packed ${qty} bags of size ${size}`
+      }])
     }
+    return { success: true }
   }
-  
+
+  // ── INVENTORY ──  
   if (path === "/inventory/attention" && method === "GET") {
     const { data: discrepancies } = await supabaseAdmin.from("discrepancies").select("*").eq("status", "pending-review")
     const dList = discrepancies || []
@@ -1710,6 +1735,8 @@ export async function handleSupabaseApiRequest(
 
   // ── Generic CRUD Table Mapping ──
   let table = parts[0]
+  if (path.startsWith("/finance/reconciliations")) table = "bank_reconciliations"
+  if (path.startsWith("/finance/payroll")) table = "payroll_runs"
   if (path.startsWith("/inventory/lots")) table = "lots"
   if (path.startsWith("/production/batches")) table = "roasting_batches"
   if (path.startsWith("/roasting")) table = "roasting_batches"
@@ -1717,6 +1744,22 @@ export async function handleSupabaseApiRequest(
   if (path.startsWith("/deliveries") || path.startsWith("/delivery")) table = "delivery_records"
   if (path.startsWith("/customers")) table = "customers"
   if (path.startsWith("/orders")) table = "orders"
+  if (path.startsWith("/receiving")) table = "receiving_records"
+  if (path.startsWith("/suppliers")) table = "suppliers"
+
+  // Special route for profiles (drivers, sales-reps)
+  if (path.startsWith("/profiles")) {
+    const roleMap: Record<string, string> = {
+      "drivers": "delivery-staff",
+      "sales-reps": "sales-rep",
+    }
+    const roleParam = parts[1]
+    const roleKey = roleMap[roleParam] || roleParam
+    if (method === "GET") {
+      const { data } = await supabaseAdmin.from("users").select("id, name, role_id").eq("role_id", roleKey)
+      return data || []
+    }
+  }
 
   const idPos = path.startsWith("/inventory/") || path.startsWith("/production/") ? 2 : 1
   const id = parts[idPos]

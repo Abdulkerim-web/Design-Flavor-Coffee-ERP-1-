@@ -159,16 +159,90 @@ html, body, #root {
 body {
   font-family: 'Inter', system-ui, sans-serif;
   font-feature-settings: 'cv01', 'cv02', 'cv03', 'cv04';
-  /* Elegant 3D gradient background for premium ERP feel */
-  background: radial-gradient(circle at top left, #FFFFFF 0%, #F2F4F7 100%);
+  
+  /* Extremely elegant dynamic 3D background */
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+  background-size: cover;
+  position: relative;
+  
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: 14px;
   line-height: 20px;
   min-height: 100vh;
+  margin: 0;
+  
   /* Ensure 3D perspective is available globally */
-  perspective: 1000px;
+  perspective: 1200px;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: -20%; left: -10%;
+  width: 50%; height: 50%;
+  background: radial-gradient(circle, rgba(107, 76, 154, 0.1) 0%, transparent 70%);
+  filter: blur(60px);
+  z-index: -1;
+  animation: floatOrb 15s infinite alternate ease-in-out;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  bottom: -20%; right: -10%;
+  width: 60%; height: 60%;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.08) 0%, transparent 70%);
+  filter: blur(80px);
+  z-index: -1;
+  animation: floatOrb2 20s infinite alternate ease-in-out;
+}
+
+@keyframes floatOrb {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(100px, 50px) scale(1.2); }
+}
+
+@keyframes floatOrb2 {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(-80px, -60px) scale(1.1); }
+}
+
+/* 3D Interactive Card Component */
+.stat-card, .glass-panel, .card-3d {
+  background: var(--surface-01);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: var(--shadow-card);
+  border-radius: 16px;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform-style: preserve-3d;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before, .glass-panel::before, .card-3d::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.stat-card:hover, .glass-panel:hover, .card-3d:hover {
+  transform: translateY(-8px) rotateX(2deg) rotateY(2deg);
+  box-shadow: var(--shadow-float);
+  border-color: rgba(107, 76, 154, 0.3);
+}
+
+.stat-card:hover::before, .glass-panel:hover::before, .card-3d:hover::before {
+  opacity: 1;
 }
 
 /* ─── Typography Scale ───────────────────────────────────────── */
