@@ -200,6 +200,65 @@ export async function handleSupabaseApiRequest(
     }
   }
 
+  // ── FINANCE DASHBOARD & BANKING ──
+  if (path === "/finance/dashboard" && method === "GET") {
+    return {
+      totalRevenue: "ETB 0",
+      totalExpenses: "ETB 0",
+      netProfit: "ETB 0",
+      cashBalance: "ETB 0",
+      pendingReceivables: "ETB 0",
+      pendingPayables: "ETB 0"
+    }
+  }
+
+  if (path.startsWith("/finance/accounts")) {
+    if (method === "GET" && !id) {
+      const { data } = await supabaseAdmin.from("company_bank_accounts").select("*")
+      return camelizeKeys(data || [])
+    }
+  }
+
+  if (path === "/finance/banking/summary" && method === "GET") {
+    const { data: accounts } = await supabaseAdmin.from("company_bank_accounts").select("*")
+    const total = (accounts || []).reduce((s: number, a: any) => s + parseFloat(a.opening_balance || 0), 0)
+    return {
+      totalBalance: `ETB ${total.toLocaleString()}`,
+      accounts: camelizeKeys(accounts || [])
+    }
+  }
+
+  if (path === "/finance/payments") {
+    if (method === "GET") {
+      const { data } = await supabaseAdmin.from("payments").select("*").order("created_at", { ascending: false })
+      return camelizeKeys(data || [])
+    }
+    if (method === "POST") {
+      const { data } = await supabaseAdmin.from("payments").insert([{
+        order_id: body.orderId || body.referenceId || "N/A",
+        amount: parseFloat(String(body.amount || 0).replace(/[^0-9.]/g, "")),
+        payment_method: body.method || "bank_transfer",
+        bank_reference_number: body.reference || "",
+        idempotency_key: `PAY-${Date.now()}`,
+        registered_by_user_id: "System"
+      }]).select()
+      return camelizeKeys(data?.[0] || {})
+    }
+  }
+
+  if (path.startsWith("/finance/transactions")) {
+    if (method === "POST") {
+      const { data } = await supabaseAdmin.from("bank_transactions").insert([{
+        bank_account_id: body.accountId || "unknown",
+        amount: parseFloat(String(body.amount || 0).replace(/[^0-9.]/g, "")),
+        sourceType: body.type || "OTHER",
+        source_id: "Manual",
+        reference_note: body.description || ""
+      }]).select()
+      return camelizeKeys(data?.[0] || {})
+    }
+  }
+
   // ── FINANCE EXPENSES ──
   if (path.startsWith("/finance/expenses")) {
     // ── GET: list, summary, single ──
@@ -1593,6 +1652,62 @@ export async function handleSupabaseApiRequest(
     } catch { return [] }
   }
 
+  if (path.startsWith("/receiving/") && path.endsWith("/approve") && method === "POST") {
+    const lotId = parts[1]
+    await supabaseAdmin.from("lots").update({ qcStatus: "approved" }).eq("id", lotId)
+    await writeNotification(
+      "inventory-manager",
+      "Lot Approved",
+      `Lot ${lotId} has been approved and is ready for use.`,
+      "info",
+      "lots",
+      lotId
+    )
+    return { success: true }
+  }
+
+  if (path === "/packing" && method === "POST") {
+    const jobId = body.jobId
+    const packedQty = body.packedQty || 0
+    await supabaseAdmin.from("roasting_batches").update({
+      status: "PACKED",
+      updated_at: new Date().toISOString()
+    }).eq("id", jobId)
+    return { success: true }
+  }
+
+  if (path.startsWith("/packing/") && path.endsWith("/confirm") && method === "POST") {
+    const jobId = parts[1]
+    await supabaseAdmin.from("roasting_batches").update({
+      status: "COMPLETED",
+      updated_at: new Date().toISOString()
+    }).eq("id", jobId)
+    return { success: true }
+  }
+
+  // ── INVENTORY ──
+  if (path === "/inventory/stats" && method === "GET") {
+    const { data: stocks } = await supabaseAdmin.from("stock_balances").select("*")
+    const st = stocks || []
+    return {
+      greenCoffeeTotal: `${st.filter(s => s.itemType === 'GREEN').reduce((sum, s) => sum + parseFloat(s.on_hand || 0), 0)} KG`,
+      roastedCoffeeTotal: `${st.filter(s => s.itemType === 'ROASTED').reduce((sum, s) => sum + parseFloat(s.on_hand || 0), 0)} KG`,
+      packagingTotal: `${st.filter(s => s.itemType === 'PACKAGING').reduce((sum, s) => sum + parseFloat(s.on_hand || 0), 0)} Units`,
+      lowStockItems: st.filter(s => parseFloat(s.on_hand || 0) < 50).length
+    }
+  }
+  
+  if (path === "/inventory/attention" && method === "GET") {
+    const { data: discrepancies } = await supabaseAdmin.from("discrepancies").select("*").eq("status", "pending-review")
+    const dList = discrepancies || []
+    return dList.map(d => ({
+      id: d.id,
+      title: "Stock Discrepancy",
+      message: `Expected ${d.expectedQuantity}, Actual ${d.actualQuantity}`,
+      type: "discrepancy"
+    }))
+  }
+
   // ── Generic CRUD Table Mapping ──
   let table = parts[0]
   if (path.startsWith("/inventory/lots")) table = "lots"
@@ -1995,8 +2110,22 @@ async function getManagerDashboard() {
       value: `${activeRoastingCount || 0} batches`,
       sub: "In progress",
       icon: "M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0",
-    },
+    }
   ]
+
+  try {
+    const { data: stock } = await supabaseAdmin.from("stock_balances").select("on_hand").eq("itemType", "GREEN")
+    const totalGreen = (stock || []).reduce((s: number, i: any) => s + parseFloat(i.on_hand || 0), 0)
+    // Assume 60kg daily consumption for the smart forecast
+    const estDays = Math.floor(totalGreen / 60)
+    
+    kpiCards.push({
+      label: "Stock Forecast",
+      value: `${estDays} Days Left`,
+      sub: `${totalGreen.toLocaleString()} KG Green Coffee`,
+      icon: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",
+    })
+  } catch { /* ignore */ }
 
   const statusCounts = ordersArr.reduce((acc: any, o: any) => {
     const st = o.status || "pending"

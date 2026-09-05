@@ -101,7 +101,14 @@ export async function apiRequest<T>(
 ): Promise<T> {
   try {
     const { handleSupabaseApiRequest } = await import("../lib/supabase-api")
-    return (await handleSupabaseApiRequest(endpoint, method, body, currentUserRole)) as T
+    const result = (await handleSupabaseApiRequest(endpoint, method, body, currentUserRole)) as T
+    
+    if (method !== "GET") {
+      // Dispatch event to tell the UI to refetch data immediately
+      window.dispatchEvent(new CustomEvent("erp-api-mutation"))
+    }
+    
+    return result
   } catch (err) {
     console.error(`[Supabase API Error] ${method} ${endpoint}`, err)
     throw err

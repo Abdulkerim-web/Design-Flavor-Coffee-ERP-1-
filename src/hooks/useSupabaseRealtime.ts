@@ -68,6 +68,16 @@ export default function useSupabaseRealtime(
 
     subscribe()
 
+    const handleLocalMutation = () => {
+      // Small delay to allow state changes or DB triggers to settle
+      setTimeout(() => {
+        if (active) onChangeRef.current()
+      }, 100)
+    }
+
+    // Listen for local mutations (e.g. from api.ts) to provide instant feedback
+    window.addEventListener("erp-api-mutation", handleLocalMutation)
+
     return () => {
       active = false
       if (pollInterval) clearInterval(pollInterval)
@@ -76,6 +86,7 @@ export default function useSupabaseRealtime(
           channel.unsubscribe()
         } catch (_) {}
       }
+      window.removeEventListener("erp-api-mutation", handleLocalMutation)
     }
   }, [table, enabled])
 }

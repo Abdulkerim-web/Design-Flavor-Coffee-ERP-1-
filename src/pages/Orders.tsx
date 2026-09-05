@@ -3942,6 +3942,7 @@ const NewOrderView: FC<{ onBack: () => void }> = ({ onBack }) => {
               status: c.status === "active" ? "active" : "pending",
               salesRep: c.salesRepId || "",
               phone: c.phone || "",
+              address: c.address || c.location || "",
             }))
           )
         }
@@ -3956,6 +3957,19 @@ const NewOrderView: FC<{ onBack: () => void }> = ({ onBack }) => {
 
   const selectedCustomer = liveCustomers.find((c) => c.id === form.customerId)
   const isPendingCustomer = selectedCustomer?.status === "pending"
+  
+  // Smart ERP Feature: Auto-fill customer details
+  useEffect(() => {
+    if (selectedCustomer) {
+      setForm(prev => {
+        // Only override if the user hasn't typed a custom one
+        if (!prev.deliveryContact || prev.deliveryContact === "") {
+          return { ...prev, deliveryContact: selectedCustomer.phone || selectedCustomer.name }
+        }
+        return prev
+      })
+    }
+  }, [selectedCustomer])
 
   const refreshPricing = useCallback((lines: NewOrderLine[]) => {
     if (pricingTimer.current) clearTimeout(pricingTimer.current)

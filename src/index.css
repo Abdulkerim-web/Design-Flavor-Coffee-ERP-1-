@@ -159,12 +159,16 @@ html, body, #root {
 body {
   font-family: 'Inter', system-ui, sans-serif;
   font-feature-settings: 'cv01', 'cv02', 'cv03', 'cv04';
-  background-color: var(--bg-primary);
+  /* Elegant 3D gradient background for premium ERP feel */
+  background: radial-gradient(circle at top left, #FFFFFF 0%, #F2F4F7 100%);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: 14px;
   line-height: 20px;
+  min-height: 100vh;
+  /* Ensure 3D perspective is available globally */
+  perspective: 1000px;
 }
 
 /* ─── Typography Scale ───────────────────────────────────────── */
@@ -370,14 +374,17 @@ body {
 .stat-card {
   background: var(--surface-01);
   border: 1px solid var(--border-neutral);
-  border-radius: 10px;
+  border-radius: 12px; /* slightly rounder for premium feel */
   padding: 20px 24px;
-  box-shadow: var(--shadow-card);
-  transition: box-shadow var(--dur-base) var(--ease-apple), transform var(--dur-base) var(--ease-apple);
+  box-shadow: 0px 4px 12px rgba(0,0,0,0.03), inset 0px 1px 0px rgba(255,255,255,0.7);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform-style: preserve-3d;
+  will-change: transform, box-shadow;
 }
 .stat-card:hover {
-  box-shadow: var(--shadow-flyout);
-  transform: translateY(-1px);
+  box-shadow: 0px 20px 40px rgba(0,0,0,0.08), 0px 1px 3px rgba(0,0,0,0.04);
+  transform: translateY(-4px) scale(1.02) rotateX(3deg) rotateY(-2deg);
+  border-color: rgba(113, 75, 103, 0.2); /* hint of brand color */
 }
 
 /* ─── Tables ─────────────────────────────────────────────────── */
@@ -452,47 +459,57 @@ body {
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: var(--brand-primary);
+  background: linear-gradient(180deg, var(--brand-primary) 0%, var(--brand-hover) 100%);
   color: #FFFFFF;
-  border-radius: 6px;
+  border-radius: 8px; /* Slightly rounder */
   font-size: 13.5px;
   font-weight: 600;
-  border: none;
+  border: 1px solid rgba(0,0,0,0.1);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), 0 2px 4px rgba(113, 75, 103, 0.3);
   cursor: pointer;
-  transition: all var(--dur-base) var(--ease-apple);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   line-height: 20px;
   font-family: 'Inter', sans-serif;
+  transform-style: preserve-3d;
 }
 .btn-primary:hover {
-  background: var(--brand-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(43, 77, 58, 0.25);
+  background: linear-gradient(180deg, var(--brand-hover) 0%, #462e40 100%);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 6px 14px rgba(113, 75, 103, 0.4);
 }
-.btn-primary:active { transform: scale(0.98); }
+.btn-primary:active { 
+  transform: translateY(1px) scale(0.98); 
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); 
+}
 
 .btn-secondary {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 7px 14px;
-  background: var(--surface-01);
+  background: linear-gradient(180deg, var(--surface-01) 0%, var(--surface-hover) 100%);
   color: var(--text-primary);
-  border-radius: 6px;
+  border-radius: 8px; /* Slightly rounder */
   font-size: 13.5px;
   font-weight: 500;
   border: 1px solid var(--border-neutral);
   cursor: pointer;
-  transition: all var(--dur-base) var(--ease-apple);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   line-height: 20px;
   font-family: 'Inter', sans-serif;
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  transform-style: preserve-3d;
 }
 .btn-secondary:hover {
-  background: var(--surface-hover);
-  border-color: #D0CEC6;
-  transform: translateY(-1px);
+  background: var(--surface-01);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  border-color: var(--border-focus);
 }
-.btn-secondary:active { transform: scale(0.98); }
+.btn-secondary:active { 
+  transform: translateY(1px) scale(0.98); 
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); 
+}
 
 .btn-ghost {
   display: inline-flex;

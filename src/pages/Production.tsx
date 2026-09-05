@@ -24,6 +24,7 @@ import {
 } from "../services/operations"
 import { apiRequest } from "../services/api"
 import useSupabaseRealtime from "../hooks/useSupabaseRealtime"
+import { useToast } from "../contexts/ToastContext"
 import type {
   RoastingJob,
   RoastingBatch,
@@ -736,6 +737,17 @@ function AddBatchModal({
   const [notes, setNotes] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
+  const toast = useToast()
+
+  // Smart ERP Feature: Auto-calculate 85% expected yield
+  useEffect(() => {
+    if (greenInput && !isNaN(Number(greenInput))) {
+      const expected = (Number(greenInput) * 0.85).toFixed(1)
+      setOutputQty(expected)
+    } else {
+      setOutputQty("")
+    }
+  }, [greenInput])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -754,6 +766,9 @@ function AddBatchModal({
         greenInputQty: greenInput.trim(),
         outputQty: outputQty.trim(),
         notes: notes.trim() || undefined,
+      })
+      toast.success("Roasting Batch Completed", {
+        description: `Batch ${job.ref} completed. Packaging job auto-created.`,
       })
       onSuccess()
     } catch {
